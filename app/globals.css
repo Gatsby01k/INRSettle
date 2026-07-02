@@ -49,6 +49,31 @@
   --accent: var(--brand-emerald);
   --accent-ink: var(--brand-emerald-ink);
 
+  /* ── Semantic status tokens (Phase 0) ─────────────────────────
+     The ONLY sanctioned colors for status communication. Every
+     chip, dot, meter and state icon maps to one of these five
+     tones. Do not introduce new hex values for status UI. */
+  --status-ok: #087f69;            /* verified / matched / settled */
+  --status-ok-bg: #e7faf4;
+  --status-ok-line: #9ee8d4;
+  --status-pending: #9b6810;       /* awaiting action / in review */
+  --status-pending-bg: #fff5de;
+  --status-pending-line: #f2d9a0;
+  --status-blocked: #b42334;       /* failed / exception / blocked */
+  --status-blocked-bg: #fdeef0;
+  --status-blocked-line: #f3bfc6;
+  --status-info: #0a7d86;          /* informational / suggested */
+  --status-info-bg: #e7f7fb;
+  --status-info-line: #a8dde4;
+  --status-neutral: #55637a;       /* inactive / not started */
+  --status-neutral-bg: #f1f4f8;
+  --status-neutral-line: #d9dfe8;
+
+  /* Type floor: 12px minimum for functional text. Micro-labels
+     (eyebrows, chip text) use --text-micro; legal footnotes may
+     go to 11px. Nothing below 11px anywhere. */
+  --text-micro: 0.75rem; /* 12px */
+
   /* shadcn-compatible semantic tokens (HSL channels) */
   --background: 80 16% 98%;
   --foreground: 216 64% 8%;
@@ -1898,6 +1923,14 @@ body {
 .ops-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(7, 17, 31, 0.18) transparent;
+}
+
+/* Phase 0: sticky table headers inside scroll containers (DataGrid/DataTable) */
+.ops-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
 }
 .ops-scroll::-webkit-scrollbar {
   width: 10px;

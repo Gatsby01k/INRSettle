@@ -695,6 +695,212 @@ async function createApprovedLiveSettlement(organizationId: string, userId: stri
   return settlement;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Phase 0.6 — historical book of business.
+
+   Every dashboard trend, table page and demo screenshot draws from seed
+   data. The four curated cases above all cluster in the last few hours, so
+   any 30-day chart renders as a single spike. This generator spreads a
+   deterministic, realistic book of settlements across the past ~42 days:
+   mostly reconciled, some settled-awaiting-recon, a few failed. Naming
+   stays inside the DEMO prefixes so deleteOldDemoRecords() cleans it up on
+   every re-run (idempotent).
+   ────────────────────────────────────────────────────────────────────── */
+
+// Deterministic PRNG (mulberry32) — same book every seed run.
+function mulberry32(seed: number) {
+  let a = seed;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+async function seedHistoricalBook(organizationId: string, userId: string) {
+  const rand = mulberry32(260701);
+  const DAY = 24 * 60 * 60 * 1000;
+  const COUNT = 38;
+  let created = 0;
+
+  for (let i = 0; i < COUNT; i += 1) {
+    const n = String(i + 1).padStart(3, "0");
+    // Spread across ~42 days, newest first; jitter within the day.
+    const daysBack = 2 + (i * 40) / COUNT + rand() * 0.9;
+    const createdAt = new Date(Date.now() - daysBack * DAY - rand() * 6 * 60 * 60 * 1000);
+
+    // Outcome mix: 70% reconciled, 18% settled (awaiting recon), 12% failed.
+    const roll = rand();
+    const outcome: "RECONCILED" | "SETTLED" | "FAILED" =
+      roll < 0.7 ? "RECONCILED" : roll < 0.88 ? "SETTLED" : "FAILED";
+
+    const usdt = Math.round((800 + rand() * 22000) * 100) / 100;
+    const inr = Math.round(usdt * Number(DEMO_RATE) * 1_000_000) / 1_000_000;
+    const fee = Math.round(usdt * (DEMO_FEE_BPS / 10000) * 100) / 100;
+    const provider = rand() < 0.62 ? "PontisGlobe" : "RemitQuickly";
+    const txnId = `sb_demo_hist_${n}`;
+
+    const approvedAt = new Date(createdAt.getTime() + (20 + rand() * 90) * 60 * 1000);
+    const executedAt = new Date(approvedAt.getTime() + (5 + rand() * 40) * 60 * 1000);
+    const settledAt = new Date(executedAt.getTime() + (10 + rand() * 120) * 60 * 1000);
+    const reconciledAt = new Date(settledAt.getTime() + (30 + rand() * 20 * 60) * 60 * 1000);
+    const valueDate = new Date(settledAt);
+    valueDate.setHours(0, 0, 0, 0);
+
+    const quote = await prisma.quote.create({
+      data: {
+        organizationId,
+        createdById: userId,
+        corridor: Corridor.USDT_INR,
+        sourceCurrency: "USDT",
+        targetCurrency: "INR",
+        sourceAmount: new Prisma.Decimal(usdt.toFixed(2)),
+        targetAmount: new Prisma.Decimal(inr.toFixed(6)),
+        rate: DEMO_RATE,
+        feeBps: DEMO_FEE_BPS,
+        feeAmount: new Prisma.Decimal(fee.toFixed(2)),
+        settlementWindow: "instant",
+        status: QuoteStatus.ACCEPTED,
+        expiresAt: new Date(createdAt.getTime() + 15 * 60 * 1000),
+        createdAt,
+      },
+    });
+
+    const failed = outcome === "FAILED";
+    const settlement = await prisma.settlement.create({
+      data: {
+        publicId: `SET-DEMO-H${n}`,
+        organizationId,
+        quoteId: quote.id,
+        createdById: userId,
+        reference: `DEMO-HIST-${n}`,
+        corridor: Corridor.USDT_INR,
+        sourceCurrency: "USDT",
+        targetCurrency: "INR",
+        sourceAmount: new Prisma.Decimal(usdt.toFixed(2)),
+        targetAmount: new Prisma.Decimal(inr.toFixed(6)),
+        feeAmount: new Prisma.Decimal(fee.toFixed(2)),
+        status: failed
+          ? SettlementStatus.FAILED
+          : outcome === "SETTLED"
+            ? SettlementStatus.SETTLED
+            : SettlementStatus.RECONCILED,
+        sourceAccount: "USDT Treasury Wallet",
+        targetAccount: "INR Settlement Account",
+        provider,
+        providerTransactionId: failed ? null : txnId,
+        providerStatus: failed ? "failed" : "completed",
+        approvedAt,
+        executedAt: failed ? null : executedAt,
+        settledAt: failed ? null : settledAt,
+        reconciledAt: outcome === "RECONCILED" ? reconciledAt : null,
+        createdAt,
+      },
+    });
+
+    const events: Prisma.SettlementEventCreateManyInput[] = [
+      {
+        settlementId: settlement.id,
+        fromStatus: SettlementStatus.PENDING_APPROVAL,
+        toStatus: SettlementStatus.APPROVED,
+        actorId: userId,
+        note: "Settlement approved for provider execution.",
+        createdAt: approvedAt,
+      },
+    ];
+    if (failed) {
+      events.push({
+        settlementId: settlement.id,
+        fromStatus: SettlementStatus.APPROVED,
+        toStatus: SettlementStatus.FAILED,
+        actorId: userId,
+        note: "Provider rejected the payout; settlement marked failed.",
+        createdAt: executedAt,
+      });
+    } else {
+      events.push(
+        {
+          settlementId: settlement.id,
+          fromStatus: SettlementStatus.APPROVED,
+          toStatus: SettlementStatus.EXECUTING,
+          actorId: userId,
+          note: `${provider} payout submitted; provider acknowledged ${txnId}.`,
+          createdAt: executedAt,
+        },
+        {
+          settlementId: settlement.id,
+          fromStatus: SettlementStatus.EXECUTING,
+          toStatus: SettlementStatus.SETTLED,
+          actorId: userId,
+          note: "Provider confirmed payout completed.",
+          createdAt: settledAt,
+        },
+      );
+      if (outcome === "RECONCILED") {
+        events.push({
+          settlementId: settlement.id,
+          fromStatus: SettlementStatus.SETTLED,
+          toStatus: SettlementStatus.RECONCILED,
+          actorId: userId,
+          note: "Bank reconciliation record matched; settlement reconciled.",
+          createdAt: reconciledAt,
+        });
+      }
+    }
+    await prisma.settlementEvent.createMany({ data: events });
+
+    if (!failed) {
+      await prisma.providerProof.create({
+        data: {
+          settlementId: settlement.id,
+          provider,
+          providerTransactionId: txnId,
+          utr: `UTRDEMOH${n}`,
+          providerStatus: "completed",
+          actualAmount: new Prisma.Decimal(inr.toFixed(2)),
+          currency: "INR",
+          rawResponse: { ok: true, data: { transaction_id: txnId, status: "completed" } },
+          receivedVia: ProofReceivedVia.WEBHOOK,
+          receivedAt: settledAt,
+        },
+      });
+    }
+
+    if (outcome === "RECONCILED") {
+      await prisma.reconciliationRecord.create({
+        data: {
+          organizationId,
+          settlementId: settlement.id,
+          externalRef: `DEMO-HIST-BANK-${n}`,
+          source: "bank_statement",
+          amount: new Prisma.Decimal(inr.toFixed(2)),
+          currency: "INR",
+          valueDate,
+          status: ReconciliationStatus.MATCHED,
+          createdAt: reconciledAt,
+          rawPayload: {
+            externalRef: `DEMO-HIST-BANK-${n}`,
+            source: "bank_statement",
+            amount: Number(inr.toFixed(2)),
+            currency: "INR",
+            valueDate: valueDate.toISOString(),
+            status: "MATCHED",
+            providerTransactionId: txnId,
+            matchReason: "Amount, INR currency, and value date all match the settlement.",
+            _matchOrigin: "AUTO",
+          },
+        },
+      });
+    }
+
+    created += 1;
+  }
+
+  return created;
+}
+
 async function main() {
   const { organization, user } = await resolveDemoContext();
   const expiresAt = minutesFromNow(15);
@@ -720,6 +926,9 @@ async function main() {
 
   await findOrCreateActiveQuote(organization.id, user.id, expiresAt);
   console.log("Created active quote for Quotes page");
+
+  const historical = await seedHistoricalBook(organization.id, user.id);
+  console.log(`Created ${historical} historical settlements across ~42 days (trend/chart data)`);
 
   console.log("Done");
 }

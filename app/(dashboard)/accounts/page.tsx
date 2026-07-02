@@ -14,10 +14,12 @@ import {
   DataGridTh,
 } from "@/components/ops/data-grid";
 
+// Illustrative sample rows — labeled as such in the detail sheet. Amounts are
+// derived from the reference balance so the layout reads realistically.
 function recentActivityFor(balance: number, currency: string) {
   return [
-    { label: "Inbound settlement", fraction: 0.12, when: "Today, 11:42" },
-    { label: "Outbound payout", fraction: -0.06, when: "Yesterday, 17:08" },
+    { label: "Inbound settlement", fraction: 0.12, when: "Today" },
+    { label: "Outbound payout", fraction: -0.06, when: "Yesterday" },
     { label: "Inbound settlement", fraction: 0.09, when: "2 days ago" },
   ].map((row) => ({
     label: row.label,

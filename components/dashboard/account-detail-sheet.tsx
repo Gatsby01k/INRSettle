@@ -59,7 +59,10 @@ export function AccountDetailSheet({ account }: { account: AccountDetail }) {
         </div>
 
         <div className="mt-3 rounded-xl border border-[var(--ops-line)] p-3">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Recent activity</p>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Recent activity</p>
+            <span className="case-chip case-chip--demo">Illustrative</span>
+          </div>
           {account.recentActivity.length ? (
             <ul className="divide-y divide-slate-100">
               {account.recentActivity.map((activity) => (
@@ -75,6 +78,10 @@ export function AccountDetailSheet({ account }: { account: AccountDetail }) {
           ) : (
             <p className="text-sm text-slate-500">No recent activity.</p>
           )}
+          <p className="mt-2 border-t border-[var(--ops-line-soft)] pt-2 text-[11px] leading-relaxed text-slate-400">
+            Sample entries for layout only. Balances are reference records — INRSettle holds no funds and moves no
+            money through these accounts.
+          </p>
         </div>
       </SheetContent>
     </Sheet>

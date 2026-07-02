@@ -7,29 +7,31 @@ type BadgeProps = React.HTMLAttributes<HTMLSpanElement> & {
   dot?: boolean;
 };
 
+// Phase 0: all status colors resolve through the semantic tokens in
+// globals.css (--status-*). This file is the ONLY place chip colors live.
 const TONES: Record<BadgeTone, string> = {
-  default: "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200/70",
-  success: "bg-[#e7faf4] text-brand-emerald-ink ring-1 ring-inset ring-[#00c79d]/20",
-  warning: "bg-[#fff5de] text-[#9b6810] ring-1 ring-inset ring-[#f2ad23]/25",
-  danger: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200/80",
-  neutral: "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200/70",
-  info: "bg-[#e7f7fb] text-[#0a7d86] ring-1 ring-inset ring-[#0bb4c4]/22",
+  default: "bg-[var(--status-neutral-bg)] text-slate-700 ring-1 ring-inset ring-[var(--status-neutral-line)]",
+  success: "bg-[var(--status-ok-bg)] text-[var(--status-ok)] ring-1 ring-inset ring-[var(--status-ok-line)]",
+  warning: "bg-[var(--status-pending-bg)] text-[var(--status-pending)] ring-1 ring-inset ring-[var(--status-pending-line)]",
+  danger: "bg-[var(--status-blocked-bg)] text-[var(--status-blocked)] ring-1 ring-inset ring-[var(--status-blocked-line)]",
+  neutral: "bg-[var(--status-neutral-bg)] text-[var(--status-neutral)] ring-1 ring-inset ring-[var(--status-neutral-line)]",
+  info: "bg-[var(--status-info-bg)] text-[var(--status-info)] ring-1 ring-inset ring-[var(--status-info-line)]",
 };
 
 const DOTS: Record<BadgeTone, string> = {
-  default: "bg-slate-400",
-  success: "bg-brand-emerald",
-  warning: "bg-brand-amber",
-  danger: "bg-rose-500",
-  neutral: "bg-slate-400",
-  info: "bg-brand-aqua",
+  default: "bg-[var(--status-neutral)]",
+  success: "bg-[var(--status-ok)]",
+  warning: "bg-[var(--status-pending)]",
+  danger: "bg-[var(--status-blocked)]",
+  neutral: "bg-[var(--status-neutral)]",
+  info: "bg-[var(--status-info)]",
 };
 
 export function Badge({ className, tone = "default", dot = false, children, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold tracking-tight tabular-nums",
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-tight tabular-nums",
         TONES[tone],
         className,
       )}

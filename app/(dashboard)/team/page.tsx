@@ -50,7 +50,7 @@ export default async function TeamPage() {
       />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <MetricCard label="Database members" value={realMembers.length} hint="Can sign in and act" />
+        <MetricCard label="Members" value={realMembers.length} hint="Can sign in and act" />
         <MetricCard label="Finality approvers" value={approverCount} hint="Can approve settlements & finality" tone="success" />
         <MetricCard
           label="Dual control"
@@ -58,7 +58,7 @@ export default async function TeamPage() {
           hint={
             dualControlPossible
               ? "A second operator can approve finality"
-              : "Add a second member (npm run demo:approver)"
+              : "Requires a second member with approval rights"
           }
           tone={dualControlPossible ? "success" : "warning"}
         />
@@ -68,14 +68,14 @@ export default async function TeamPage() {
       <div className="flex items-start gap-2 rounded-xl border border-[var(--ops-line)] bg-white p-3">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-emerald-ink" />
         <p className="text-xs leading-relaxed text-slate-600">
-          <span className="font-semibold text-slate-900">Dual control:</span> LIVE_TEST finality requires approval by
+          <span className="font-semibold text-slate-900">Dual control:</span> Live-test finality requires approval by
           a second operator. Creators can&apos;t approve their own settlements.
         </p>
       </div>
 
       {/* Real database members */}
       <div>
-        <p className="ops-eyebrow mb-2">Organization members · database users</p>
+        <p className="ops-eyebrow mb-2">Organization members</p>
         <DataGrid>
           <table className="w-full min-w-[680px]">
             <DataGridHead>
@@ -91,7 +91,6 @@ export default async function TeamPage() {
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-slate-950">{member.name}</p>
                       {member.isYou ? <span className="case-chip case-chip--shadow">you</span> : null}
-                      <span className="case-chip border-emerald-200 bg-emerald-50 text-emerald-700">DB user</span>
                     </div>
                     <p className="text-xs text-slate-500">{member.email}</p>
                   </DataGridTd>

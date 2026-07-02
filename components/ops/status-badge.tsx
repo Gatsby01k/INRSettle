@@ -1,4 +1,6 @@
+import { AlertTriangle, Check, Circle, Clock, X, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type Tone = "success" | "warning" | "danger" | "info" | "neutral";
 
@@ -45,5 +47,77 @@ export function StatusBadge({ status, dot = true }: { status: string; dot?: bool
     <Badge tone={tone} dot={dot}>
       {normalized.replaceAll("_", " ")}
     </Badge>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Phase 0 — canonical status primitives.
+   StatusChip: the single general-purpose labeled chip (replaces the
+   case-chip / prs-chip families as call sites migrate).
+   StateIcon: the single state glyph (replaces text characters "✓ ✕ • !"
+   inside check-dot / conf-step__dot / prs-gate-dot).
+   ────────────────────────────────────────────────────────────────────── */
+
+export type StatusTone = Tone;
+
+export function StatusChip({
+  tone = "neutral",
+  dot = false,
+  className,
+  children,
+}: {
+  tone?: StatusTone;
+  dot?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Badge tone={tone} dot={dot} className={className}>
+      {children}
+    </Badge>
+  );
+}
+
+export type StateKind = "ok" | "pending" | "blocked" | "attention" | "idle";
+
+const STATE_ICON: Record<StateKind, LucideIcon> = {
+  ok: Check,
+  pending: Clock,
+  blocked: X,
+  attention: AlertTriangle,
+  idle: Circle,
+};
+
+const STATE_STYLE: Record<StateKind, string> = {
+  ok: "bg-[var(--status-ok-bg)] text-[var(--status-ok)] ring-[var(--status-ok-line)]",
+  pending: "bg-[var(--status-pending-bg)] text-[var(--status-pending)] ring-[var(--status-pending-line)]",
+  blocked: "bg-[var(--status-blocked-bg)] text-[var(--status-blocked)] ring-[var(--status-blocked-line)]",
+  attention: "bg-[var(--status-pending-bg)] text-[var(--status-pending)] ring-[var(--status-pending-line)]",
+  idle: "bg-[var(--status-neutral-bg)] text-[var(--status-neutral)] ring-[var(--status-neutral-line)]",
+};
+
+export function StateIcon({
+  state,
+  label,
+  className,
+}: {
+  state: StateKind;
+  /** Accessible name; defaults to the state itself. */
+  label?: string;
+  className?: string;
+}) {
+  const Icon = STATE_ICON[state];
+  return (
+    <span
+      role="img"
+      aria-label={label ?? state}
+      className={cn(
+        "inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full ring-1 ring-inset",
+        STATE_STYLE[state],
+        className,
+      )}
+    >
+      <Icon className="h-3 w-3" strokeWidth={2.5} aria-hidden="true" />
+    </span>
   );
 }
