@@ -259,8 +259,21 @@ export default async function DashboardPage({
         },
       })
     : null;
+  const executionFailed =
+    latestProof?.status === SettlementStatus.FAILED || latestProof?.status === SettlementStatus.CANCELLED;
   const pipeline: { name: string; state: StepState }[] = latestProof
     ? [
+        // Settlements can only be created from an accepted, unexpired quote.
+        { name: "Quote locked", state: "ok" },
+        { name: "Approval", state: latestProof.approvedAt ? "ok" : "pending" },
+        {
+          name: "Provider execution",
+          state: executionFailed
+            ? "blocked"
+            : latestProof.executedAt || latestProof.settledAt || latestProof.providerTransactionId
+              ? "ok"
+              : "pending",
+        },
         { name: "Provider proof", state: latestProof.providerProofs.length > 0 ? "ok" : "pending" },
         {
           name: "Independent recon",
@@ -280,14 +293,15 @@ export default async function DashboardPage({
                 ? "blocked"
                 : "pending",
         },
-        { name: "Settlement report", state: latestReportLog ? "ok" : "pending" },
       ]
     : [
+        { name: "Quote locked", state: "pending" },
+        { name: "Approval", state: "pending" },
+        { name: "Provider execution", state: "pending" },
         { name: "Provider proof", state: "pending" },
         { name: "Independent recon", state: "pending" },
         { name: "Audit trail", state: "pending" },
         { name: "Finality review", state: "pending" },
-        { name: "Settlement report", state: "pending" },
       ];
 
   const operatingMode: SettlementMode = liveTestCount > 0 ? "LIVE_TEST" : shadowCount > 0 ? "SHADOW" : "DEMO";
@@ -458,14 +472,21 @@ export default async function DashboardPage({
       </section>
 
       {/* 2 ── Settlement confidence pipeline (main anchor) ───────────────── */}
-      <section aria-label="Settlement confidence pipeline" className="ov-reveal ov-reveal-1">
+      <section aria-label="Settlement control loop" className="ov-reveal ov-reveal-1">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="ops-eyebrow">Settlement confidence pipeline</p>
-          <p className="text-[11px] text-slate-400">
-            {latestProof ? `Tracking ${latestProof.publicId}` : "Awaiting first case"}
-          </p>
+          <p className="ops-eyebrow">Settlement control loop</p>
+          <div className="flex items-center gap-2">
+            {latestProof ? (
+              <span className={cn("case-chip", latestReportLog ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "case-chip--demo")}>
+                {latestReportLog ? "Report generated" : "Report pending"}
+              </span>
+            ) : null}
+            <p className="text-[11px] text-slate-400">
+              {latestProof ? `Tracking ${latestProof.publicId}` : "Awaiting first case"}
+            </p>
+          </div>
         </div>
-        <div className="conf-pipeline">
+        <div className="conf-pipeline conf-pipeline--loop">
           {pipeline.map((step, index) => (
             <div key={step.name} className={cn("conf-step", `conf-step--${step.state}`)}>
               <span className="conf-step__dot" aria-hidden="true">

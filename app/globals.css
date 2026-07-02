@@ -3605,6 +3605,16 @@ details[open] > .reconciliation-details-content {
   gap: 0.5rem;
 }
 @media (max-width: 860px) { .conf-pipeline { grid-template-columns: repeat(2, 1fr); } }
+/* Full control loop: quote → approval → execution → proof → recon → audit → finality */
+.conf-pipeline--loop { grid-template-columns: repeat(7, 1fr); }
+@media (max-width: 1280px) {
+  .conf-pipeline--loop { grid-template-columns: repeat(4, 1fr); }
+  .conf-pipeline--loop::before { display: none; }
+  .conf-pipeline--loop .conf-step::after { display: none; }
+}
+@media (max-width: 860px) { .conf-pipeline--loop { grid-template-columns: repeat(2, 1fr); } }
+.conf-step:nth-child(6) { animation-delay: 0.25s; }
+.conf-step:nth-child(7) { animation-delay: 0.3s; }
 .conf-step {
   position: relative;
   border-radius: 0.85rem;

@@ -331,7 +331,8 @@ export default async function ReconciliationPage({
             </div>
             <h1 className="conf-hero__headline mt-3">Reconciliation</h1>
             <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-slate-500">
-              Match external bank/PSP records against settlements before finality.
+              Provider proof is not enough. Every settlement must match an independent bank or PSP
+              record before it can reach finality.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <span className="case-chip case-chip--gold">Provider claims excluded</span>
