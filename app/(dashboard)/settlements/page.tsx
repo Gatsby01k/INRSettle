@@ -175,7 +175,7 @@ function ModeChip({ testMode }: { testMode: string }) {
   return (
     <span
       className={cn("case-chip", MODE_CHIP_CLASS[key])}
-      title="DEMO: fake data · SHADOW/LIVE TEST: money moves externally via the partner/provider — INRSettle does not move funds"
+      title="DEMO: simulated data · SHADOW/LIVE TEST: money moves externally via the partner/provider — INRSettle does not move funds"
     >
       {MODE_LABEL[key]}
     </span>

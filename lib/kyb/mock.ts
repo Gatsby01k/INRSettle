@@ -83,7 +83,7 @@ export const KYB_COUNTERPARTIES: CounterpartyKyb[] = [
       { label: ELIGIBILITY_LABELS.sourceOfFunds, done: true },
       { label: ELIGIBILITY_LABELS.sanctions, done: true },
       { label: ELIGIBILITY_LABELS.volumes, done: true },
-      { label: ELIGIBILITY_LABELS.providerRoute, done: false, note: "Provider commercial review pending (see Provider Risk Shield)" },
+      { label: ELIGIBILITY_LABELS.providerRoute, done: false, note: "Provider commercial review pending (see Provider readiness)" },
       { label: ELIGIBILITY_LABELS.commercial, done: true },
       { label: ELIGIBILITY_LABELS.reviewOwner, done: true },
     ],

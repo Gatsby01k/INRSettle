@@ -251,8 +251,8 @@ export default async function ProvidersPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <PageHeader
-          title="Provider Risk Shield"
-          description="Provider readiness and pilot go-live gating, decided on evidence."
+          title="Provider readiness"
+          description="Risk visibility and the go-live gate for every payout rail — sandbox verification, KYB, commercial review and production onboarding, decided on evidence."
         />
         {/* Status summary: per-provider decision at a glance (current data only) */}
         <div className="flex flex-wrap gap-2">

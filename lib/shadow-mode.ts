@@ -25,7 +25,7 @@ export const MODE_LABEL: Record<SettlementMode, string> = {
 };
 
 export const MODE_DESCRIPTION: Record<SettlementMode, string> = {
-  DEMO: "Fake/demo data — no real-world money anywhere.",
+  DEMO: "Simulated data — no real-world funds involved.",
   SHADOW: "Real-world operation tracked by INRSettle. Money moves externally via a partner/provider; INRSettle does not move funds.",
   LIVE_TEST: "Tiny, capped, manually guarded provider test. INRSettle does not move funds directly.",
 };

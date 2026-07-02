@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { clearSession } from "@/lib/auth";
+import { getShadowConfig } from "@/lib/shadow-mode";
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
 import { UserMenu } from "@/components/dashboard/user-menu";
@@ -9,6 +11,30 @@ async function logout() {
   "use server";
   await clearSession();
   redirect("/login");
+}
+
+/**
+ * Environment posture chip — visible on every screen. Reads the same guardrail
+ * config that gates finality (lib/shadow-mode.ts); display only, no control.
+ */
+function EnvironmentPosture() {
+  const livePayoutsEnabled = getShadowConfig().livePayoutsEnabled;
+
+  if (livePayoutsEnabled) {
+    return (
+      <span className="hidden items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-red-700 sm:inline-flex">
+        <TriangleAlert className="h-3 w-3" aria-hidden="true" />
+        Live payouts enabled — finality blocked
+      </span>
+    );
+  }
+
+  return (
+    <span className="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-emerald-700 sm:inline-flex">
+      <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+      Sandbox · live payouts disabled
+    </span>
+  );
 }
 
 export function DashboardShell({
@@ -36,6 +62,7 @@ export function DashboardShell({
             </div>
           </div>
           <div className="flex items-center gap-2.5">
+            <EnvironmentPosture />
             <UserMenu userName={userName} organizationName={organizationName} logoutAction={logout} />
           </div>
         </header>

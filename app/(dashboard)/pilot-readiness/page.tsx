@@ -69,8 +69,8 @@ export default async function PilotReadinessPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Pilot Proof Pack"
-        description="Readiness and evidence overview for the controlled real-money shadow/live-test pilot — what is proven, what needs review, and what blocks go-live."
+        title="Pilot readiness"
+        description="Evidence pack for the controlled real-money shadow/live-test pilot — what is proven, what needs review, and what blocks go-live."
       />
 
       {/* Safety note */}

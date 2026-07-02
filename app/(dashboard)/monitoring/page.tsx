@@ -71,7 +71,7 @@ export default async function MonitoringPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Pilot Command Center"
+        title="Monitoring & incident readiness"
         description="System health, provider health, incident rules and freeze status — the operational picture required before any controlled real-money shadow or live test."
       />
 

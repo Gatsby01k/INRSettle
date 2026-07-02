@@ -55,17 +55,27 @@ const groups = [
     items: [
       { href: "/counterparties", label: "Counterparties" },
       { href: "/accounts", label: "Accounts" },
-      { href: "/providers", label: "Providers" },
+    ],
+  },
+  {
+    label: "Risk & Readiness",
+    items: [
+      { href: "/providers", label: "Provider readiness" },
       { href: "/kyb", label: "KYB" },
       { href: "/monitoring", label: "Monitoring" },
-      { href: "/pilot-readiness", label: "Pilot Readiness" },
+      { href: "/pilot-readiness", label: "Pilot readiness" },
+    ],
+  },
+  {
+    label: "Evidence",
+    items: [
       { href: "/reports", label: "Reports" },
+      { href: "/audit-logs", label: "Audit trail" },
     ],
   },
   {
     label: "Organization",
     items: [
-      { href: "/audit-logs", label: "Audit logs" },
       { href: "/team", label: "Team" },
       { href: "/api-reference", label: "API" },
       { href: "/settings", label: "Settings" },
@@ -142,9 +152,9 @@ export function SidebarContent({
       <div className="border-t border-white/10 px-4 py-3.5">
         <div className="flex items-center gap-2">
           <span className="ops-pulse" />
-          <p className="text-[11px] font-medium text-white/55">Settlement rails live</p>
+          <p className="text-[11px] font-medium text-white/55">Settlement controls enforced</p>
         </div>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-white/35">Settlement operations console</p>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-white/35">Approval · proof · reconciliation · finality</p>
       </div>
     </div>
   );

@@ -180,7 +180,7 @@ export default async function KybPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Counterparty Readiness"
+        title="KYB & counterparty readiness"
         description="KYB checklists, risk ratings, and the pilot eligibility gate — evaluated before any counterparty joins a controlled real-money shadow or live test."
       />
 

@@ -117,7 +117,7 @@ export const READINESS_CARDS: ReadinessCard[] = [
     title: "Provider Risk",
     status: "Blocked",
     owner: "Founder/Admin",
-    evidence: "Provider Risk Shield go-live gates",
+    evidence: "Provider readiness go-live gates",
     explanation: "Both providers carry open gate items (commercial terms, reconciliation format, escalation SLA).",
   },
   {
@@ -163,12 +163,12 @@ export const GO_NO_GO: GoNoGoRow[] = [
   { area: "Reports", requiredState: "Generated + audited per settlement", status: "Pass", evidence: "Dry-run step 13", owner: "Operator" },
   { area: "RBAC / dual-control", requiredState: "P0+P1 gates live; matrix tested", status: "Pass", evidence: "rbac-matrix.md; tests", owner: "Founder/Admin" },
   { area: "KYB readiness", requiredState: "Gate passed for all pilot counterparties", status: "Needs Review", evidence: "KYB records", owner: "Compliance Officer" },
-  { area: "Provider risk", requiredState: "Go-live gate complete for pilot provider", status: "Blocked", evidence: "Provider Risk Shield", owner: "Founder/Admin" },
+  { area: "Provider risk", requiredState: "Go-live gate complete for pilot provider", status: "Blocked", evidence: "Provider readiness gate", owner: "Founder/Admin" },
   { area: "Monitoring", requiredState: "Owners named; alerting path agreed", status: "Needs Review", evidence: "Command center", owner: "Founder/Admin" },
   { area: "Incident handling", requiredState: "Playbook adopted and signed off", status: "Needs Review", evidence: "Playbook", owner: "Founder/Admin" },
   { area: "Env sanity", requiredState: "Pilot env values set in hosting", status: "Needs Review", evidence: "production-env-sanity.md", owner: "Founder/Admin" },
   { area: "Commercial terms", requiredState: "Term sheet agreed with pilot partner", status: "Needs Review", evidence: "commercial-partner-terms.md", owner: "Founder/Admin" },
-  { area: "Provider approval", requiredState: "Pilot provider approved in writing", status: "Blocked", evidence: "Risk Shield gate", owner: "Founder/Admin" },
+  { area: "Provider approval", requiredState: "Pilot provider approved in writing", status: "Blocked", evidence: "Provider readiness gate", owner: "Founder/Admin" },
   { area: "Counterparty approval", requiredState: "≥1 counterparty Approved for Shadow", status: "Needs Review", evidence: "KYB records", owner: "Compliance Officer" },
   { area: "Legal/compliance perimeter", requiredState: "Licensing/contracting analysis documented", status: "Blocked", evidence: "Counsel memo (pending)", owner: "Founder/Admin" },
 ];

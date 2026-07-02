@@ -357,7 +357,7 @@ export default async function DashboardPage({
             <div className="flex flex-wrap items-center gap-2">
               <span className="overview-live-badge inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-emerald-700">
                 <span className="ops-pulse ops-pulse--subtle" aria-hidden="true" />
-                Rails live
+                Controls enforced
               </span>
               <span className={MODE_CHIP[operatingMode]}>{MODE_LABEL[operatingMode]} workspace</span>
               <span className={cn("case-chip", pontisConnected ? "case-chip--shadow" : "case-chip--demo")}>
@@ -370,7 +370,8 @@ export default async function DashboardPage({
               Payment completed <span className="conf-hero__neq">≠</span> settlement finalized.
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
-              Finality requires provider proof, a matched independent record, and a recorded approval.
+              INRSettle controls the workflow around settlement: quote → approval → provider execution →
+              proof → reconciliation → audit trail → finality review.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-2.5">
