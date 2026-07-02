@@ -20,6 +20,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { cn, formatCurrencyFull, formatDateTime } from "@/lib/utils";
 import { StatusBadge } from "@/components/ops/status-badge";
 import { StatRow } from "@/components/ops/stat-row";
+import { PrintButton } from "@/components/ops/print-button";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -138,9 +139,11 @@ export default async function SettlementReportPage({
   const shadowConfig = getShadowConfig();
   const isLiveTest = settlement.testMode === "LIVE_TEST";
 
-  // "Settlement report generated" is itself pilot evidence: record it once in
-  // the append-only audit trail (deduped; best-effort — a failed write never
-  // blocks rendering the report).
+  // Report identity (Phase 5.2): the FIRST "settlement.report_generated" audit
+  // row is the report's stable generation record — its timestamp and ID never
+  // change on re-render, so the document is referenceable. Recording is
+  // best-effort; a failed write never blocks rendering.
+  let reportRecord: { id: string; createdAt: Date } | null = null;
   try {
     const existingReportLog = await prisma.auditLog.findFirst({
       where: {
@@ -149,8 +152,11 @@ export default async function SettlementReportPage({
         resourceType: "settlement",
         resourceId: settlement.id,
       },
+      orderBy: { createdAt: "asc" },
     });
-    if (!existingReportLog) {
+    if (existingReportLog) {
+      reportRecord = { id: existingReportLog.id, createdAt: existingReportLog.createdAt };
+    } else {
       await writeAuditLog({
         action: "settlement.report_generated",
         resourceType: "settlement",
@@ -159,10 +165,21 @@ export default async function SettlementReportPage({
         userId: user.id,
         after: { publicId: settlement.publicId, testMode: settlement.testMode },
       });
+      const created = await prisma.auditLog.findFirst({
+        where: {
+          organizationId: organization.id,
+          action: "settlement.report_generated",
+          resourceType: "settlement",
+          resourceId: settlement.id,
+        },
+        orderBy: { createdAt: "asc" },
+      });
+      if (created) reportRecord = { id: created.id, createdAt: created.createdAt };
     }
   } catch {
     // Non-fatal: the report still renders; the checklist item simply stays open.
   }
+  const reportId = reportRecord ? `SR-${reportRecord.id.replace(/-/g, "").slice(0, 8).toUpperCase()}` : null;
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
@@ -250,16 +267,20 @@ export default async function SettlementReportPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <div className="report-print-hide flex items-center justify-between gap-2">
+      <div className="report-print-hide flex flex-wrap items-center justify-between gap-2">
         <Button asChild variant="outline" size="sm">
           <Link href="/settlements" className="inline-flex items-center gap-1.5">
             <ArrowLeft className="h-3.5 w-3.5" />
             Settlements
           </Link>
         </Button>
-        <p className="text-[11px] text-slate-400">
-          Generated {formatDateTime(generatedAt)} · INRSettle settlement report
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-slate-400">
+            {reportId ? `Report ${reportId} · ` : ""}
+            generated {formatDateTime(reportRecord?.createdAt ?? generatedAt)}
+          </p>
+          <PrintButton />
+        </div>
       </div>
 
       <div className="report-sheet space-y-5 p-5 sm:p-6">
@@ -267,7 +288,7 @@ export default async function SettlementReportPage({
         <div className="report-band -mx-5 -mt-5 flex flex-wrap items-start justify-between gap-3 px-5 pb-4 pt-5 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-              Settlement report
+              Settlement report{reportId ? ` · ${reportId}` : ""}
             </p>
             <h1 className="mt-1 text-xl font-semibold text-slate-950">{settlement.publicId}</h1>
             <p className="text-sm text-slate-500">{settlement.reference}</p>

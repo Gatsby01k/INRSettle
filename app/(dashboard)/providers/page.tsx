@@ -14,6 +14,8 @@ import { PROVIDER_RISK_PROFILES, type ProviderRiskProfile, type ReadinessLabel }
 import { PageHeader } from "@/components/ops/page-header";
 import { cn } from "@/lib/utils";
 
+export const metadata = { title: "Provider readiness" };
+
 // Provider Risk Shield — UI-ONLY risk visibility layer.
 // Renders static mock data from lib/provider-risk/mock.ts. This page makes
 // no provider API calls, reads no provider secrets, and exposes no execution

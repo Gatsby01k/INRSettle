@@ -75,6 +75,8 @@ import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/helper-text";
 import { SubmitButton } from "@/components/ui/submit-button";
 
+export const metadata = { title: "Settlements" };
+
 function pageFlashMessage(value?: string) {
   if (value === "created") return "Settlement created.";
   if (value === "reconciled" || value === "matched") {
@@ -474,6 +476,7 @@ export default async function SettlementsPage({
     status?: string;
     reconcileRequired?: string;
     demo?: string;
+    page?: string;
   }>;
 }) {
   const { organization, membership } = await requireSession();
@@ -537,6 +540,22 @@ export default async function SettlementsPage({
     const matchesMode = !modeFilter || settlement.testMode === modeFilter;
     return matchesSearch && matchesStatus && matchesMode;
   });
+
+  // Pagination (Phase 4.1-lite): the case list never renders unbounded.
+  const CASE_PAGE_SIZE = 20;
+  const casePage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+  const casePageCount = Math.max(1, Math.ceil(filteredCases.length / CASE_PAGE_SIZE));
+  const pagedCases = filteredCases.slice((casePage - 1) * CASE_PAGE_SIZE, casePage * CASE_PAGE_SIZE);
+  const casePageHref = (target: number) => {
+    const sp = new URLSearchParams();
+    if (params.q) sp.set("q", params.q);
+    if (params.status) sp.set("status", params.status);
+    if (modeFilter) sp.set("mode", modeFilter);
+    if (demoFocus) sp.set("demo", "1");
+    if (target > 1) sp.set("page", String(target));
+    const qs = sp.toString();
+    return qs ? `/settlements?${qs}` : "/settlements";
+  };
 
   const requested = settlements.filter((s) => s.status === SettlementStatus.REQUESTED).length;
   const inFlight = settlements.filter((s) => isInFlight(s.status)).length;
@@ -654,7 +673,7 @@ export default async function SettlementsPage({
 
       {filteredCases.length ? (
         <div className="space-y-3">
-          {filteredCases.map(({ settlement, detail }) => {
+          {pagedCases.map(({ settlement, detail }) => {
             const rowAutoRefresh =
               settlement.status === SettlementStatus.EXECUTING ||
               Boolean(
@@ -972,6 +991,29 @@ export default async function SettlementsPage({
               </article>
             );
           })}
+          {casePageCount > 1 ? (
+            <div className="ops-panel flex items-center justify-between gap-3 px-4 py-2.5">
+              <p className="text-xs tabular-nums text-slate-500">
+                {(casePage - 1) * CASE_PAGE_SIZE + 1}–{Math.min(filteredCases.length, casePage * CASE_PAGE_SIZE)} of{" "}
+                {filteredCases.length} cases
+              </p>
+              <div className="flex items-center gap-2">
+                {casePage > 1 ? (
+                  <Link href={casePageHref(casePage - 1)} className="text-xs font-medium text-slate-600 hover:text-slate-950">
+                    ← Previous
+                  </Link>
+                ) : null}
+                <span className="text-xs tabular-nums text-slate-400">
+                  {casePage} / {casePageCount}
+                </span>
+                {casePage < casePageCount ? (
+                  <Link href={casePageHref(casePage + 1)} className="text-xs font-medium text-slate-600 hover:text-slate-950">
+                    Next →
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="empty-compact ops-panel">

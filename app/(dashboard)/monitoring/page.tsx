@@ -25,6 +25,8 @@ import {
 import { PageHeader } from "@/components/ops/page-header";
 import { cn } from "@/lib/utils";
 
+export const metadata = { title: "Runbook" };
+
 // Monitoring / Incident Readiness — UI-ONLY pilot command center.
 // Renders static mock data from lib/monitoring/mock.ts. No provider calls,
 // no external monitoring integrations, no database writes.

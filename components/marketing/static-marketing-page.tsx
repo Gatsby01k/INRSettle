@@ -157,30 +157,8 @@ const MARKETING_POLISH_CSS = `
    dashed rails drift slowly. All of it dies under the global
    prefers-reduced-motion rule (animation:none!important).
    ============================================================ */
-.mkt-bg-orbs{position:absolute;top:-40px;left:50%;transform:translateX(-50%);
-  width:1680px;max-width:none;height:820px;pointer-events:none}
-.mkt-orb{position:absolute;top:0;left:0;width:7px;height:7px;border-radius:50%;opacity:0;
-  offset-rotate:0deg;will-change:offset-distance}
-.mkt-orb-a{background:#0bb4c4;box-shadow:0 0 16px rgba(11,180,196,.65),0 0 36px rgba(11,180,196,.25);
-  offset-path:path("M-60,250 C 340,90 660,330 1010,200 S 1500,140 1740,300");
-  animation:lpOrbTravel 36s linear infinite}
-.mkt-orb-b{width:6px;height:6px;background:#f2ad23;box-shadow:0 0 14px rgba(242,173,35,.55),0 0 30px rgba(242,173,35,.2);
-  offset-path:path("M-60,460 C 320,560 700,330 1060,480 S 1520,560 1740,420");
-  animation:lpOrbTravel 44s linear infinite;animation-delay:-18s}
-.mkt-orb-c{width:5px;height:5px;background:#0bb4c4;box-shadow:0 0 12px rgba(11,180,196,.5);
-  offset-path:path("M-60,150 C 380,300 720,70 1070,250 S 1540,330 1740,170");
-  animation:lpOrbTravel 52s linear infinite;animation-delay:-30s}
-@keyframes lpOrbTravel{
-  0%{offset-distance:0%;opacity:0}
-  6%{opacity:.85}
-  94%{opacity:.85}
-  100%{offset-distance:100%;opacity:0}
-}
-.mkt-rail-dash{animation:lpRailDrift 60s linear infinite}
-.mkt-rail-dash--slow{animation-duration:90s;animation-direction:reverse}
-@keyframes lpRailDrift{to{stroke-dashoffset:-220}}
 /* keep the background cheap on small screens */
-@media (max-width:760px){.mkt-bg-orbs{display:none}.mkt-rail-dash{animation:none}}
+
 
 /* ---- Desktop / base polish ---- */
 .nav-actions{display:flex;align-items:center;gap:8px}
@@ -424,7 +402,7 @@ function addHomepageConsoleCtas(html: string, fileName: string) {
     /<div class="hero-ctas">[\s\S]*?<\/div><div class="hero-proof"/,
     '<div class="hero-ctas">' +
       '<a class="btn primary" href="/contact?intent=access">Start a pilot</a>' +
-      '<a class="btn" href="/contact?intent=sales">View sample report</a>' +
+      '<a class="btn" href="/sample-report">View sample report</a>' +
       '</div><div class="hero-proof"',
   );
 }
@@ -586,7 +564,7 @@ const finalCtaBand = `
         <p>Prove finality on the payouts you already run &mdash; provider proof, independent reconciliation, audit trail and finality review. INRSettle does not move funds.</p>
         <div class="hero-ctas">
           <a class="btn primary" href="/contact?intent=access">Start a pilot</a>
-          <a class="btn" href="/contact?intent=sales">View sample report</a>
+          <a class="btn" href="/sample-report">View sample report</a>
         </div>
       </div>
     </div>
@@ -722,13 +700,6 @@ function MarketingBackground() {
           <circle cx="1400" cy="250" r="3" fill="#f2ad23" />
         </g>
       </svg>
-      {/* Proof-flow orbs: soft pulses travelling along the rails (CSS offset-path,
-          so the global prefers-reduced-motion rule disables them entirely). */}
-      <div className="mkt-bg-orbs" aria-hidden="true">
-        <span className="mkt-orb mkt-orb-a" />
-        <span className="mkt-orb mkt-orb-b" />
-        <span className="mkt-orb mkt-orb-c" />
-      </div>
       <div className="mkt-bg-glow" />
     </div>
   );

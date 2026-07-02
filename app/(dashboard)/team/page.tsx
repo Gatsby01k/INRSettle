@@ -19,6 +19,8 @@ import {
   DataGridTh,
 } from "@/components/ops/data-grid";
 
+export const metadata = { title: "Team" };
+
 export default async function TeamPage() {
   const { user, organization } = await requireSession();
 

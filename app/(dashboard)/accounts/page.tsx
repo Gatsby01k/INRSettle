@@ -15,6 +15,8 @@ import {
   DataGridTh,
 } from "@/components/ops/data-grid";
 
+export const metadata = { title: "Treasury references" };
+
 // Illustrative sample rows — labeled as such in the detail sheet. Amounts are
 // derived from the reference balance so the layout reads realistically.
 function recentActivityFor(balance: number, currency: string) {

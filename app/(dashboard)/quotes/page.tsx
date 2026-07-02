@@ -29,6 +29,8 @@ import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/helper-text";
 import { SubmitButton } from "@/components/ui/submit-button";
 
+export const metadata = { title: "Quotes" };
+
 async function submitQuote(formData: FormData) {
   "use server";
   const { user, organization, membership } = await requireSession();

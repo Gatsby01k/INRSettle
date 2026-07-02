@@ -15,6 +15,8 @@ import {
   DataGridTh,
 } from "@/components/ops/data-grid";
 
+export const metadata = { title: "Counterparties" };
+
 function recentSettlementsFor(volume: number, corridor: "INR_USDT" | "USDT_INR") {
   if (volume <= 0) return [];
   const currency = corridor === "INR_USDT" ? "INR" : "USDT";

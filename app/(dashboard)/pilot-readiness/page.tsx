@@ -24,6 +24,8 @@ import {
 import { PageHeader } from "@/components/ops/page-header";
 import { cn } from "@/lib/utils";
 
+export const metadata = { title: "Go-live readiness" };
+
 // Pilot Readiness / Proof Pack — UI-ONLY readiness and evidence overview.
 // Renders static mock data from lib/pilot-readiness/mock.ts. No DB writes,
 // no provider calls, no fetch, no process.env reads. This page cannot

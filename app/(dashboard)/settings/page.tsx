@@ -14,6 +14,8 @@ import { Field, HelperText } from "@/components/ui/helper-text";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Separator } from "@/components/ui/separator";
 
+export const metadata = { title: "Settings" };
+
 type ChipState = "Active" | "Configured" | "Not connected";
 
 function StatusChip({ state }: { state: ChipState }) {
@@ -168,11 +170,11 @@ export default async function SettingsPage({
         <Card className="lg:col-span-2">
           <CardHeader>
             <SectionTitle title="Audit & retention" chip="Active" />
-            <CardDescription>Immutable evidence is retained automatically for every operational change.</CardDescription>
+            <CardDescription>Append-only evidence is retained automatically for every operational change.</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-slate-600">
-              View the full immutable trail in{" "}
+              View the full append-only trail in{" "}
               <a href="/audit-logs" className="font-semibold text-brand-emerald-ink hover:underline">
                 Audit logs
               </a>{" "}

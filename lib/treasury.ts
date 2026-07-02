@@ -278,7 +278,7 @@ export const API_ENDPOINTS: ApiEndpoint[] = [
   {
     method: "GET",
     path: "/v1/audit",
-    description: "Stream the immutable audit trail for compliance review.",
+    description: "Stream the append-only audit trail for compliance review.",
     response: `{
   "data": [
     {

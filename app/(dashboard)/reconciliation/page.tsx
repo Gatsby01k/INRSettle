@@ -35,6 +35,8 @@ import { ReconciliationCommandBar } from "@/components/dashboard/reconciliation-
 import { ReconciliationWorkspace } from "@/components/dashboard/reconciliation-workspace";
 import { SubmitButton } from "@/components/ui/submit-button";
 
+export const metadata = { title: "Reconciliation" };
+
 /**
  * P0 RBAC: every reconciliation mutation requires the operational write set.
  * Reconciliation records are INDEPENDENT finality evidence — read-only and

@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/ops/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+export const metadata = { title: "API" };
+
 function MethodBadge({ method }: { method: "GET" | "POST" }) {
   return (
     <span

@@ -14,6 +14,8 @@ import { KYB_COUNTERPARTIES, type CounterpartyKyb, type KybStatus } from "@/lib/
 import { PageHeader } from "@/components/ops/page-header";
 import { cn } from "@/lib/utils";
 
+export const metadata = { title: "KYB" };
+
 // KYB / Counterparty Readiness — UI-ONLY pilot control screen.
 // Renders static mock data from lib/kyb/mock.ts. No database writes, no
 // approval mutations, no provider calls. Decisions run through the documented review process.

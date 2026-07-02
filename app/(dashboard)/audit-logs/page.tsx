@@ -1,16 +1,34 @@
 import { Suspense } from "react";
-import { ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { Download } from "lucide-react";
+import type { Prisma } from "@prisma/client";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { cn, formatDateTime } from "@/lib/utils";
+import { AUDIT_CLAIM } from "@/lib/copy";
+import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/ops/page-header";
+import { DataTable, parseTableState, type DataTableColumn } from "@/components/ops/data-table";
 import { EmptyState } from "@/components/ops/empty-state";
 import { FilterBar } from "@/components/ops/filter-bar";
+import { StatusChip } from "@/components/ops/status-badge";
+import { Time } from "@/components/ops/time";
+import { buttonVariants } from "@/components/ui/button";
 
-// Display-only labels for actor types — professional copy, same data.
+export const metadata = { title: "Audit trail" };
+
+/**
+ * Audit trail — Phase 5.1 rebuild.
+ * The full event history, not a 100-row stub: server-side filters
+ * (search, actor type, date range), real pagination, and inline
+ * before/after state inspection for every event. Answers "show me March".
+ */
+
+const PAGE_SIZE = 25;
+
 const ACTOR_LABEL: Record<string, string> = {
-  USER: "User action",
-  API: "Provider event",
-  SYSTEM: "System event",
+  USER: "User",
+  API: "Provider",
+  SYSTEM: "System",
 };
 
 type AuditPayload = {
@@ -49,170 +67,276 @@ function eventDetail(log: { before: unknown; after: unknown }) {
   if (fromStatus && toStatus && fromStatus !== toStatus) return `${fromStatus} → ${toStatus}`;
   if (toStatus) return String(toStatus);
   if (after.amount && after.currency) return `${after.amount} ${after.currency}`;
-  return "Recorded event";
+  return "Recorded";
 }
 
-function auditTone(action: string): "neutral" | "success" | "warning" | "danger" | "info" {
-  if (action.includes("EXCEPTION") || action.includes("FAILED") || action.includes("DELETE")) return "danger";
-  if (action.includes("APPROVED") || action.includes("MATCHED") || action.includes("SETTLED") || action.includes("RECONCILED")) {
+function actionTone(action: string): "success" | "warning" | "danger" | "info" | "neutral" {
+  const upper = action.toUpperCase();
+  if (upper.includes("EXCEPTION") || upper.includes("FAILED") || upper.includes("REJECT")) return "danger";
+  if (upper.includes("APPROV") || upper.includes("MATCH") || upper.includes("SETTLED") || upper.includes("RECONCIL")) {
     return "success";
   }
-  if (action.includes("REQUESTED") || action.includes("EXECUTING") || action.includes("UPDATE")) return "warning";
-  if (action.includes("CREATE")) return "info";
+  if (upper.includes("CREATE") || upper.includes("GENERATED")) return "info";
+  if (upper.includes("UPDATE") || upper.includes("TRANSITION")) return "warning";
   return "neutral";
 }
 
-function demoAuditWhere(organizationId: string) {
-  return {
-    organizationId,
-    OR: [{ action: { startsWith: "DEMO." } }, { resourceId: { startsWith: "SET-DEMO" } }],
-  };
+function one(v: string | string[] | undefined) {
+  return Array.isArray(v) ? v[0] : v;
 }
 
-function DemoFocusBadge() {
-  return (
-    <span className="inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-amber-800">
-      Demo focus mode
-    </span>
-  );
+function filterHref(
+  params: Record<string, string | undefined>,
+  updates: Record<string, string | null>,
+) {
+  const next = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (v) next.set(k, v);
+  for (const [k, v] of Object.entries(updates)) {
+    if (v == null) next.delete(k);
+    else next.set(k, v);
+  }
+  next.delete("page");
+  const qs = next.toString();
+  return qs ? `/audit-logs?${qs}` : "/audit-logs";
 }
 
 export default async function AuditLogsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; demo?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { organization } = await requireSession();
   const params = await searchParams;
-  const demoFocus = params.demo === "1";
-  const logs = await prisma.auditLog.findMany({
-    where: demoFocus ? demoAuditWhere(organization.id) : { organizationId: organization.id },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: { user: true },
-  });
+  const state = parseTableState(params, { sortKey: "createdAt", sortDir: "desc" });
 
-  const query = params.q?.toLowerCase().trim() ?? "";
-  const filteredLogs = logs.filter((log) => {
-    const resource = resourceLabel(log).toLowerCase();
-    return (
-      !query ||
-      log.action.toLowerCase().includes(query) ||
-      resource.includes(query) ||
-      log.resourceType.toLowerCase().includes(query)
-    );
-  });
+  const q = one(params.q)?.trim() ?? "";
+  const actor = one(params.actor)?.toUpperCase() ?? "";
+  const from = one(params.from);
+  const to = one(params.to);
 
-  const settlementEvents = logs.filter((log) => log.resourceType === "settlement").length;
-  const reconciliationEvents = logs.filter((log) => log.resourceType === "reconciliation_record").length;
-  // Provider/system events from the same dataset — actorType already exists on every log.
-  const providerEvents = logs.filter((log) => log.actorType === "API" || log.actorType === "SYSTEM").length;
+  const where: Prisma.AuditLogWhereInput = {
+    organizationId: organization.id,
+    ...(actor && ["USER", "API", "SYSTEM"].includes(actor) ? { actorType: actor as "USER" | "API" | "SYSTEM" } : {}),
+    ...(from || to
+      ? {
+          createdAt: {
+            ...(from ? { gte: new Date(`${from}T00:00:00.000Z`) } : {}),
+            ...(to ? { lte: new Date(`${to}T23:59:59.999Z`) } : {}),
+          },
+        }
+      : {}),
+    ...(q
+      ? {
+          OR: [
+            { action: { contains: q, mode: "insensitive" } },
+            { resourceType: { contains: q, mode: "insensitive" } },
+            { resourceId: { contains: q, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+
+  const [totalCount, logs] = await Promise.all([
+    prisma.auditLog.count({ where }),
+    prisma.auditLog.findMany({
+      where,
+      orderBy: { createdAt: state.sortDir },
+      skip: (state.page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      include: { user: true },
+    }),
+  ]);
+
+  type Row = (typeof logs)[number];
+
+  const filterParams: Record<string, string | undefined> = {
+    q: q || undefined,
+    actor: one(params.actor),
+    from,
+    to,
+    sort: one(params.sort),
+    dir: one(params.dir),
+  };
+
+  const columns: DataTableColumn<Row>[] = [
+    {
+      key: "createdAt",
+      header: "Time",
+      sortable: true,
+      className: "whitespace-nowrap",
+      render: (log) => <Time value={log.createdAt} className="text-xs tabular-nums text-slate-500" />,
+    },
+    {
+      key: "action",
+      header: "Action",
+      render: (log) => (
+        <div className="flex items-center gap-2">
+          <StatusChip tone={actionTone(log.action)} dot>
+            {log.action}
+          </StatusChip>
+        </div>
+      ),
+    },
+    {
+      key: "actor",
+      header: "Actor",
+      render: (log) => (
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-slate-700">{ACTOR_LABEL[log.actorType] ?? log.actorType}</p>
+          <p className="truncate text-xs text-slate-400">
+            {log.user?.email ?? (log.actorType === "API" ? "Provider integration" : "System")}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "resource",
+      header: "Resource",
+      render: (log) => (
+        <div className="min-w-0">
+          <p className="truncate text-xs font-medium text-slate-700">{resourceLabel(log)}</p>
+          <p className="text-xs text-slate-400">{eventDetail(log)}</p>
+        </div>
+      ),
+    },
+    {
+      key: "state",
+      header: "State change",
+      render: (log) =>
+        log.before || log.after ? (
+          <details className="group">
+            <summary className="cursor-pointer select-none text-xs font-medium text-slate-500 transition-colors hover:text-slate-900 [&::-webkit-details-marker]:hidden">
+              Inspect <span className="text-slate-300 group-open:hidden">▸</span>
+              <span className="hidden text-slate-300 group-open:inline">▾</span>
+            </summary>
+            <div className="mt-2 grid max-w-xl gap-2">
+              {log.before ? (
+                <div>
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Before</p>
+                  <pre className="ops-scroll max-h-48 overflow-auto rounded-lg bg-slate-50 p-2 text-[11px] leading-relaxed text-slate-600">
+                    {JSON.stringify(log.before, null, 2)}
+                  </pre>
+                </div>
+              ) : null}
+              {log.after ? (
+                <div>
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">After</p>
+                  <pre className="ops-scroll max-h-48 overflow-auto rounded-lg bg-slate-50 p-2 text-[11px] leading-relaxed text-slate-600">
+                    {JSON.stringify(log.after, null, 2)}
+                  </pre>
+                </div>
+              ) : null}
+            </div>
+          </details>
+        ) : (
+          <span className="text-xs text-slate-300">—</span>
+        ),
+    },
+  ];
 
   return (
     <div className="space-y-4">
-      {/* Command header: immutable evidence trail band (mirrors Settlements) */}
-      <section className="conf-hero ov-reveal p-5 sm:p-6">
-        <div className="relative flex flex-wrap items-start justify-between gap-5">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="overview-live-badge inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-emerald-700">
-                <span className="ops-pulse ops-pulse--subtle" aria-hidden="true" />
-                Immutable evidence trail
-              </span>
-              {demoFocus ? <DemoFocusBadge /> : null}
-            </div>
-            <h1 className="conf-hero__headline mt-3">Audit logs</h1>
-            <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-slate-500">
-              Track settlement, reconciliation, approval, and configuration events with actor, timestamp, and
-              resource history.
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <span className="case-chip border-emerald-200 bg-emerald-50 text-emerald-700">Immutable history</span>
-              <span className="case-chip border-cyan-200 bg-cyan-50 text-cyan-800">Actor + timestamp</span>
-              <span className="case-chip case-chip--gold">Required for finality</span>
-              <span className="case-chip case-chip--demo">Provider + user events</span>
-            </div>
-          </div>
-          <div className="grid shrink-0 grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
-            {[
-              { label: "Total events", value: logs.length, tone: "text-slate-900" },
-              { label: "Settlement", value: settlementEvents, tone: "text-[#0a7d86]" },
-              { label: "Reconciliation", value: reconciliationEvents, tone: "text-[#9b6810]" },
-              { label: "Provider / system", value: providerEvents, tone: "text-brand-emerald-ink" },
-            ].map((stat) => (
-              <div key={stat.label} className="scase-stat">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.09em] text-slate-400">{stat.label}</p>
-                <p className={cn("scase-stat__value mt-1", stat.tone)}>{stat.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PageHeader
+        title="Audit trail"
+        description={`${AUDIT_CLAIM} Every settlement, reconciliation, approval and configuration event with actor and before/after state.`}
+        actions={
+          <a
+            href="/api/reports?type=audit&format=csv"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            <Download className="h-3.5 w-3.5" aria-hidden="true" />
+            Export CSV
+          </a>
+        }
+      />
 
-      {/* Why this trail exists — UI copy only */}
-      <div className="flex items-start gap-2 rounded-xl border border-[var(--ops-line)] bg-white p-3">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-emerald-ink" aria-hidden="true" />
-        <p className="text-xs leading-relaxed text-slate-600">
-          <span className="font-semibold text-slate-900">Auditable trail:</span> every settlement decision is
-          recorded for review, reporting, and finality control. The audit trail is one of the six pillars a
-          settlement needs to finalize.
-        </p>
-      </div>
-
-      <div className="ops-panel ops-panel-accent overflow-hidden">
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--ops-line-soft)] px-3 py-2">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Recorded events</p>
-            <p className="truncate text-xs text-slate-400">
-              Latest {logs.length} events · {filteredLogs.length} shown
-            </p>
-          </div>
-          <p className="hidden shrink-0 text-[10px] font-medium uppercase tracking-[0.07em] text-slate-400 sm:block">
-            Finality evidence
-          </p>
-        </div>
-
+      {/* Filters: search + actor + date range */}
+      <div className="ops-panel space-y-2.5 p-3">
         <Suspense fallback={null}>
-          <FilterBar embedded searchPlaceholder="Search action, resource, reference..." />
+          <FilterBar embedded searchPlaceholder="Search action, resource type, or ID..." />
         </Suspense>
-
-        <div className="p-4 sm:p-5">
-        {filteredLogs.length ? (
-          <div className="audit-line space-y-0.5">
-            {filteredLogs.map((log) => {
-              const actor = log.actorType.toLowerCase() as "user" | "api" | "system";
-              const tone = auditTone(log.action);
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-medium text-slate-400">Actor</span>
+            {[
+              { value: null, label: "All" },
+              { value: "USER", label: "User" },
+              { value: "API", label: "Provider" },
+              { value: "SYSTEM", label: "System" },
+            ].map((option) => {
+              const active = (option.value ?? "") === actor || (!option.value && !actor);
               return (
-                <div key={log.id} className={`audit-event audit-event--${actor}`}>
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <p className="text-[13px] font-medium tracking-tight text-slate-950">{log.action}</p>
-                    <span className={`audit-actor audit-actor--${actor}`}>
-                      {ACTOR_LABEL[log.actorType] ?? log.actorType}
-                    </span>
-                    {tone === "danger" ? (
-                      <span className="case-chip case-chip--live">attention</span>
-                    ) : null}
-                    <span className="ml-auto shrink-0 text-[11px] tabular-nums text-slate-400">
-                      {formatDateTime(log.createdAt)}
-                    </span>
-                  </div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
-                    <span className="font-medium text-slate-700">{resourceLabel(log)}</span>
-                    <span className="text-slate-500">{eventDetail(log)}</span>
-                    <span className="text-slate-400">
-                      {log.user?.email ?? (log.actorType === "API" ? "Provider integration" : "System")}
-                    </span>
-                  </div>
-                </div>
+                <Link
+                  key={option.label}
+                  href={filterHref(filterParams, { actor: option.value })}
+                  className={cn(
+                    "rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                    active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100",
+                  )}
+                >
+                  {option.label}
+                </Link>
               );
             })}
           </div>
-        ) : (
-          <EmptyState title="No audit events match" description="Try another search term or clear filters." />
-        )}
+          <form method="GET" action="/audit-logs" className="flex flex-wrap items-center gap-1.5">
+            {q ? <input type="hidden" name="q" value={q} /> : null}
+            {actor ? <input type="hidden" name="actor" value={actor} /> : null}
+            <label className="text-xs font-medium text-slate-400" htmlFor="audit-from">
+              From
+            </label>
+            <input
+              id="audit-from"
+              type="date"
+              name="from"
+              defaultValue={from}
+              className="h-7 rounded-md border border-[var(--ops-line)] bg-white px-2 text-xs text-slate-700"
+            />
+            <label className="text-xs font-medium text-slate-400" htmlFor="audit-to">
+              To
+            </label>
+            <input
+              id="audit-to"
+              type="date"
+              name="to"
+              defaultValue={to}
+              className="h-7 rounded-md border border-[var(--ops-line)] bg-white px-2 text-xs text-slate-700"
+            />
+            <button
+              type="submit"
+              className="h-7 rounded-md border border-[var(--ops-line)] bg-white px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              Apply
+            </button>
+            {from || to ? (
+              <Link
+                href={filterHref(filterParams, { from: null, to: null })}
+                className="text-xs font-medium text-slate-400 hover:text-slate-700"
+              >
+                Clear dates
+              </Link>
+            ) : null}
+          </form>
         </div>
       </div>
+
+      <DataTable
+        columns={columns}
+        rows={logs}
+        rowKey={(log) => log.id}
+        state={state}
+        basePath="/audit-logs"
+        searchParams={params}
+        pageSize={PAGE_SIZE}
+        totalCount={totalCount}
+        minWidth={880}
+        emptyState={
+          <EmptyState
+            title="No audit events match"
+            description="Adjust the search, actor, or date range — every recorded event is queryable here."
+          />
+        }
+      />
     </div>
   );
 }
-

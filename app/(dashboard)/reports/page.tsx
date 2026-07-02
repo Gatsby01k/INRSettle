@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/ops/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { cn, formatNumberCompact } from "@/lib/utils";
 
+export const metadata = { title: "Reports & exports" };
+
 // Reports & exports — the evidence surface of the console. Two layers:
 // 1. Per-settlement evidence packages (the settlement report), and
 // 2. Full-ledger exports for finance, compliance and partner review.
