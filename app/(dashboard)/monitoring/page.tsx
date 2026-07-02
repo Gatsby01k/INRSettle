@@ -10,6 +10,7 @@ import {
   Snowflake,
 } from "lucide-react";
 import { requireSession } from "@/lib/auth";
+import { AreaTabs } from "@/components/ops/area-tabs";
 import {
   EVIDENCE_READINESS,
   FREEZE_STATUS,
@@ -26,8 +27,7 @@ import { cn } from "@/lib/utils";
 
 // Monitoring / Incident Readiness — UI-ONLY pilot command center.
 // Renders static mock data from lib/monitoring/mock.ts. No provider calls,
-// no external monitoring integrations, no database writes. All controls are
-// disabled mocks.
+// no external monitoring integrations, no database writes.
 
 const HEALTH_CHIP: Record<HealthStatus, string> = {
   Healthy: "prs-chip--ok",
@@ -70,6 +70,7 @@ export default async function MonitoringPage() {
 
   return (
     <div className="space-y-6">
+      <AreaTabs area="providers" />
       <PageHeader
         title="Monitoring & incident readiness"
         description="System health, provider health, incident rules and freeze status — the operational picture required before any controlled real-money shadow or live test."
@@ -235,15 +236,9 @@ export default async function MonitoringPage() {
                 </div>
               ))}
             </dl>
-            <div className="mt-3">
-              <button type="button" className="prs-freeze-btn" disabled aria-disabled="true">
-                <Snowflake className="h-3.5 w-3.5" aria-hidden="true" />
-                Global freeze
-              </button>
-            </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-white/50">
-              Mock control only — no freeze mutation exists yet. Any real freeze must write an audit event and
-              must never enable live operations as a side effect.
+            <p className="mt-2 text-xs leading-relaxed text-white/50">
+              Freeze policy: a freeze stops new payout creation, keeps status checks and reporting available,
+              writes an audit event, and never enables live operations as a side effect.
             </p>
           </div>
 

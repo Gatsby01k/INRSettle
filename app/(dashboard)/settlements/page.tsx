@@ -5,6 +5,7 @@ import { SettlementStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
+import { AreaTabs } from "@/components/ops/area-tabs";
 import {
   autoMatchReconciliation,
   createSettlement,
@@ -566,6 +567,7 @@ export default async function SettlementsPage({
   return (
     <SettlementActionsProvider>
     <div className="space-y-4">
+      <AreaTabs area="settlements" />
       {/* Command header: operations console band */}
       <section className="conf-hero ov-reveal p-5 sm:p-6">
         <div className="relative flex flex-wrap items-start justify-between gap-5">

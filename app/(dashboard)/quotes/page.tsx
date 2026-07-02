@@ -3,6 +3,7 @@ import Link from "next/link";
 import { FileSearch, Lock } from "lucide-react";
 import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
+import { AreaTabs } from "@/components/ops/area-tabs";
 import { createQuote, createSettlement } from "@/lib/domain";
 import { friendlyErrorMessage } from "@/lib/errors";
 import { canCreateQuote, canCreateSettlement, roleErrorMessage } from "@/lib/permissions";
@@ -371,6 +372,7 @@ export default async function QuotesPage({
 
   return (
     <div className="space-y-4">
+      <AreaTabs area="settlements" />
       {/* 1 ── Quote command hero ─────────────────────────────────────────── */}
       <section className="conf-hero ov-reveal p-5 sm:p-7">
         <div className="relative">

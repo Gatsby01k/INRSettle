@@ -1,4 +1,5 @@
 import { requireSession } from "@/lib/auth";
+import { AreaTabs } from "@/components/ops/area-tabs";
 import { API_ENDPOINTS } from "@/lib/treasury";
 import { PageHeader } from "@/components/ops/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,6 +36,7 @@ export default async function ApiReferencePage() {
 
   return (
     <div className="space-y-6">
+      <AreaTabs area="settings" />
       <PageHeader
         title="API"
         description="Programmatic access to the same settlement, reconciliation and treasury primitives the console uses."
@@ -44,7 +46,7 @@ export default async function ApiReferencePage() {
         <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-medium text-slate-950">Base URL</p>
-            <p className="text-xs text-slate-500">All endpoints are scoped to your organization via a bearer API key.</p>
+            <p className="text-xs text-slate-500">Endpoints are organization-scoped. API keys are provisioned during partner onboarding — self-serve key management ships with production onboarding.</p>
           </div>
           <code className="rounded-md bg-slate-100 px-3 py-1.5 text-xs text-slate-700">https://api.inrsettle.com</code>
         </CardContent>

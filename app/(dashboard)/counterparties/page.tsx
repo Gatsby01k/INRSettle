@@ -1,4 +1,5 @@
 import { requireSession } from "@/lib/auth";
+import { AreaTabs } from "@/components/ops/area-tabs";
 import { COUNTERPARTIES, accountsForCounterparty } from "@/lib/treasury";
 import { formatCurrencyCompact, formatCurrencyFull } from "@/lib/utils";
 import { PageHeader } from "@/components/ops/page-header";
@@ -38,6 +39,7 @@ export default async function CounterpartiesPage() {
 
   return (
     <div className="space-y-6">
+      <AreaTabs area="providers" />
       <PageHeader
         title="Counterparties"
         description="Exchanges, PSPs and banking partners that settle across your corridors."

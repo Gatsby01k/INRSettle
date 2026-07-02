@@ -1,5 +1,6 @@
 import { Check, ShieldCheck } from "lucide-react";
 import { requireSession } from "@/lib/auth";
+import { AreaTabs } from "@/components/ops/area-tabs";
 import { prisma } from "@/lib/prisma";
 import { canApproveSettlement } from "@/lib/permissions";
 import { ACCESS_ROLES, DEMO_TEAM } from "@/lib/treasury";
@@ -44,6 +45,7 @@ export default async function TeamPage() {
 
   return (
     <div className="space-y-6">
+      <AreaTabs area="settings" />
       <PageHeader
         title="Team & access"
         description="Role-based access control for treasury, settlement, compliance and finance teams."

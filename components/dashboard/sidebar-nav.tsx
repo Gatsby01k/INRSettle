@@ -40,48 +40,23 @@ const ICONS: Record<string, typeof LayoutDashboard> = {
   "/settings": Settings,
 };
 
-const groups = [
-  {
-    label: "Operations",
-    items: [
-      { href: "/dashboard", label: "Overview" },
-      { href: "/quotes", label: "Quotes" },
-      { href: "/settlements", label: "Settlements" },
-      { href: "/reconciliation", label: "Reconciliation" },
-    ],
-  },
-  {
-    label: "Treasury",
-    items: [
-      { href: "/counterparties", label: "Counterparties" },
-      { href: "/accounts", label: "Accounts" },
-    ],
-  },
-  {
-    label: "Risk & Readiness",
-    items: [
-      { href: "/providers", label: "Provider readiness" },
-      { href: "/kyb", label: "KYB" },
-      { href: "/monitoring", label: "Monitoring" },
-      { href: "/pilot-readiness", label: "Pilot readiness" },
-    ],
-  },
-  {
-    label: "Evidence",
-    items: [
-      { href: "/reports", label: "Reports" },
-      { href: "/audit-logs", label: "Audit trail" },
-    ],
-  },
-  {
-    label: "Organization",
-    items: [
-      { href: "/team", label: "Team" },
-      { href: "/api-reference", label: "API" },
-      { href: "/settings", label: "Settings" },
-    ],
-  },
-];
+// Phase 1 IA — seven destinations, one flat list (source: lib/ops NAV_GROUPS).
+// Former pages are tabs inside Settlements / Providers / Settings.
+import { NAV_GROUPS } from "@/lib/ops";
+
+const groups = NAV_GROUPS;
+
+/** Sub-routes that should highlight a parent nav item. */
+const NAV_ALIAS: Record<string, string> = {
+  "/quotes": "/settlements",
+  "/counterparties": "/providers",
+  "/kyb": "/providers",
+  "/monitoring": "/providers",
+  "/pilot-readiness": "/providers",
+  "/team": "/settings",
+  "/accounts": "/settings",
+  "/api-reference": "/settings",
+};
 
 /**
  * Shared rail contents — reused by the fixed desktop sidebar and the mobile
@@ -111,12 +86,18 @@ export function SidebarContent({
       <nav className="ops-scroll flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Primary">
         {groups.map((group) => (
           <div key={group.label}>
-            <p className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35">
-              {group.label}
-            </p>
+            {groups.length > 1 ? (
+              <p className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35">
+                {group.label}
+              </p>
+            ) : null}
             <div className="space-y-0.5">
               {group.items.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const aliased = NAV_ALIAS[pathname] ?? pathname;
+                const active =
+                  pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`) ||
+                  aliased === item.href;
                 const Icon = ICONS[item.href] ?? LayoutDashboard;
                 return (
                   <Link
@@ -150,11 +131,13 @@ export function SidebarContent({
       </nav>
 
       <div className="border-t border-white/10 px-4 py-3.5">
-        <div className="flex items-center gap-2">
-          <span className="ops-pulse" />
-          <p className="text-[11px] font-medium text-white/55">Settlement controls enforced</p>
-        </div>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-white/35">Approval · proof · reconciliation · finality</p>
+        <p className="text-[11px] font-medium text-white/55">INRSettle Console · Private beta</p>
+        <a
+          href="/contact?intent=sales"
+          className="mt-1 inline-block text-[11px] text-white/35 transition-colors hover:text-white/60"
+        >
+          Contact support
+        </a>
       </div>
     </div>
   );

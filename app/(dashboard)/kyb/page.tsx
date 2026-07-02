@@ -9,13 +9,14 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { requireSession } from "@/lib/auth";
+import { AreaTabs } from "@/components/ops/area-tabs";
 import { KYB_COUNTERPARTIES, type CounterpartyKyb, type KybStatus } from "@/lib/kyb/mock";
 import { PageHeader } from "@/components/ops/page-header";
 import { cn } from "@/lib/utils";
 
 // KYB / Counterparty Readiness — UI-ONLY pilot control screen.
 // Renders static mock data from lib/kyb/mock.ts. No database writes, no
-// approval mutations, no provider calls. Decision buttons are disabled mocks.
+// approval mutations, no provider calls. Decisions run through the documented review process.
 
 const STATUS_CHIP: Record<KybStatus, string> = {
   "Not Started": "prs-chip--neutral",
@@ -31,29 +32,6 @@ const RISK_CHIP: Record<CounterpartyKyb["riskRating"], string> = {
   High: "prs-chip--blocked",
   Unrated: "prs-chip--neutral",
 };
-
-function MockDecisionButton({ label, tone }: { label: string; tone: "review" | "approve" | "block" }) {
-  const toneClass =
-    tone === "approve"
-      ? "border-[rgba(0,199,157,0.32)] bg-[rgba(0,199,157,0.1)] text-[#5ff0cf]"
-      : tone === "block"
-        ? "border-[rgba(255,122,122,0.32)] bg-[rgba(255,99,99,0.1)] text-[#ffb4b4]"
-        : "border-[rgba(242,173,35,0.32)] bg-[rgba(242,173,35,0.1)] text-[#ffd58a]";
-  return (
-    <button
-      type="button"
-      disabled
-      aria-disabled="true"
-      title="Mock control — decisions are recorded outside the app for now."
-      className={cn(
-        "inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold",
-        toneClass,
-      )}
-    >
-      {label}
-    </button>
-  );
-}
 
 function CounterpartyCard({ counterparty }: { counterparty: CounterpartyKyb }) {
   const gateDone = counterparty.eligibility.filter((item) => item.done).length;
@@ -154,19 +132,15 @@ function CounterpartyCard({ counterparty }: { counterparty: CounterpartyKyb }) {
           )}
         </div>
 
-        {/* 5. Decision panel */}
+        {/* 5. Decision policy */}
         <div className="prs-panel p-4">
           <p className="prs-eyebrow flex items-center gap-1.5">
-            <Gavel className="h-3 w-3" aria-hidden="true" /> Decision panel
+            <Gavel className="h-3 w-3" aria-hidden="true" /> Decision policy
           </p>
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            <MockDecisionButton label="Mark under review" tone="review" />
-            <MockDecisionButton label="Approve for shadow" tone="approve" />
-            <MockDecisionButton label="Block counterparty" tone="block" />
-          </div>
-          <p className="mt-2.5 text-[11px] leading-relaxed text-white/50">
-            Mock controls only — no database writes, no approval mutation. In production a decision would
-            require an operational role, write an audit event, and never enable live payouts by itself.
+          <p className="mt-2.5 text-xs leading-relaxed text-white/60">
+            KYB decisions (under review, approved for shadow, blocked) are recorded through the documented
+            review process. Every decision requires an operational role, writes an audit event, and never
+            enables live payouts by itself.
           </p>
         </div>
       </div>
@@ -179,6 +153,7 @@ export default async function KybPage() {
 
   return (
     <div className="space-y-6">
+      <AreaTabs area="providers" />
       <PageHeader
         title="KYB & counterparty readiness"
         description="KYB checklists, risk ratings, and the pilot eligibility gate — evaluated before any counterparty joins a controlled real-money shadow or live test."

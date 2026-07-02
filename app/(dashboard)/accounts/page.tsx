@@ -1,4 +1,5 @@
 import { requireSession } from "@/lib/auth";
+import { AreaTabs } from "@/components/ops/area-tabs";
 import { ACCOUNTS, availableBalance, counterpartiesForAccount } from "@/lib/treasury";
 import { formatCurrencyCompact, formatCurrencyFull } from "@/lib/utils";
 import { PageHeader } from "@/components/ops/page-header";
@@ -37,6 +38,7 @@ export default async function AccountsPage() {
 
   return (
     <div className="space-y-6">
+      <AreaTabs area="settings" />
       <PageHeader
         title="Accounts"
         description="Reference balances you record for operations. INRSettle holds no funds and provides no liquidity."

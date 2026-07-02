@@ -10,6 +10,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { requireSession } from "@/lib/auth";
+import { AreaTabs } from "@/components/ops/area-tabs";
 import {
   FINALITY_PILLARS,
   FINAL_STATEMENT,
@@ -25,8 +26,8 @@ import { cn } from "@/lib/utils";
 
 // Pilot Readiness / Proof Pack — UI-ONLY readiness and evidence overview.
 // Renders static mock data from lib/pilot-readiness/mock.ts. No DB writes,
-// no provider calls, no fetch, no process.env reads. All buttons are
-// disabled mocks. This page cannot enable live operations.
+// no provider calls, no fetch, no process.env reads. This page cannot
+// enable live operations.
 
 const STATUS_CHIP: Record<ReadinessStatus, string> = {
   Pass: "prs-chip--ok",
@@ -40,25 +41,6 @@ const STATUS_VAL: Record<ReadinessStatus, string> = {
   Blocked: "prs-val--blocked",
 };
 
-function MockButton({ label, primary = false }: { label: string; primary?: boolean }) {
-  return (
-    <button
-      type="button"
-      disabled
-      aria-disabled="true"
-      title="Mock control — readiness review happens through the documented checklist process."
-      className={cn(
-        "inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold",
-        primary
-          ? "border-[rgba(0,199,157,0.32)] bg-[rgba(0,199,157,0.1)] text-[#5ff0cf]"
-          : "border-white/15 bg-white/[0.06] text-white/65",
-      )}
-    >
-      {label}
-    </button>
-  );
-}
-
 export default async function PilotReadinessPage() {
   await requireSession();
 
@@ -68,6 +50,7 @@ export default async function PilotReadinessPage() {
 
   return (
     <div className="space-y-6">
+      <AreaTabs area="providers" />
       <PageHeader
         title="Pilot readiness"
         description="Evidence pack for the controlled real-money shadow/live-test pilot — what is proven, what needs review, and what blocks go-live."
@@ -229,15 +212,10 @@ export default async function PilotReadinessPage() {
             <ClipboardCheck className="h-3 w-3" aria-hidden="true" /> Final readiness statement
           </p>
           <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-white/85">{FINAL_STATEMENT}</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <MockButton label="Review readiness package" primary />
-            <MockButton label="Export proof pack" />
-            <MockButton label="Start pilot review" />
-          </div>
-          <p className="mt-2.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-white/45">
+          <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-white/45">
             <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[#5ff0cf]" aria-hidden="true" />
-            Mock controls only — the readiness review runs through the documented checklist process
-            (docs/controlled-live-test-readiness.md), not through this page.
+            The readiness review itself runs through the documented checklist process; this page is the
+            evidence overview it draws on.
           </p>
         </div>
       </section>

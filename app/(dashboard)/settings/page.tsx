@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
+import { AreaTabs } from "@/components/ops/area-tabs";
 import { updateSettings } from "@/lib/domain";
 import { friendlyErrorMessage } from "@/lib/errors";
 import { canManageSettings } from "@/lib/permissions";
@@ -66,6 +67,7 @@ export default async function SettingsPage({
 
   return (
     <div className="space-y-6">
+      <AreaTabs area="settings" />
       <PageHeader title="Organization controls" description="Treasury policy, approval rules, integrations and audit retention for your organization." />
 
       {params.error ? <FlashMessage message={params.error} tone="error" /> : null}

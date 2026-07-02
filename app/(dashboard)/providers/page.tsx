@@ -7,9 +7,9 @@ import {
   Gauge,
   ListChecks,
   ShieldCheck,
-  Snowflake,
 } from "lucide-react";
 import { requireSession } from "@/lib/auth";
+import { AreaTabs } from "@/components/ops/area-tabs";
 import { PROVIDER_RISK_PROFILES, type ProviderRiskProfile, type ReadinessLabel } from "@/lib/provider-risk/mock";
 import { PageHeader } from "@/components/ops/page-header";
 import { cn } from "@/lib/utils";
@@ -214,12 +214,8 @@ function ProviderDecisionCard({ provider }: { provider: ProviderRiskProfile }) {
           <div className="prs-panel p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="prs-eyebrow flex items-center gap-1.5">
-                <Archive className="h-3 w-3" aria-hidden="true" /> Evidence vault
+                <Archive className="h-3 w-3" aria-hidden="true" /> Evidence on file
               </p>
-              <button type="button" className="prs-freeze-btn !px-2.5 !py-1.5 text-[11px]" disabled aria-disabled="true">
-                <Snowflake className="h-3 w-3" aria-hidden="true" />
-                Freeze provider
-              </button>
             </div>
             <ul className="mt-2 space-y-1">
               {provider.evidence.map((item) => (
@@ -233,9 +229,9 @@ function ProviderDecisionCard({ provider }: { provider: ProviderRiskProfile }) {
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-[10.5px] leading-relaxed text-white/40">
-              Freeze is a mock control — in production it would block new payout creation, keep status checks and
-              reporting available, and write an audit event.
+            <p className="mt-2 text-xs leading-relaxed text-white/40">
+              Freeze policy: new payouts to a provider stop automatically per the auto-freeze rule above; status
+              checks and reporting stay available, and the action is audit-logged.
             </p>
           </div>
         </div>
@@ -249,6 +245,7 @@ export default async function ProvidersPage() {
 
   return (
     <div className="space-y-4">
+      <AreaTabs area="providers" />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <PageHeader
           title="Provider readiness"
