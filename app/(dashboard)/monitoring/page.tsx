@@ -93,7 +93,7 @@ export default async function MonitoringPage() {
         <div className="relative flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold tracking-tight text-white">System health</h2>
+              <h2 className="text-lg font-semibold tracking-tight text-slate-950">System health</h2>
               {overall ? (
                 <span className={cn("prs-chip", HEALTH_CHIP[overall.status])}>
                   <Activity className="h-3 w-3" aria-hidden="true" />
@@ -101,7 +101,7 @@ export default async function MonitoringPage() {
                 </span>
               ) : null}
             </div>
-            <p className="mt-1 text-xs text-white/50">
+            <p className="mt-1 text-xs text-slate-500">
               {openIncidents} open incident{openIncidents === 1 ? "" : "s"} · live payouts disabled · sandbox rails only
             </p>
           </div>
@@ -110,10 +110,10 @@ export default async function MonitoringPage() {
           {SYSTEM_HEALTH.map((item) => (
             <div key={item.label} className="prs-panel p-3.5">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold text-white/85">{item.label}</p>
+                <p className="text-xs font-semibold text-slate-700">{item.label}</p>
                 <span className={cn("prs-chip", HEALTH_CHIP[item.status])}>{item.status}</span>
               </div>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-white/50">{item.detail}</p>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">{item.detail}</p>
             </div>
           ))}
         </div>
@@ -121,7 +121,7 @@ export default async function MonitoringPage() {
 
       {/* 2. Provider health */}
       <section className="prs-card p-5 sm:p-6" aria-label="Provider health">
-        <h2 className="relative text-lg font-semibold tracking-tight text-white">Provider health</h2>
+        <h2 className="relative text-lg font-semibold tracking-tight text-slate-950">Provider health</h2>
         <div className="relative mt-4 grid gap-3 lg:grid-cols-2">
           {PROVIDER_HEALTH.map((provider) => (
             <div key={provider.id} className="prs-panel p-4">
@@ -152,7 +152,7 @@ export default async function MonitoringPage() {
                 </div>
                 <div className="prs-passport-row">
                   <dt>Last successful check</dt>
-                  <dd className="text-white/85">{provider.lastSuccessfulCheck}</dd>
+                  <dd className="text-slate-700">{provider.lastSuccessfulCheck}</dd>
                 </div>
                 <div className="prs-passport-row">
                   <dt>Recent failures</dt>
@@ -161,7 +161,7 @@ export default async function MonitoringPage() {
                   </dd>
                 </div>
               </dl>
-              <p className="mt-2 text-[11px] leading-relaxed text-white/45">{provider.note}</p>
+              <p className="mt-2 text-[11px] leading-relaxed text-slate-400">{provider.note}</p>
             </div>
           ))}
         </div>
@@ -169,7 +169,7 @@ export default async function MonitoringPage() {
 
       {/* 3 + 4: rules and queue */}
       <section className="prs-card p-5 sm:p-6" aria-label="Incident rules and queue">
-        <h2 className="relative text-lg font-semibold tracking-tight text-white">Incidents</h2>
+        <h2 className="relative text-lg font-semibold tracking-tight text-slate-950">Incidents</h2>
         <div className="relative mt-4 grid gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           {/* Rules */}
           <div className="prs-panel p-4">
@@ -180,9 +180,9 @@ export default async function MonitoringPage() {
               {INCIDENT_RULES.map((rule) => (
                 <div key={rule.name} className="prs-gate-item">
                   <span className={cn("prs-chip shrink-0", SEVERITY_CHIP[rule.severity])}>{rule.severity}</span>
-                  <span className="text-white/75">
+                  <span className="text-slate-700">
                     {rule.name}
-                    <span className="block text-[11px] text-white/40">{rule.trigger}</span>
+                    <span className="block text-[11px] text-slate-400">{rule.trigger}</span>
                   </span>
                 </div>
               ))}
@@ -201,8 +201,8 @@ export default async function MonitoringPage() {
                   className="rounded-lg border border-white/[0.07] bg-white/[0.03] p-3"
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[11px] font-semibold tabular-nums text-white/40">{incident.id}</span>
-                    <p className="text-xs font-semibold text-white/90">{incident.title}</p>
+                    <span className="text-[11px] font-semibold tabular-nums text-slate-400">{incident.id}</span>
+                    <p className="text-xs font-semibold text-slate-900">{incident.title}</p>
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     <span className={cn("prs-chip", SEVERITY_CHIP[incident.severity])}>{incident.severity}</span>
@@ -210,10 +210,10 @@ export default async function MonitoringPage() {
                     <span className="prs-chip prs-chip--neutral">{incident.owner}</span>
                     <span className="prs-chip prs-chip--neutral">SLA: {incident.slaTimer}</span>
                   </div>
-                  <p className="mt-1.5 text-[11px] leading-relaxed text-white/60">
-                    <span className="font-semibold text-white/75">Recommended:</span> {incident.recommendedAction}
+                  <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
+                    <span className="font-semibold text-slate-700">Recommended:</span> {incident.recommendedAction}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-white/40">Related control: {incident.relatedControl}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-400">Related control: {incident.relatedControl}</p>
                 </div>
               ))}
             </div>
@@ -223,7 +223,7 @@ export default async function MonitoringPage() {
 
       {/* 5 + 6: freeze status and evidence readiness */}
       <section className="prs-card p-5 sm:p-6" aria-label="Freeze status and evidence readiness">
-        <h2 className="relative text-lg font-semibold tracking-tight text-white">Controls & evidence</h2>
+        <h2 className="relative text-lg font-semibold tracking-tight text-slate-950">Controls & evidence</h2>
         <div className="relative mt-4 grid gap-3 lg:grid-cols-2">
           {/* Kill switch / freeze status */}
           <div className="prs-panel p-4">
@@ -238,7 +238,7 @@ export default async function MonitoringPage() {
                 </div>
               ))}
             </dl>
-            <p className="mt-2 text-xs leading-relaxed text-white/50">
+            <p className="mt-2 text-xs leading-relaxed text-slate-500">
               Freeze policy: a freeze stops new payout creation, keeps status checks and reporting available,
               writes an audit event, and never enables live operations as a side effect.
             </p>
@@ -253,13 +253,13 @@ export default async function MonitoringPage() {
               {EVIDENCE_READINESS.map((item) => (
                 <li key={item.label} className="flex items-start gap-1.5 text-[12px] leading-snug">
                   {item.done ? (
-                    <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[#5ff0cf]" aria-hidden="true" />
+                    <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--status-ok)]" aria-hidden="true" />
                   ) : (
-                    <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-[#ffd58a]" aria-hidden="true" />
+                    <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-[var(--status-pending)]" aria-hidden="true" />
                   )}
-                  <span className="text-white/75">
+                  <span className="text-slate-700">
                     {item.label}
-                    <span className="block text-[11px] text-white/40">{item.detail}</span>
+                    <span className="block text-[11px] text-slate-400">{item.detail}</span>
                   </span>
                 </li>
               ))}

@@ -37,6 +37,8 @@ export type ReconciliationRow = {
   matchReason: string | null;
   confidence: number;
   exceptionReason: string | null;
+  /** How long the record has been open (e.g. "3d 4h"). */
+  age: string;
   valueDate: string;
   settlement: { publicId: string; reference: string } | null;
   suggestion: ReconciliationSuggestion | null;
@@ -102,7 +104,7 @@ function formatSource(source: string) {
 
 function queueContext(record: ReconciliationRow) {
   if (record.matchType === "EXCEPTION" && record.exceptionReason) {
-    return record.exceptionReason;
+    return `${record.exceptionReason} · open ${record.age}`;
   }
   if (record.matchType === "RESOLVED") {
     return "Reviewed · no settlement linked";
@@ -113,7 +115,7 @@ function queueContext(record: ReconciliationRow) {
   if (record.suggestion) {
     return `Suggested ${record.suggestion.publicId} · ${record.suggestion.confidence}% confidence`;
   }
-  return `${record.valueDate} · Awaiting match`;
+  return `${record.valueDate} · Awaiting match · open ${record.age}`;
 }
 
 function ConfidenceMeter({ confidence, prominent = false }: { confidence: number; prominent?: boolean }) {

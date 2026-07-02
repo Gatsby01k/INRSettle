@@ -18,7 +18,7 @@ import {
 import { buildLivePilotReadiness } from "@/lib/live-pilot";
 import { writeAuditLog } from "@/lib/audit";
 import { cn, formatCurrencyFull, formatDateTime } from "@/lib/utils";
-import { StatusBadge } from "@/components/ops/status-badge";
+import { StateIcon, StatusBadge } from "@/components/ops/status-badge";
 import { StatRow } from "@/components/ops/stat-row";
 import { PrintButton } from "@/components/ops/print-button";
 import { Button } from "@/components/ui/button";
@@ -311,6 +311,62 @@ export default async function SettlementReportPage({
 
         {/* Finality decision */}
         <DecisionBanner assessment={assessment} />
+
+        {/* Decision inputs — how the deterministic engine reached the decision.
+            Same inputs as lib/finality.ts; display only. */}
+        <div className="report-section p-4">
+          <SectionTitle>Decision inputs</SectionTitle>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {[
+              {
+                label: "Provider proof",
+                ok: Boolean(proof),
+                detail: proof
+                  ? `${proof.provider} · ${proof.providerStatus}${proof.utr ? ` · UTR ${proof.utr}` : " · no UTR"}`
+                  : "No provider proof recorded.",
+              },
+              {
+                label: "Independent reconciliation",
+                ok: Boolean(
+                  reconciliation &&
+                    reconciliation.status === "MATCHED" &&
+                    isIndependentReconciliationSource(reconciliation.source),
+                ),
+                detail: reconciliation
+                  ? isIndependentReconciliationSource(reconciliation.source)
+                    ? `${reconciliation.status} · ${RECONCILIATION_SOURCE_LABEL[reconciliation.source] ?? reconciliation.source}`
+                    : "Provider claim only — does not count toward finality."
+                  : "No independent record matched.",
+              },
+              {
+                label: "Recorded approval",
+                ok: approvalRecorded,
+                detail: approvalRecorded
+                  ? "Approval present in the audit trail."
+                  : "No approval recorded — required audit evidence.",
+              },
+              {
+                label: "Guardrails",
+                ok: !isShadowMode || (safety.withinCap && safety.livePayoutsDisabled),
+                detail: isShadowMode
+                  ? `${safety.withinCap ? "Within cap" : "Cap exceeded"} · live payouts ${safety.livePayoutsDisabled ? "disabled" : "ENABLED"}`
+                  : "Not applicable in demo mode.",
+              },
+            ].map((input) => (
+              <div key={input.label} className="flex items-start gap-2.5 rounded-lg border border-[var(--ops-line)] bg-white p-2.5">
+                <StateIcon state={input.ok ? "ok" : "pending"} label={`${input.label}: ${input.ok ? "verified" : "pending"}`} />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-900">{input.label}</p>
+                  <p className="text-xs leading-snug text-slate-500">{input.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2.5 text-xs leading-relaxed text-slate-400">
+            The finality decision and confidence are computed deterministically from these four inputs. The same
+            engine answers the API and the console — they can never disagree.
+          </p>
+        </div>
 
         {/* Mode + money movement + safety checklist */}
         <div className="report-section p-4">

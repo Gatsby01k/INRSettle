@@ -46,7 +46,7 @@ function CounterpartyCard({ counterparty }: { counterparty: CounterpartyKyb }) {
       <div className="relative flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-semibold tracking-tight text-white">{counterparty.name}</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-slate-950">{counterparty.name}</h2>
             <span className={cn("prs-chip", STATUS_CHIP[counterparty.status])}>
               <BadgeCheck className="h-3 w-3" aria-hidden="true" />
               {counterparty.status}
@@ -55,21 +55,21 @@ function CounterpartyCard({ counterparty }: { counterparty: CounterpartyKyb }) {
               Risk: {counterparty.riskRating}
             </span>
           </div>
-          <p className="mt-1 text-xs text-white/50">{counterparty.segment}</p>
-          <p className="mt-2 max-w-2xl text-[12.5px] leading-relaxed text-white/70">{counterparty.summary}</p>
+          <p className="mt-1 text-xs text-slate-500">{counterparty.segment}</p>
+          <p className="mt-2 max-w-2xl text-[12.5px] leading-relaxed text-slate-700">{counterparty.summary}</p>
         </div>
         <div className="w-full max-w-[230px] shrink-0 sm:w-[230px]">
           <div className="flex items-baseline justify-between">
             <span className="prs-eyebrow">Pilot eligibility</span>
-            <span className="text-xl font-semibold tabular-nums text-white">
+            <span className="text-xl font-semibold tabular-nums text-slate-950">
               {gateDone}
-              <span className="text-xs font-medium text-white/40">/{gateTotal}</span>
+              <span className="text-xs font-medium text-slate-400">/{gateTotal}</span>
             </span>
           </div>
           <div className="prs-score-track mt-1.5" role="img" aria-label={`Eligibility ${gateDone} of ${gateTotal}`}>
             <div className="prs-score-fill" style={{ width: `${Math.round((gateDone / gateTotal) * 100)}%` }} />
           </div>
-          <p className="mt-1.5 text-[11px] text-white/45">
+          <p className="mt-1.5 text-[11px] text-slate-400">
             {eligible ? "All gate items complete" : `${gateTotal - gateDone} gate item(s) open`}
             {counterparty.reviewOwner ? ` · review owner assigned` : " · no review owner"}
           </p>
@@ -103,9 +103,9 @@ function CounterpartyCard({ counterparty }: { counterparty: CounterpartyKyb }) {
                 <span className={cn("prs-gate-dot", item.done ? "prs-gate-dot--done" : "prs-gate-dot--open")}>
                   {item.done ? "✓" : "·"}
                 </span>
-                <span className={item.done ? "text-white/80" : "text-white/55"}>
+                <span className={item.done ? "text-slate-700" : "text-slate-500"}>
                   {item.label}
-                  {item.note ? <span className="block text-[11px] text-[#ffd58a]/80">{item.note}</span> : null}
+                  {item.note ? <span className="block text-[11px] text-[var(--status-pending)]">{item.note}</span> : null}
                 </span>
               </div>
             ))}
@@ -120,15 +120,15 @@ function CounterpartyCard({ counterparty }: { counterparty: CounterpartyKyb }) {
           {counterparty.missingItems.length ? (
             <ul className="mt-2 space-y-1.5">
               {counterparty.missingItems.map((item) => (
-                <li key={item} className="flex items-start gap-1.5 text-[12px] leading-snug text-white/70">
-                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-[#ffd58a]" aria-hidden="true" />
+                <li key={item} className="flex items-start gap-1.5 text-[12px] leading-snug text-slate-700">
+                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-[var(--status-pending)]" aria-hidden="true" />
                   {item}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="mt-2 flex items-start gap-1.5 text-[12px] text-white/70">
-              <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[#5ff0cf]" aria-hidden="true" />
+            <p className="mt-2 flex items-start gap-1.5 text-[12px] text-slate-700">
+              <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--status-ok)]" aria-hidden="true" />
               No outstanding items — readiness depends on the gate above.
             </p>
           )}
@@ -139,7 +139,7 @@ function CounterpartyCard({ counterparty }: { counterparty: CounterpartyKyb }) {
           <p className="prs-eyebrow flex items-center gap-1.5">
             <Gavel className="h-3 w-3" aria-hidden="true" /> Decision policy
           </p>
-          <p className="mt-2.5 text-xs leading-relaxed text-white/60">
+          <p className="mt-2.5 text-xs leading-relaxed text-slate-500">
             KYB decisions (under review, approved for shadow, blocked) are recorded through the documented
             review process. Every decision requires an operational role, writes an audit event, and never
             enables live payouts by itself.

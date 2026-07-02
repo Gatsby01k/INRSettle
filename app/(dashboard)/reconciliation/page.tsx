@@ -302,6 +302,13 @@ export default async function ReconciliationPage({
       matchReason,
       confidence,
       exceptionReason: record.exceptionReason,
+      // Queue aging (Phase 4.4): how long this record has been waiting.
+      age: (() => {
+        const hours = Math.max(0, Math.floor((Date.now() - record.createdAt.getTime()) / 3_600_000));
+        if (hours < 1) return "under 1h";
+        if (hours < 24) return `${hours}h`;
+        return `${Math.floor(hours / 24)}d ${hours % 24}h`;
+      })(),
       valueDate: formatDateTime(record.valueDate),
       settlement: record.settlement
         ? { publicId: record.settlement.publicId, reference: record.settlement.reference }

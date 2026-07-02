@@ -46,6 +46,7 @@ function ProviderDecisionCard({ provider }: { provider: ProviderRiskProfile }) {
   const gateTotal = provider.goLiveGate.length;
   // Pure display split of the existing passport rows.
   const verified = provider.passport.filter((f) => f.state === "ok" && f.label !== "Overall readiness");
+  const factorTotal = provider.passport.filter((f) => f.label !== "Overall readiness").length;
   const openIssues = provider.passport.filter((f) => f.state !== "ok" && f.label !== "Overall readiness");
   // Next actions: the first open gate items, verbatim from the snapshot.
   const nextActions = provider.goLiveGate.filter((item) => !item.done).slice(0, 4);
@@ -56,33 +57,37 @@ function ProviderDecisionCard({ provider }: { provider: ProviderRiskProfile }) {
       <div className="prs-panel relative flex flex-wrap items-center gap-x-5 gap-y-3 p-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-semibold tracking-tight text-white">{provider.name}</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-slate-950">{provider.name}</h2>
             <span className={cn("prs-chip", READINESS_CHIP[provider.overallReadiness])}>
               <ShieldCheck className="h-3 w-3" aria-hidden="true" />
               {provider.overallReadiness}
             </span>
           </div>
-          <p className="mt-1 text-xs text-white/50">{provider.rail}</p>
+          <p className="mt-1 text-xs text-slate-500">{provider.rail}</p>
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2">
           <div>
-            <p className="prs-eyebrow">Trust score</p>
+            <p className="prs-eyebrow">Readiness factors</p>
             <div className="mt-1 flex items-center gap-2.5">
-              <span className="text-2xl font-semibold tabular-nums leading-none text-white">
-                {provider.trustScore.score}
-                <span className="text-xs font-medium text-white/40">/100</span>
+              <span className="text-2xl font-semibold tabular-nums leading-none text-slate-950">
+                {verified.length}
+                <span className="text-xs font-medium text-slate-400">/{factorTotal} verified</span>
               </span>
-              <div className="prs-score-track w-24" role="img" aria-label={`Trust score ${provider.trustScore.score} of 100`}>
-                <div className="prs-score-fill" style={{ width: `${provider.trustScore.score}%` }} />
+              <div
+                className="prs-score-track w-24"
+                role="img"
+                aria-label={`${verified.length} of ${factorTotal} readiness factors verified`}
+              >
+                <div className="prs-score-fill" style={{ width: `${Math.round((verified.length / factorTotal) * 100)}%` }} />
               </div>
             </div>
           </div>
           <div>
             <p className="prs-eyebrow">Gate</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums leading-none text-white">
+            <p className="mt-1 text-2xl font-semibold tabular-nums leading-none text-slate-950">
               {gateDone}
-              <span className="text-xs font-medium text-white/40">/{gateTotal}</span>
+              <span className="text-xs font-medium text-slate-400">/{gateTotal}</span>
             </p>
           </div>
           <div>
@@ -95,19 +100,19 @@ function ProviderDecisionCard({ provider }: { provider: ProviderRiskProfile }) {
       </div>
 
       {/* ---- Recommended next actions (prominent) ---- */}
-      <div className="prs-panel relative mt-3 border-[rgba(242,173,35,0.25)] bg-[rgba(242,173,35,0.05)] p-4">
-        <p className="prs-eyebrow flex items-center gap-1.5 text-[#ffd58a]">
+      <div className="prs-panel relative mt-3 border-[var(--status-pending-line)] bg-[var(--status-pending-bg)] p-4">
+        <p className="prs-eyebrow flex items-center gap-1.5 text-[var(--status-pending)]">
           <ArrowRight className="h-3 w-3" aria-hidden="true" /> Recommended next actions
         </p>
         <ol className="mt-2 grid gap-1.5 sm:grid-cols-2">
           {nextActions.map((action, index) => (
-            <li key={action.label} className="flex items-start gap-2 text-[12.5px] leading-snug text-white/80">
-              <span className="mt-px flex h-[18px] w-5 shrink-0 items-center justify-center rounded-md bg-white/[0.08] text-[10px] font-bold text-[#ffd58a]">
+            <li key={action.label} className="flex items-start gap-2 text-[12.5px] leading-snug text-slate-700">
+              <span className="mt-px flex h-[18px] w-5 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[10px] font-bold text-[var(--status-pending)]">
                 {index + 1}
               </span>
               <span>
                 {action.label}
-                {action.note ? <span className="block text-[11px] text-white/45">{action.note}</span> : null}
+                {action.note ? <span className="block text-[11px] text-slate-400">{action.note}</span> : null}
               </span>
             </li>
           ))}
@@ -118,16 +123,16 @@ function ProviderDecisionCard({ provider }: { provider: ProviderRiskProfile }) {
       <div className="relative mt-3 grid gap-3 lg:grid-cols-2">
         {/* A. Verified */}
         <div className="prs-panel p-4">
-          <p className="prs-eyebrow flex items-center gap-1.5 text-[#5ff0cf]">
+          <p className="prs-eyebrow flex items-center gap-1.5 text-[var(--status-ok)]">
             <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Verified
           </p>
           <ul className="mt-2 space-y-1.5">
             {verified.map((field) => (
               <li key={field.label} className="flex items-start gap-1.5 text-[12px] leading-snug">
-                <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[#5ff0cf]" aria-hidden="true" />
-                <span className="text-white/80">
+                <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--status-ok)]" aria-hidden="true" />
+                <span className="text-slate-700">
                   {field.label}
-                  <span className="block text-[11px] text-white/40">{field.value}</span>
+                  <span className="block text-[11px] text-slate-400">{field.value}</span>
                 </span>
               </li>
             ))}
@@ -136,19 +141,19 @@ function ProviderDecisionCard({ provider }: { provider: ProviderRiskProfile }) {
 
         {/* B. Blockers / open issues */}
         <div className="prs-panel p-4">
-          <p className="prs-eyebrow flex items-center gap-1.5 text-[#ff9d9d]">
+          <p className="prs-eyebrow flex items-center gap-1.5 text-[var(--status-blocked)]">
             <CircleSlash className="h-3 w-3" aria-hidden="true" /> Blockers & open issues
           </p>
           <ul className="mt-2 space-y-1.5">
             {openIssues.map((field) => (
               <li key={field.label} className="flex items-start gap-1.5 text-[12px] leading-snug">
                 <AlertTriangle
-                  className={cn("mt-0.5 h-3 w-3 shrink-0", field.state === "blocked" ? "text-[#ff9d9d]" : "text-[#ffd58a]")}
+                  className={cn("mt-0.5 h-3 w-3 shrink-0", field.state === "blocked" ? "text-[var(--status-blocked)]" : "text-[var(--status-pending)]")}
                   aria-hidden="true"
                 />
-                <span className={field.state === "blocked" ? "text-[#ffb4b4]" : "text-white/75"}>
+                <span className={field.state === "blocked" ? "text-[var(--status-blocked)]" : "text-slate-700"}>
                   {field.label}
-                  <span className="block text-[11px] text-white/40">{field.value}</span>
+                  <span className="block text-[11px] text-slate-400">{field.value}</span>
                 </span>
               </li>
             ))}
@@ -172,9 +177,9 @@ function ProviderDecisionCard({ provider }: { provider: ProviderRiskProfile }) {
                 <span className={cn("prs-gate-dot", item.done ? "prs-gate-dot--done" : "prs-gate-dot--open")}>
                   {item.done ? "✓" : "·"}
                 </span>
-                <span className={item.done ? "text-white/80" : "text-white/55"}>
+                <span className={item.done ? "text-slate-700" : "text-slate-500"}>
                   {item.label}
-                  {item.note ? <span className="block text-[11px] text-[#ffd58a]/80">{item.note}</span> : null}
+                  {item.note ? <span className="block text-[11px] text-[var(--status-pending)]">{item.note}</span> : null}
                 </span>
               </div>
             ))}
@@ -190,15 +195,15 @@ function ProviderDecisionCard({ provider }: { provider: ProviderRiskProfile }) {
             <dl className="mt-2">
               <div className="prs-passport-row">
                 <dt>Max transaction</dt>
-                <dd className="text-white/85">{provider.exposure.maxTransaction}</dd>
+                <dd className="text-slate-700">{provider.exposure.maxTransaction}</dd>
               </div>
               <div className="prs-passport-row">
                 <dt>Daily exposure</dt>
-                <dd className="text-white/85">{provider.exposure.dailyExposure}</dd>
+                <dd className="text-slate-700">{provider.exposure.dailyExposure}</dd>
               </div>
               <div className="prs-passport-row">
                 <dt>Pending exposure</dt>
-                <dd className="text-white/85">{provider.exposure.pendingExposure}</dd>
+                <dd className="text-slate-700">{provider.exposure.pendingExposure}</dd>
               </div>
               <div className="prs-passport-row">
                 <dt>Unresolved payouts</dt>
@@ -207,8 +212,8 @@ function ProviderDecisionCard({ provider }: { provider: ProviderRiskProfile }) {
                 </dd>
               </div>
             </dl>
-            <p className="mt-2 text-[11px] leading-relaxed text-white/45">
-              <span className="font-semibold text-white/60">Auto-freeze:</span> {provider.exposure.autoFreezeRule}
+            <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+              <span className="font-semibold text-slate-500">Auto-freeze:</span> {provider.exposure.autoFreezeRule}
             </p>
           </div>
 
@@ -223,15 +228,15 @@ function ProviderDecisionCard({ provider }: { provider: ProviderRiskProfile }) {
               {provider.evidence.map((item) => (
                 <li key={item.label} className="flex items-start gap-1.5 text-[11.5px] leading-snug">
                   {item.state === "received" ? (
-                    <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[#5ff0cf]" aria-hidden="true" />
+                    <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--status-ok)]" aria-hidden="true" />
                   ) : (
-                    <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-[#ff9d9d]" aria-hidden="true" />
+                    <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-[var(--status-blocked)]" aria-hidden="true" />
                   )}
-                  <span className={item.state === "received" ? "text-white/70" : "text-[#ff9d9d]/90"}>{item.label}</span>
+                  <span className={item.state === "received" ? "text-slate-700" : "text-[var(--status-blocked)]"}>{item.label}</span>
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-xs leading-relaxed text-white/40">
+            <p className="mt-2 text-xs leading-relaxed text-slate-400">
               Freeze policy: new payouts to a provider stop automatically per the auto-freeze rule above; status
               checks and reporting stay available, and the action is audit-logged.
             </p>
@@ -265,7 +270,9 @@ export default async function ProvidersPage() {
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">{provider.name}</p>
                   <p className="text-xs font-semibold text-slate-700">
-                    {provider.trustScore.score}/100 · gate {gateDone}/{provider.goLiveGate.length}
+                    {provider.passport.filter((f) => f.state === "ok" && f.label !== "Overall readiness").length}/
+                    {provider.passport.filter((f) => f.label !== "Overall readiness").length} factors · gate{" "}
+                    {gateDone}/{provider.goLiveGate.length}
                   </p>
                 </div>
                 <span

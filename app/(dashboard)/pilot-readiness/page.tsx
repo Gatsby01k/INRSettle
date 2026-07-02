@@ -72,14 +72,14 @@ export default async function PilotReadinessPage() {
       <section className="prs-card p-5 sm:p-6" aria-label="Core principle">
         <div className="relative">
           <p className="prs-eyebrow">Core principle</p>
-          <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-white">
+          <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-slate-950">
             Payment completed ≠ settlement finalized. Provider completed ≠ ready to finalize.
           </h2>
-          <p className="mt-1 text-xs text-white/50">Settlement finality requires all six pillars to agree:</p>
+          <p className="mt-1 text-xs text-slate-500">Settlement finality requires all six pillars to agree:</p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {FINALITY_PILLARS.map((pillar, index) => (
               <span key={pillar} className="prs-chip prs-chip--neutral">
-                <span className="text-white/35">{index + 1}</span> {pillar}
+                <span className="text-slate-400">{index + 1}</span> {pillar}
               </span>
             ))}
           </div>
@@ -89,7 +89,7 @@ export default async function PilotReadinessPage() {
       {/* 1. Readiness overview cards */}
       <section className="prs-card p-5 sm:p-6" aria-label="Readiness overview">
         <div className="relative flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold tracking-tight text-white">Readiness overview</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-slate-950">Readiness overview</h2>
           <div className="flex flex-wrap gap-1.5">
             <span className="prs-chip prs-chip--ok">{passCount} Pass</span>
             <span className="prs-chip prs-chip--pending">{reviewCount} Needs Review</span>
@@ -100,15 +100,15 @@ export default async function PilotReadinessPage() {
           {READINESS_CARDS.map((card) => (
             <div key={card.id} className="prs-panel p-3.5">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold text-white/90">{card.title}</p>
+                <p className="text-xs font-semibold text-slate-900">{card.title}</p>
                 <span className={cn("prs-chip", STATUS_CHIP[card.status])}>{card.status}</span>
               </div>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-white/55">{card.explanation}</p>
-              <p className="mt-1.5 text-[10px] text-white/40">
-                Owner: <span className="text-white/60">{card.owner}</span>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">{card.explanation}</p>
+              <p className="mt-1.5 text-[10px] text-slate-400">
+                Owner: <span className="text-slate-500">{card.owner}</span>
               </p>
-              <p className="text-[10px] text-white/40">
-                Evidence: <span className="text-white/60">{card.evidence}</span>
+              <p className="text-[10px] text-slate-400">
+                Evidence: <span className="text-slate-500">{card.evidence}</span>
               </p>
             </div>
           ))}
@@ -117,14 +117,14 @@ export default async function PilotReadinessPage() {
 
       {/* 3. Go / No-Go matrix */}
       <section className="prs-card p-5 sm:p-6" aria-label="Go / No-Go matrix">
-        <h2 className="relative flex items-center gap-2 text-lg font-semibold tracking-tight text-white">
-          <Scale className="h-4 w-4 text-white/50" aria-hidden="true" /> Go / No-Go matrix
+        <h2 className="relative flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-950">
+          <Scale className="h-4 w-4 text-slate-500" aria-hidden="true" /> Go / No-Go matrix
         </h2>
-        <p className="relative mt-1 text-xs text-white/45">A single Blocked row stops the pilot.</p>
+        <p className="relative mt-1 text-xs text-slate-400">A single Blocked row stops the pilot.</p>
         <div className="relative mt-3 overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-[12px]">
             <thead>
-              <tr className="border-b border-white/10 text-[10px] font-bold uppercase tracking-[0.08em] text-white/40">
+              <tr className="border-b border-slate-200 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
                 <th className="py-2 pr-3">Area</th>
                 <th className="py-2 pr-3">Required state</th>
                 <th className="py-2 pr-3">Status</th>
@@ -134,14 +134,14 @@ export default async function PilotReadinessPage() {
             </thead>
             <tbody>
               {GO_NO_GO.map((row) => (
-                <tr key={row.area} className="border-b border-white/[0.06]">
-                  <td className="py-2 pr-3 font-semibold text-white/85">{row.area}</td>
-                  <td className="py-2 pr-3 text-white/55">{row.requiredState}</td>
+                <tr key={row.area} className="border-b border-slate-100">
+                  <td className="py-2 pr-3 font-semibold text-slate-700">{row.area}</td>
+                  <td className="py-2 pr-3 text-slate-500">{row.requiredState}</td>
                   <td className="py-2 pr-3">
                     <span className={cn("prs-chip", STATUS_CHIP[row.status])}>{row.status}</span>
                   </td>
-                  <td className="py-2 pr-3 text-white/55">{row.evidence}</td>
-                  <td className="py-2 text-white/55">{row.owner}</td>
+                  <td className="py-2 pr-3 text-slate-500">{row.evidence}</td>
+                  <td className="py-2 text-slate-500">{row.owner}</td>
                 </tr>
               ))}
             </tbody>
@@ -152,28 +152,28 @@ export default async function PilotReadinessPage() {
       {/* 4 + 5: documents and limits */}
       <div className="grid gap-3 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <section className="prs-card p-5 sm:p-6" aria-label="Proof documents">
-          <h2 className="relative flex items-center gap-2 text-lg font-semibold tracking-tight text-white">
-            <Archive className="h-4 w-4 text-white/50" aria-hidden="true" /> Proof documents
+          <h2 className="relative flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-950">
+            <Archive className="h-4 w-4 text-slate-500" aria-hidden="true" /> Proof documents
           </h2>
           <div className="relative mt-3 grid gap-2.5 sm:grid-cols-2">
             {PROOF_DOCUMENTS.map((doc) => (
               <div key={doc.id} className="prs-panel p-3.5">
-                <p className="flex items-center gap-1.5 text-xs font-semibold text-white/90">
-                  <FileText className="h-3 w-3 shrink-0 text-white/45" aria-hidden="true" />
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-900">
+                  <FileText className="h-3 w-3 shrink-0 text-slate-400" aria-hidden="true" />
                   {doc.title}
                 </p>
-                <p className="mt-1 font-mono text-[10px] text-white/35">{doc.path}</p>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-white/55">{doc.summary}</p>
+                <p className="mt-1 font-mono text-[10px] text-slate-400">{doc.path}</p>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">{doc.summary}</p>
               </div>
             ))}
           </div>
         </section>
 
         <section className="prs-card p-5 sm:p-6" aria-label="Pilot limits">
-          <h2 className="relative flex items-center gap-2 text-lg font-semibold tracking-tight text-white">
-            <Gauge className="h-4 w-4 text-white/50" aria-hidden="true" /> Pilot limits
+          <h2 className="relative flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-950">
+            <Gauge className="h-4 w-4 text-slate-500" aria-hidden="true" /> Pilot limits
           </h2>
-          <p className="relative mt-1 text-xs text-white/45">
+          <p className="relative mt-1 text-xs text-slate-400">
             To be agreed and signed before go — software caps must match.
           </p>
           <dl className="relative mt-2">
@@ -189,18 +189,18 @@ export default async function PilotReadinessPage() {
 
       {/* 6. Stop conditions */}
       <section className="prs-card p-5 sm:p-6" aria-label="Stop conditions">
-        <h2 className="relative flex items-center gap-2 text-lg font-semibold tracking-tight text-white">
-          <OctagonAlert className="h-4 w-4 text-white/50" aria-hidden="true" /> Stop conditions
+        <h2 className="relative flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-950">
+          <OctagonAlert className="h-4 w-4 text-slate-500" aria-hidden="true" /> Stop conditions
         </h2>
-        <p className="relative mt-1 text-xs text-white/45">
+        <p className="relative mt-1 text-xs text-slate-400">
           Any one stops the pilot immediately — no new transactions; in-flight ones monitored to completion.
         </p>
         <div className="relative mt-3 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
           {STOP_CONDITIONS.map((condition, index) => (
-            <div key={condition} className="flex items-start gap-1.5 text-[12px] text-white/70">
-              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-[#ffd58a]" aria-hidden="true" />
+            <div key={condition} className="flex items-start gap-1.5 text-[12px] text-slate-700">
+              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-[var(--status-pending)]" aria-hidden="true" />
               <span>
-                <span className="text-white/35">{String(index + 1).padStart(2, "0")}</span> {condition}
+                <span className="text-slate-400">{String(index + 1).padStart(2, "0")}</span> {condition}
               </span>
             </div>
           ))}
@@ -213,9 +213,9 @@ export default async function PilotReadinessPage() {
           <p className="prs-eyebrow flex items-center gap-1.5">
             <ClipboardCheck className="h-3 w-3" aria-hidden="true" /> Final readiness statement
           </p>
-          <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-white/85">{FINAL_STATEMENT}</p>
-          <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-white/45">
-            <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[#5ff0cf]" aria-hidden="true" />
+          <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-slate-700">{FINAL_STATEMENT}</p>
+          <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-slate-400">
+            <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--status-ok)]" aria-hidden="true" />
             The readiness review itself runs through the documented checklist process; this page is the
             evidence overview it draws on.
           </p>
