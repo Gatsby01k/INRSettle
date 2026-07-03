@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Check, CheckCircle2, FileCheck2, Scale, ShieldCheck } from "lucide-react";
-import { NO_FUNDS_DISCLAIMER, THESIS } from "@/lib/copy";
+import { NO_FUNDS_DISCLAIMER } from "@/lib/copy";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -81,12 +81,12 @@ const CONTROLS = [
 function CtaPair({ className }: { className?: string }) {
   return (
     <div className={cn("flex flex-wrap items-center gap-2.5", className)}>
-      <Link href="/contact?intent=access" className={cn(buttonVariants({ variant: "primary", size: "default" }))}>
+      <Link href="/contact?intent=access" className={cn(buttonVariants({ variant: "primary", size: "default" }), "lp-cta-primary")}>
         Start a pilot
       </Link>
       <Link
         href="/sample-report"
-        className={cn(buttonVariants({ variant: "outline", size: "default" }), "inline-flex items-center gap-1.5")}
+        className={cn(buttonVariants({ variant: "outline", size: "default" }), "lp-arrow-link inline-flex items-center gap-1.5")}
       >
         View a sample report
         <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -98,8 +98,10 @@ function CtaPair({ className }: { className?: string }) {
 /** The hero artifact: a faithful miniature of the product's actual output. */
 function ReportArtifact() {
   return (
-    <div className="relative">
-      <div className="rounded-2xl border border-[var(--ops-line)] bg-white p-5 shadow-ops-md">
+    <div className="lp-artifact relative">
+      <div className="lp-sheet lp-sheet--b" aria-hidden="true" />
+      <div className="lp-sheet lp-sheet--a" aria-hidden="true" />
+      <div className="lp-artifact-card rounded-2xl border border-[var(--ops-line)] bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 pb-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
@@ -107,7 +109,7 @@ function ReportArtifact() {
             </p>
             <p className="mt-0.5 text-base font-semibold text-slate-950">SET-8F42K1</p>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--status-ok-line)] bg-[var(--status-ok-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--status-ok)]">
+          <span className="lp-verified inline-flex items-center gap-1.5 rounded-full border border-[var(--status-ok-line)] bg-[var(--status-ok-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--status-ok)]">
             <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />
             Ready to finalize
           </span>
@@ -120,7 +122,7 @@ function ReportArtifact() {
             { k: "Approval", v: "Dual-control · recorded in audit trail", ok: true },
             { k: "Finality decision", v: "All evidence agrees · low risk", ok: true },
           ].map((row) => (
-            <div key={row.k} className="flex items-start gap-2.5">
+            <div key={row.k} className="lp-row flex items-start gap-2.5">
               <span className="mt-0.5 inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-[var(--status-ok-bg)] text-[var(--status-ok)] ring-1 ring-inset ring-[var(--status-ok-line)]">
                 <Check className="h-3 w-3" strokeWidth={2.5} aria-hidden="true" />
               </span>
@@ -154,33 +156,32 @@ export default function HomePage() {
 
       <main>
         {/* ── Hero ──────────────────────────────────────────────────────── */}
-        <section className="relative overflow-hidden">
-          <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(60%_100%_at_50%_0%,rgba(0,199,157,0.07),transparent)]"
-            aria-hidden="true"
-          />
+        <section className="lp-hero relative overflow-hidden">
+          <div className="lp-hero-light pointer-events-none" aria-hidden="true" />
           <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:pb-24 lg:pt-20">
             <div>
-              <p className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ops-line)] bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+              <p className="lp-reveal lp-d1 inline-flex items-center gap-1.5 rounded-full border border-[var(--ops-line)] bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
                 Private beta — with selected payout and treasury teams
               </p>
-              <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">
-                {THESIS}
+              {/* Visual markup of THESIS — keep wording in sync with lib/copy.ts */}
+              <h1 className="lp-reveal lp-d2 mt-5 text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">
+                <span className="lp-ink">Payment completed</span> <span className="lp-neq">≠</span>{" "}
+                <span className="lp-ink">settlement finalized.</span>
               </h1>
-              <p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-600">
+              <p className="lp-reveal lp-d3 mt-5 max-w-xl text-lg leading-relaxed text-slate-600">
                 INRSettle is the control layer around INR payout rails. Every settlement carries provider
                 proof, an independently matched bank record, a recorded approval and an append-only audit
                 trail — before anyone calls it final.
               </p>
-              <CtaPair className="mt-7" />
-              <p className="mt-5 text-sm text-slate-400">{NO_FUNDS_DISCLAIMER}</p>
+              <CtaPair className="lp-reveal lp-d4 mt-7" />
+              <p className="lp-reveal lp-d5 mt-5 text-sm text-slate-400">{NO_FUNDS_DISCLAIMER}</p>
             </div>
             <ReportArtifact />
           </div>
         </section>
 
         {/* ── The problem ───────────────────────────────────────────────── */}
-        <section className="border-y border-[var(--ops-line)] bg-slate-50/60">
+        <section className="lp-view border-y border-[var(--ops-line)] bg-slate-50/60">
           <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
             <div className="max-w-3xl">
               <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -199,7 +200,7 @@ export default function HomePage() {
         </section>
 
         {/* ── How it works ─────────────────────────────────────────────── */}
-        <section id="how-it-works" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16 sm:px-6">
+        <section id="how-it-works" className="lp-view mx-auto max-w-6xl scroll-mt-20 px-4 py-16 sm:px-6">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">One loop, seven checkpoints.</h2>
           <p className="mt-3 max-w-2xl text-slate-600">
             Every settlement moves through the same controlled sequence — the same loop you&rsquo;ll see live
@@ -209,8 +210,8 @@ export default function HomePage() {
           </p>
           <ol className="mt-8 grid gap-px overflow-hidden rounded-2xl border border-[var(--ops-line)] bg-[var(--ops-line)] sm:grid-cols-2 lg:grid-cols-7">
             {LOOP.map((item, index) => (
-              <li key={item.step} className="bg-white p-4">
-                <span className="text-xs font-semibold tabular-nums text-[var(--status-ok)]">
+              <li key={item.step} className="lp-step bg-white p-4">
+                <span className="lp-step-num text-xs font-semibold tabular-nums">
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <p className="mt-1.5 text-sm font-semibold leading-snug text-slate-950">{item.step}</p>
@@ -221,7 +222,7 @@ export default function HomePage() {
         </section>
 
         {/* ── Platform surfaces ────────────────────────────────────────── */}
-        <section id="platform" className="border-t border-[var(--ops-line)] bg-slate-50/60">
+        <section id="platform" className="lp-view border-t border-[var(--ops-line)] bg-slate-50/60">
           <div className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16 sm:px-6">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               Three surfaces. One standard of evidence.
@@ -230,8 +231,8 @@ export default function HomePage() {
               {SURFACES.map((surface) => {
                 const Icon = surface.icon;
                 return (
-                  <div key={surface.title} className="rounded-2xl border border-[var(--ops-line)] bg-white p-6">
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--status-ok-bg)] text-[var(--status-ok)] ring-1 ring-inset ring-[var(--status-ok-line)]">
+                  <div key={surface.title} className="lp-card rounded-2xl border border-[var(--ops-line)] bg-white p-6">
+                    <span className="lp-card-icon inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--status-ok-bg)] text-[var(--status-ok)] ring-1 ring-inset ring-[var(--status-ok-line)]">
                       <Icon className="h-5 w-5" aria-hidden="true" />
                     </span>
                     <h3 className="mt-4 text-lg font-semibold tracking-tight">{surface.title}</h3>
@@ -252,7 +253,7 @@ export default function HomePage() {
         </section>
 
         {/* ── Who it's for ─────────────────────────────────────────────── */}
-        <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <section className="lp-view mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Built for teams that have to prove it settled.
           </h2>
@@ -262,7 +263,7 @@ export default function HomePage() {
           </p>
           <dl className="mt-8 grid gap-x-10 gap-y-6 sm:grid-cols-2">
             {AUDIENCES.map((audience) => (
-              <div key={audience.who} className="border-l-2 border-[var(--status-ok-line)] pl-4">
+              <div key={audience.who} className="lp-rule border-l-2 border-[var(--status-ok-line)] pl-4">
                 <dt className="text-[15px] font-semibold text-slate-950">{audience.who}</dt>
                 <dd className="mt-1 text-sm leading-relaxed text-slate-600">{audience.need}</dd>
               </div>
@@ -271,14 +272,14 @@ export default function HomePage() {
         </section>
 
         {/* ── Controls strip ───────────────────────────────────────────── */}
-        <section className="border-y border-[var(--ops-line)] bg-slate-50/60">
+        <section className="lp-view border-y border-[var(--ops-line)] bg-slate-50/60">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-3 px-4 py-8 sm:px-6">
             <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
               <ShieldCheck className="h-4 w-4 text-[var(--status-ok)]" aria-hidden="true" />
               Enforced, not optional
             </span>
             {CONTROLS.map((control) => (
-              <span key={control} className="text-sm font-medium text-slate-700">
+              <span key={control} className="lp-ctrl text-sm font-medium text-slate-700">
                 {control}
               </span>
             ))}
@@ -286,7 +287,7 @@ export default function HomePage() {
         </section>
 
         {/* ── Closing CTA ──────────────────────────────────────────────── */}
-        <section className="mx-auto max-w-6xl px-4 py-20 text-center sm:px-6">
+        <section className="lp-view mx-auto max-w-6xl px-4 py-20 text-center sm:px-6">
           <h2 className="mx-auto max-w-2xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
             Prove your settlements are actually final.
           </h2>

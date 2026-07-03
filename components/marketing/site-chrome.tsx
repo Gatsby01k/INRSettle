@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--ops-line)] bg-white/85 backdrop-blur-xl">
+    <header className="lp-glass sticky top-0 z-40">
       <nav
         className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6"
         aria-label="Primary"

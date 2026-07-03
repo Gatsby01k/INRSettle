@@ -5537,3 +5537,195 @@ details[open] > .reconciliation-details-content {
 .mkt-legacy .legal ul { padding-left: 1.25rem; }
 .mkt-legacy .narrow { max-width: 46rem; }
 .mkt-legacy .seo-cta { margin-top: 1.5rem; }
+
+/* =====================================================================
+   LANDING CRAFT — Creative Director pass.
+   Lighting, depth, entrance choreography and micro-interactions for the
+   public landing. Pure CSS: no JS, no loops that never end, everything
+   inside prefers-reduced-motion guards. The material story: the page is
+   a lit room; the report is a physical document lying on it.
+   ===================================================================== */
+
+/* ── Signature easing ─────────────────────────────────────────────── */
+:root {
+  --lp-ease-out: cubic-bezier(0.16, 1, 0.3, 1);      /* decisive, expensive */
+  --lp-ease-spring: cubic-bezier(0.34, 1.3, 0.5, 1); /* gentle overshoot */
+}
+
+/* ── Glass nav (all public pages) ─────────────────────────────────── */
+.lp-glass {
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid rgba(7, 17, 31, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* ── Hero lighting: key light from above, horizon, paper grain ─────── */
+.lp-hero { position: relative; isolation: isolate; }
+.lp-hero-light {
+  position: absolute; inset: 0; z-index: -2; pointer-events: none;
+  background:
+    radial-gradient(52% 42% at 24% -6%, rgba(0, 199, 157, 0.10), transparent 68%),
+    radial-gradient(46% 38% at 82% 4%, rgba(11, 180, 196, 0.08), transparent 66%),
+    radial-gradient(90% 60% at 50% -20%, rgba(7, 17, 31, 0.05), transparent 70%),
+    linear-gradient(180deg, #fbfdfd 0%, #ffffff 55%);
+}
+.lp-hero-light::before {
+  /* fine dot grid, fading toward the fold */
+  content: ""; position: absolute; inset: 0;
+  background-image: radial-gradient(rgba(7, 17, 31, 0.055) 1px, transparent 1.3px);
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(75% 65% at 50% 0%, #000 30%, transparent 78%);
+  mask-image: radial-gradient(75% 65% at 50% 0%, #000 30%, transparent 78%);
+}
+.lp-hero-light::after {
+  /* photographic grain — the "printed" feel, nearly subliminal */
+  content: ""; position: absolute; inset: 0; opacity: 0.5; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.03 0 0 0 0 0.07 0 0 0 0 0.12 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── Ink & the ≠ mark ─────────────────────────────────────────────── */
+.lp-ink {
+  background: linear-gradient(180deg, #020617 55%, #334155 130%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.lp-neq {
+  color: var(--status-ok);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8), 0 0 28px rgba(0, 199, 157, 0.35);
+}
+
+/* ── Entrance choreography (load) ─────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-reveal { opacity: 0; animation: lpRise 0.9s var(--lp-ease-out) forwards; }
+  .lp-d1 { animation-delay: 0.05s; }
+  .lp-d2 { animation-delay: 0.14s; }
+  .lp-d3 { animation-delay: 0.24s; }
+  .lp-d4 { animation-delay: 0.34s; }
+  .lp-d5 { animation-delay: 0.46s; }
+  @keyframes lpRise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+/* ── The document: paper stack, key shadow, settle-in ─────────────── */
+.lp-artifact { perspective: 1400px; }
+.lp-sheet {
+  position: absolute; inset: 0; border-radius: 1rem; pointer-events: none;
+  border: 1px solid rgba(7, 17, 31, 0.07); background: #fff;
+}
+.lp-sheet--a { transform: rotate(1.4deg) translate(7px, 9px); opacity: 0.75; }
+.lp-sheet--b { transform: rotate(-1.8deg) translate(-8px, 15px); opacity: 0.45; }
+.lp-artifact-card {
+  position: relative;
+  transform: rotateX(2.2deg) rotateY(-2.6deg);
+  transform-style: preserve-3d;
+  transition: transform 0.7s var(--lp-ease-out), box-shadow 0.7s var(--lp-ease-out);
+  box-shadow:
+    0 1px 2px rgba(7, 17, 31, 0.06),
+    0 12px 24px -8px rgba(7, 17, 31, 0.10),
+    0 44px 80px -24px rgba(7, 17, 31, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.lp-artifact:hover .lp-artifact-card {
+  transform: rotateX(0deg) rotateY(0deg) translateY(-3px);
+  box-shadow:
+    0 1px 2px rgba(7, 17, 31, 0.05),
+    0 18px 34px -10px rgba(7, 17, 31, 0.12),
+    0 60px 110px -28px rgba(7, 17, 31, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.lp-artifact-card::before {
+  /* top sheen — light catching the sheet's edge */
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 1px; border-radius: 1rem 1rem 0 0;
+  background: linear-gradient(90deg, transparent 8%, rgba(0, 199, 157, 0.45) 30%, rgba(11, 180, 196, 0.4) 60%, transparent 92%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lp-artifact { opacity: 0; animation: lpDoc 1.1s var(--lp-ease-out) 0.42s forwards; }
+  @keyframes lpDoc {
+    from { opacity: 0; transform: translateY(30px) scale(0.975); }
+    to { opacity: 1; transform: none; }
+  }
+  .lp-row { opacity: 0; animation: lpRise 0.6s var(--lp-ease-out) forwards; }
+  .lp-row:nth-child(1) { animation-delay: 0.9s; }
+  .lp-row:nth-child(2) { animation-delay: 1.02s; }
+  .lp-row:nth-child(3) { animation-delay: 1.14s; }
+  .lp-row:nth-child(4) { animation-delay: 1.26s; }
+  .lp-verified { animation: lpVerify 0.55s var(--lp-ease-spring) 1.42s backwards; }
+  @keyframes lpVerify {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}
+@media (max-width: 1023px) {
+  .lp-artifact-card { transform: none; }
+  .lp-sheet--a { transform: rotate(1deg) translate(5px, 7px); }
+  .lp-sheet--b { display: none; }
+}
+
+/* ── Scroll choreography (modern browsers; others see content) ────── */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .lp-view {
+      animation: lpViewIn 1s var(--lp-ease-out) both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 42%;
+    }
+    @keyframes lpViewIn {
+      from { opacity: 0.01; transform: translateY(26px); }
+      to { opacity: 1; transform: none; }
+    }
+  }
+}
+
+/* ── Micro-interactions ───────────────────────────────────────────── */
+/* Loop checkpoints: cells respond individually, index lights up */
+.lp-step { position: relative; transition: background-color 0.35s var(--lp-ease-out), transform 0.35s var(--lp-ease-out); }
+.lp-step:hover { background: #fbfdfd; transform: translateY(-2px); }
+.lp-step:hover .lp-step-num { background: var(--status-ok); color: #fff; transform: scale(1.12); }
+.lp-step-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.5rem; height: 1.5rem; padding: 0 0.35rem; border-radius: 9999px;
+  background: var(--status-ok-bg); color: var(--status-ok);
+  transition: background-color 0.3s var(--lp-ease-out), color 0.3s var(--lp-ease-out), transform 0.3s var(--lp-ease-spring);
+}
+
+/* Platform surfaces: lift, border light, icon nod */
+.lp-card {
+  transition: transform 0.45s var(--lp-ease-out), box-shadow 0.45s var(--lp-ease-out), border-color 0.45s var(--lp-ease-out);
+}
+.lp-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 199, 157, 0.35);
+  box-shadow: 0 1px 2px rgba(7, 17, 31, 0.04), 0 24px 48px -16px rgba(7, 17, 31, 0.14), 0 0 0 1px rgba(0, 199, 157, 0.08);
+}
+.lp-card .lp-card-icon { transition: transform 0.45s var(--lp-ease-spring); }
+.lp-card:hover .lp-card-icon { transform: translateY(-2px) rotate(-3deg) scale(1.06); }
+
+/* Audience rules: the border grows and warms */
+.lp-rule { transition: border-color 0.35s var(--lp-ease-out), padding-left 0.35s var(--lp-ease-out); }
+.lp-rule:hover { border-color: var(--status-ok); padding-left: 1.25rem; }
+
+/* Primary CTA: sheen sweep on hover */
+.lp-cta-primary { position: relative; overflow: hidden; }
+.lp-cta-primary::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
+  transform: translateX(-120%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lp-cta-primary:hover::after { transition: transform 0.7s var(--lp-ease-out); transform: translateX(120%); }
+}
+
+/* Inline arrows nudge */
+.lp-arrow-link .lucide, .lp-arrow-link svg { transition: transform 0.3s var(--lp-ease-spring); }
+.lp-arrow-link:hover .lucide, .lp-arrow-link:hover svg { transform: translateX(3px); }
+
+/* Controls strip: underline draws in */
+.lp-ctrl { position: relative; padding-bottom: 2px; }
+.lp-ctrl::after {
+  content: ""; position: absolute; left: 0; right: 100%; bottom: 0; height: 1.5px;
+  background: var(--status-ok); transition: right 0.4s var(--lp-ease-out);
+}
+.lp-ctrl:hover::after { right: 0; }
