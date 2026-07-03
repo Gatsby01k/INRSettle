@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Check, ShieldCheck } from "lucide-react";
-import { NO_FUNDS_DISCLAIMER } from "@/lib/copy";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
+import { SettlementProofScene } from "@/components/marketing/hero/SettlementProofScene";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -39,153 +39,13 @@ const AUDIENCES = [
   { who: "Compliance & risk", need: "Every approval, match and finality decision in an exportable, append-only record." },
 ] as const;
 
-/* ── The chamber atlas: engraved corridor field filling the hero ───── */
-function ChamberAtlas() {
-  return (
-    <div className="lp-atlas" aria-hidden="true">
-      <svg viewBox="0 0 1600 900" fill="none" preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <linearGradient id="eeTeal" x1="0" y1="0" x2="1600" y2="0" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#0bb4c4" stopOpacity="0" />
-            <stop offset="0.3" stopColor="#0bb4c4" stopOpacity="0.3" />
-            <stop offset="0.7" stopColor="#00c79d" stopOpacity="0.26" />
-            <stop offset="1" stopColor="#00c79d" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="eeGold" x1="0" y1="0" x2="1600" y2="0" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#f2ad23" stopOpacity="0" />
-            <stop offset="0.4" stopColor="#f2ad23" stopOpacity="0.35" />
-            <stop offset="1" stopColor="#f2ad23" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path d="M-60,180 Q 800,120 1660,180" stroke="rgba(7,17,31,0.05)" strokeWidth="1" />
-        <path d="M-60,420 Q 800,340 1660,420" stroke="rgba(7,17,31,0.04)" strokeWidth="1" />
-        <path d="M-60,680 Q 800,590 1660,680" stroke="rgba(7,17,31,0.035)" strokeWidth="1" />
-        <path d="M-60,520 C 380,340 760,560 1140,380 S 1520,300 1660,360" stroke="url(#eeTeal)" strokeWidth="1.2" />
-        <path d="M-60,380 C 420,520 820,280 1220,440 S 1560,500 1660,460" stroke="url(#eeGold)" strokeWidth="1" />
-        <path d="M-60,260 C 460,440 880,200 1300,380" stroke="url(#eeTeal)" strokeWidth="0.7" strokeDasharray="1 8" />
-        <g>
-          <circle cx="480" cy="430" r="16" fill="rgba(0,199,157,0.07)" />
-          <circle cx="480" cy="430" r="2.4" fill="#0bb4c4" fillOpacity="0.5" />
-          <circle cx="1010" cy="405" r="18" fill="rgba(242,173,35,0.08)" />
-          <circle cx="1010" cy="405" r="2.6" fill="#f2ad23" fillOpacity="0.55" />
-          <circle cx="1330" cy="390" r="13" fill="rgba(0,199,157,0.06)" />
-          <circle cx="1330" cy="390" r="2.1" fill="#00c79d" fillOpacity="0.5" />
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-/* ── The monumental object: the evidence package itself ────────────── */
-function EvidencePackage() {
-  return (
-    <div className="ee-package mx-auto w-full max-w-2xl">
-      <div className="lp-sheet lp-sheet--b" aria-hidden="true" />
-      <div className="lp-sheet lp-sheet--a" aria-hidden="true" />
-      <div className="ee-package-card p-6 sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">
-              Settlement evidence package · SR-2026-0612
-            </p>
-            <p className="mt-1 text-xl font-semibold tracking-tight text-slate-950">SET-8F42K1</p>
-            <p className="text-sm text-slate-500">10,000.00 USDT → ₹8,31,500.00 · PontisGlobe (sandbox)</p>
-          </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--status-ok-line)] bg-[var(--status-ok-bg)] px-3 py-1 text-xs font-semibold text-[var(--status-ok)]">
-            <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />
-            Ready to finalize
-          </span>
-        </div>
-
-        <div className="mt-4 grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
-          {[
-            ["Recorded approval", "Dual-control · treasury manager"],
-            ["Provider proof", "completed · UTR verified"],
-            ["Independent reconciliation", "Bank statement · matched 100%"],
-            ["Audit trail", "4 events · append-only"],
-            ["Guardrails", "Within cap · live payouts disabled"],
-            ["Finality decision", "All evidence agrees · low risk"],
-          ].map(([k, v]) => (
-            <div key={k} className="flex items-start gap-2">
-              <span className="mt-1 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--status-ok-bg)] text-[var(--status-ok)] ring-1 ring-inset ring-[var(--status-ok-line)]">
-                <Check className="h-2.5 w-2.5" strokeWidth={3} aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-[13px] font-medium leading-snug text-slate-900">{k}</p>
-                <p className="text-xs leading-snug text-slate-500">{v}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-          <p className="text-xs text-slate-400">Demonstration data · every field exists in the real report</p>
-          <Link
-            href="/sample-report"
-            className="lp-arrow-link inline-flex items-center gap-1 text-xs font-semibold text-[var(--status-ok)] hover:underline"
-          >
-            Open the full document
-            <ArrowRight className="h-3 w-3" aria-hidden="true" />
-          </Link>
-        </div>
-
-        <span className="ee-seal" aria-hidden="true">
-          <Check className="h-6 w-6" strokeWidth={2.75} />
-        </span>
-      </div>
-    </div>
-  );
-}
-
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white text-slate-950 antialiased">
       <SiteHeader />
 
       <main className="relative">
-        {/* ════ ACT 0 · THE CHAMBER ═══════════════════════════════════ */}
-        <section className="ee-chamber">
-          <ChamberAtlas />
-          <div className="relative mx-auto max-w-5xl px-4 pb-24 pt-16 text-center sm:px-6 lg:pt-24">
-            <p className="lp-reveal lp-d1 mx-auto inline-flex items-center gap-2 rounded-full border border-[var(--ops-line)] bg-white/75 px-3.5 py-1 text-xs font-semibold text-slate-600 backdrop-blur">
-              <span className="lp-gold-dot" aria-hidden="true" />
-              Private beta — for payout, treasury &amp; settlement teams
-            </p>
-
-            {/* Visual markup of THESIS — keep wording in sync with lib/copy.ts */}
-            <h1 className="ee-display lp-reveal lp-d2 mx-auto mt-7 max-w-4xl">
-              <span className="lp-ink">Payment completed</span> <span className="lp-neq">≠</span>{" "}
-              <span className="lp-ink">settlement finalized.</span>
-            </h1>
-
-            <p className="lp-reveal lp-d3 mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-600 sm:text-xl">
-              Providers move money. INRSettle proves what happened — recorded approval, provider
-              proof, independent reconciliation and an audit trail, for every payment.
-            </p>
-
-            <div className="lp-reveal lp-d4 mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                href="/contact?intent=access"
-                className={cn(buttonVariants({ variant: "primary", size: "lg" }), "lp-cta-primary")}
-              >
-                Start a pilot
-              </Link>
-              <Link
-                href="/sample-report"
-                className={cn(buttonVariants({ variant: "outline", size: "lg" }), "lp-arrow-link inline-flex items-center gap-1.5")}
-              >
-                View a sample report
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            </div>
-
-            <p className="lp-reveal lp-d5 mt-6 text-sm text-slate-400">{NO_FUNDS_DISCLAIMER}</p>
-
-            <div className="mt-14 lg:mt-16">
-              <EvidencePackage />
-            </div>
-          </div>
-        </section>
+        <SettlementProofScene />
 
         {/* ════ THE ASSEMBLY · five scenes, five compositions ═════════ */}
         <section id="how-it-works" className="relative scroll-mt-20" aria-label="How the evidence assembles">

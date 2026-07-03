@@ -6070,3 +6070,195 @@ section.lp-view.bg-slate-50\/60 {
   height: 1px; width: 200px; margin: 0 auto;
   background: rgba(7,17,31,0.35);
 }
+
+/* =====================================================================
+   THE PROOF INSTRUMENT — cinematic first viewport.
+   Gold value enters, is verified inside a layered-glass instrument,
+   leaves as teal finality. Rails draw once, then flow slowly forever.
+   Reduced motion = the finished still.
+   ===================================================================== */
+
+.hx-scene {
+  position: relative; isolation: isolate; overflow: hidden;
+  background:
+    radial-gradient(56% 44% at 18% -6%, rgba(242, 173, 35, 0.12), transparent 60%),
+    radial-gradient(50% 42% at 86% -2%, rgba(0, 199, 157, 0.11), transparent 62%),
+    radial-gradient(80% 55% at 50% 108%, rgba(11, 180, 196, 0.06), transparent 66%),
+    linear-gradient(180deg, #fcfaf5 0%, #ffffff 62%, #fbfdfd 100%);
+}
+.hx-scene::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-image: radial-gradient(rgba(7, 17, 31, 0.05) 1px, transparent 1.3px);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(80% 70% at 50% 20%, #000 20%, transparent 80%);
+  mask-image: radial-gradient(80% 70% at 50% 20%, #000 20%, transparent 80%);
+}
+
+.hx-rails { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; }
+@media (max-width: 1023px) { .hx-rails { opacity: 0.45; } }
+
+.hx-headline {
+  font-size: clamp(2.5rem, 5.2vw, 4rem);
+  line-height: 1.05; letter-spacing: -0.03em; font-weight: 600; text-wrap: balance;
+}
+.hx-neq { font-weight: 500; }
+
+/* ── Rail choreography: draw once, then flow ──────────────────────── */
+.hx-rail { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.hx-flow { opacity: 0; stroke-linecap: round; }
+@media (prefers-reduced-motion: no-preference) {
+  .hx-rail { stroke-dashoffset: 1; animation: hxDraw 1.4s var(--lp-ease-out) forwards; }
+  .hx-rail--teal { animation-delay: 0.5s; }
+  .hx-rail--teal2 { animation-delay: 0.65s; }
+  @keyframes hxDraw { to { stroke-dashoffset: 0; } }
+
+  .hx-flow {
+    stroke-dasharray: 0.015 0.115;
+    animation: hxAppear 0.6s ease 1.6s forwards, hxFlow 9s linear 1.6s infinite;
+  }
+  .hx-flow--teal { animation-delay: 2s, 2s; animation-duration: 0.6s, 7s; }
+  .hx-flow--teal2 { animation-delay: 2.2s, 2.2s; animation-duration: 0.6s, 8s; }
+  @keyframes hxAppear { to { opacity: 0.9; } }
+  @keyframes hxFlow { to { stroke-dashoffset: -1; } }
+}
+
+/* ── The instrument: layered glass with real depth ────────────────── */
+.hx-stage { position: relative; perspective: 1600px; margin: 0 auto; width: min(100%, 26.5rem); }
+@media (prefers-reduced-motion: no-preference) {
+  .hx-stage { opacity: 0; animation: hxRise 1.1s var(--lp-ease-out) 0.35s forwards; }
+  @keyframes hxRise { from { opacity: 0; transform: translateY(42px); } to { opacity: 1; transform: none; } }
+}
+
+.hx-layer { position: absolute; border-radius: 1.4rem; pointer-events: none; }
+.hx-layer--back {
+  inset: 8% -7% -5% 9%;
+  background: linear-gradient(160deg, rgba(242, 173, 35, 0.10), rgba(255, 255, 255, 0.5) 55%);
+  border: 1px solid rgba(242, 173, 35, 0.22);
+  transform: rotate(3deg);
+  box-shadow: 0 30px 60px -30px rgba(7, 17, 31, 0.25);
+}
+.hx-layer--mid {
+  inset: 3% -3.5% -2% 4%;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(11, 180, 196, 0.2);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  transform: rotate(-1.6deg);
+  box-shadow: 0 24px 50px -26px rgba(7, 17, 31, 0.22);
+  overflow: hidden;
+}
+.hx-layer--mid span {
+  display: block; height: 7px; border-radius: 9999px; margin: 1.1rem 1.4rem 0;
+  background: linear-gradient(90deg, rgba(7,17,31,0.07), rgba(7,17,31,0.03));
+}
+.hx-layer--mid span:first-child { margin-top: 1.6rem; width: 55%; }
+.hx-layer--mid span:nth-child(2) { width: 72%; }
+.hx-layer--mid span:nth-child(3) { width: 44%; }
+
+.hx-face {
+  position: relative; z-index: 2; border-radius: 1.4rem; padding: 1.5rem 1.6rem 1.4rem;
+  background: linear-gradient(168deg, rgba(255, 255, 255, 0.94), rgba(252, 253, 254, 0.88));
+  border: 1px solid rgba(7, 17, 31, 0.09);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5); backdrop-filter: blur(14px) saturate(1.5);
+  transform: rotateX(4deg) rotateY(-4deg);
+  transform-style: preserve-3d;
+  transition: transform 0.8s var(--lp-ease-out);
+  box-shadow:
+    0 1px 2px rgba(7, 17, 31, 0.05),
+    0 26px 48px -18px rgba(7, 17, 31, 0.14),
+    0 80px 140px -40px rgba(7, 17, 31, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+.hx-stage:hover .hx-face { transform: rotateX(0deg) rotateY(0deg) translateY(-4px); }
+.hx-face::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 2px; border-radius: 1.4rem 1.4rem 0 0;
+  background: linear-gradient(90deg, rgba(242,173,35,0.8) 0%, rgba(242,173,35,0.35) 34%,
+    rgba(0,199,157,0.45) 66%, rgba(11,180,196,0.7) 100%);
+}
+@media (max-width: 1023px) { .hx-face { transform: none; } }
+
+/* rail docking ports on the instrument's edges */
+.hx-port { position: absolute; border-radius: 9999px; }
+.hx-port--in {
+  left: -7px; top: 46%; width: 14px; height: 14px;
+  background: radial-gradient(circle at 35% 30%, #ffd576, #e8a012 70%);
+  box-shadow: 0 0 0 4px rgba(242, 173, 35, 0.18), 0 0 18px rgba(242, 173, 35, 0.5);
+}
+.hx-port--out1, .hx-port--out2 {
+  right: -6px; width: 11px; height: 11px;
+  background: radial-gradient(circle at 35% 30%, #7df0d4, #00a37f 75%);
+  box-shadow: 0 0 0 3px rgba(0, 199, 157, 0.16), 0 0 14px rgba(0, 199, 157, 0.45);
+}
+.hx-port--out1 { top: 30%; }
+.hx-port--out2 { top: 58%; }
+
+.hx-micro {
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(7, 17, 31, 0.4);
+}
+.hx-amount { margin-top: 0.3rem; font-size: 1rem; font-weight: 600; letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums; color: #020617; }
+.hx-face-head { border-bottom: 1px solid rgba(7, 17, 31, 0.07); padding-bottom: 0.8rem; }
+
+/* the four verification stations, lighting in sequence */
+.hx-stations { margin-top: 0.9rem; position: relative; }
+.hx-stations::before {
+  content: ""; position: absolute; left: 15px; top: 10px; bottom: 10px; width: 1.5px;
+  background: linear-gradient(180deg, rgba(242,173,35,0.4), rgba(0,199,157,0.45));
+}
+.hx-station {
+  position: relative; display: flex; align-items: center; gap: 0.8rem; padding: 0.55rem 0;
+}
+.hx-station-ring {
+  position: relative; z-index: 1; display: grid; place-items: center;
+  width: 31px; height: 31px; border-radius: 9999px; flex-shrink: 0;
+  background: #fff; color: var(--status-ok);
+  border: 1px solid var(--status-ok-line);
+  box-shadow: 0 4px 10px -3px rgba(0, 199, 157, 0.35);
+}
+.hx-station-check { margin-left: auto; color: var(--status-ok); }
+@media (prefers-reduced-motion: no-preference) {
+  .hx-station { opacity: 0; animation: hxStation 0.55s var(--lp-ease-spring) forwards; }
+  @keyframes hxStation { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+}
+
+/* the verdict row + wax seal */
+.hx-verdict {
+  margin-top: 0.9rem; display: flex; align-items: center; gap: 0.8rem;
+  border-top: 1px solid rgba(7, 17, 31, 0.07); padding-top: 0.95rem;
+}
+.hx-wax {
+  display: grid; place-items: center; width: 44px; height: 44px; border-radius: 9999px; flex-shrink: 0;
+  color: #5c3d05;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 224, 150, 0.95), transparent 46%),
+    repeating-radial-gradient(circle at center, rgba(201, 136, 15, 0.3) 0 1px, transparent 1px 4px),
+    radial-gradient(circle at center, #f6c561, #e09a12 78%);
+  box-shadow: 0 8px 18px -5px rgba(201, 136, 15, 0.55), inset 0 1px 1px rgba(255,255,255,0.6);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hx-verdict { opacity: 0; animation: hxStation 0.5s var(--lp-ease-out) 3.1s forwards; }
+  .hx-wax { animation: hxSealPop 0.6s var(--lp-ease-spring) 3.25s backwards; }
+  @keyframes hxSealPop { from { transform: scale(0.5) rotate(-12deg); } to { transform: scale(1) rotate(0deg); } }
+}
+
+/* luxury floor: contact shadow + faint glass reflection */
+.hx-floor {
+  position: absolute; left: 6%; right: 6%; bottom: -2.6rem; height: 2.2rem; z-index: -1;
+  background: radial-gradient(50% 100% at 50% 0%, rgba(7, 17, 31, 0.16), transparent 70%);
+  filter: blur(6px);
+}
+.hx-floor::after {
+  content: ""; position: absolute; inset: 0.4rem 12% auto; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(11, 180, 196, 0.35), rgba(242, 173, 35, 0.3), transparent);
+}
+
+/* gentle parallax between the glass layers on scroll (progressive) */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .hx-layer--back { animation: hxPar1 1s linear both; animation-timeline: view(); animation-range: entry 0% exit 100%; }
+    .hx-layer--mid { animation: hxPar2 1s linear both; animation-timeline: view(); animation-range: entry 0% exit 100%; }
+    @keyframes hxPar1 { from { translate: 0 26px; } to { translate: 0 -26px; } }
+    @keyframes hxPar2 { from { translate: 0 12px; } to { translate: 0 -12px; } }
+  }
+}
