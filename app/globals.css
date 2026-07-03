@@ -6305,3 +6305,133 @@ section.lp-view.bg-slate-50\/60 {
   -webkit-mask-image: radial-gradient(120% 120% at 0% 100%, #000 30%, transparent 75%);
   mask-image: radial-gradient(120% 120% at 0% 100%, #000 30%, transparent 75%);
 }
+
+/* =====================================================================
+   FIVE ACTS · MEANINGFUL 3D — each object moves the way its real-world
+   counterpart moves. Scroll-driven (animation-timeline: view) with a
+   finished-still fallback everywhere else. Self-contained perspective()
+   inside transforms — zero markup changes, zero libraries.
+   ===================================================================== */
+
+/* room ambience: alternating warm pearl washes behind the acts */
+.ee-act:nth-of-type(odd)::before {
+  content: ""; position: absolute; inset: 8% 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(50% 80% at 50% 50%, rgba(242, 173, 35, 0.045), transparent 70%);
+}
+.ee-act:nth-of-type(even)::before {
+  content: ""; position: absolute; inset: 8% 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(50% 80% at 50% 50%, rgba(0, 199, 157, 0.04), transparent 70%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+
+    /* 01 · THE STAMP — the approval slip descends and presses onto the spine */
+    .ee-slip {
+      animation: eeStampDown 1s var(--lp-ease-out) both;
+      animation-timeline: view(); animation-range: entry 5% entry 60%;
+    }
+    @keyframes eeStampDown {
+      from {
+        opacity: 0;
+        transform: perspective(1100px) rotateX(38deg) translateY(-46px) scale(1.04);
+        box-shadow: 0 1px 2px rgba(7,17,31,0.03), 0 60px 90px -30px rgba(7,17,31,0.28);
+      }
+      60% { opacity: 1; }
+      to {
+        opacity: 1;
+        transform: perspective(1100px) rotateX(0deg) rotate(-1.2deg) translateY(0) scale(1);
+        box-shadow: 0 1px 2px rgba(7,17,31,0.05), 0 22px 44px -18px rgba(7,17,31,0.18);
+      }
+    }
+
+    /* 02 · THE PRINT — the wire ticket feeds out of the machine, left to right */
+    .ee-ticket {
+      animation: eePrintOut 1s var(--lp-ease-out) both;
+      animation-timeline: view(); animation-range: entry 5% entry 55%;
+      transform-origin: left center;
+    }
+    @keyframes eePrintOut {
+      from {
+        opacity: 0;
+        transform: perspective(1400px) rotateY(-14deg) translateX(-60px);
+        clip-path: inset(0 65% 0 0);
+      }
+      55% { clip-path: inset(0 0 0 0); }
+      to { opacity: 1; transform: perspective(1400px) rotateY(0deg) translateX(0); clip-path: inset(0 0 0 0); }
+    }
+
+    /* 03 · THE CONVERGENCE — claim and bank record travel toward the match */
+    .ee-claim {
+      animation: eeConvergeL 1s var(--lp-ease-out) both;
+      animation-timeline: view(); animation-range: entry 0% entry 55%;
+    }
+    .ee-bank {
+      animation: eeConvergeR 1s var(--lp-ease-out) both;
+      animation-timeline: view(); animation-range: entry 0% entry 55%;
+    }
+    @keyframes eeConvergeL {
+      from { opacity: 0; transform: perspective(1200px) rotateY(18deg) translateX(-90px) rotate(-4deg); }
+      to { opacity: 1; transform: perspective(1200px) rotateY(0deg) translateX(0) rotate(-2deg); }
+    }
+    @keyframes eeConvergeR {
+      from { opacity: 0; transform: perspective(1200px) rotateY(-18deg) translateX(90px) rotate(4deg); }
+      to { opacity: 1; transform: perspective(1200px) rotateY(0deg) translateX(0) rotate(2deg); }
+    }
+    .ee-bracket {
+      animation: eeBracketMint 0.9s var(--lp-ease-spring) both;
+      animation-timeline: view(); animation-range: entry 25% entry 65%;
+    }
+    @keyframes eeBracketMint {
+      from { opacity: 0; transform: perspective(600px) rotateY(90deg) scale(0.6); }
+      to { opacity: 1; transform: perspective(600px) rotateY(0deg) scale(1); }
+    }
+
+    /* 04 · THE RECORDER — the ledger lifts open like a device screen */
+    .ee-ledger {
+      animation: eeRecorderOpen 1s var(--lp-ease-out) both;
+      animation-timeline: view(); animation-range: entry 5% entry 60%;
+      transform-origin: center bottom;
+    }
+    @keyframes eeRecorderOpen {
+      from { opacity: 0; transform: perspective(1300px) rotateX(-22deg) translateY(40px); }
+      to { opacity: 1; transform: perspective(1300px) rotateX(0deg) translateY(0); }
+    }
+    /* one glare pass across the dark glass as it opens */
+    .ee-ledger::after {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.10) 48%, transparent 62%);
+      background-size: 240% 100%;
+      animation: eeGlare 1.4s var(--lp-ease-out) both;
+      animation-timeline: view(); animation-range: entry 20% entry 90%;
+    }
+    @keyframes eeGlare { from { background-position: 130% 0; } to { background-position: -80% 0; } }
+
+    /* 05 · THE PRESS — the finality fragment settles as the seal presses in */
+    .ee-act:nth-of-type(5) .ee-fragment {
+      animation: eeVerdictPress 1s var(--lp-ease-out) both;
+      animation-timeline: view(); animation-range: entry 5% entry 60%;
+    }
+    @keyframes eeVerdictPress {
+      from { opacity: 0; transform: perspective(1300px) rotateX(16deg) rotateY(-8deg) translateY(36px); }
+      to { opacity: 1; transform: perspective(1300px) rotateX(0deg) rotateY(0deg) rotate(0.8deg) translateY(0); }
+    }
+    .ee-act:nth-of-type(5) .ee-seal {
+      animation: eeSealPress 0.9s var(--lp-ease-spring) both;
+      animation-timeline: view(); animation-range: entry 35% entry 75%;
+    }
+    @keyframes eeSealPress {
+      from { opacity: 0; transform: translateY(-34px) scale(1.5) rotate(-14deg);
+             box-shadow: 0 26px 40px -8px rgba(201, 136, 15, 0.6); }
+      to { opacity: 1; transform: translateY(0) scale(1) rotate(0deg);
+           box-shadow: 0 6px 16px -4px rgba(201, 136, 15, 0.5), inset 0 1px 1px rgba(255,255,255,0.6); }
+    }
+  }
+}
+
+/* коin-like emboss on the match medallion + richer seals (static, all modes) */
+.ee-bracket {
+  box-shadow: 0 10px 24px -8px rgba(0,199,157,0.35),
+    inset 0 1.5px 1px rgba(255,255,255,0.9), inset 0 -1.5px 2px rgba(0,120,95,0.2);
+}
+.ee-seal { outline: 3px solid rgba(242, 173, 35, 0.16); outline-offset: 2px; }
