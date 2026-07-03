@@ -6283,3 +6283,25 @@ section.lp-view.bg-slate-50\/60 {
   content: ""; display: block; margin-top: 1.1rem; height: 1px; width: 64px;
   background: linear-gradient(90deg, rgba(242, 173, 35, 0.75), rgba(0, 199, 157, 0.5), transparent);
 }
+
+/* ── Brand-sweep alignment with the master render ─────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .hx-burst { animation: hxBurstIn 1.6s var(--lp-ease-out) both; transform-origin: 330px 330px; }
+  @keyframes hxBurstIn { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
+}
+/* halftone corner patches, exactly like the render */
+.hx-scene .hx-dots-tr, .hx-scene .hx-dots-bl {
+  position: absolute; z-index: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(7, 17, 31, 0.14) 1.1px, transparent 1.5px);
+  background-size: 14px 14px;
+}
+.hx-scene .hx-dots-tr {
+  top: 1.5rem; right: 0; width: 220px; height: 190px;
+  -webkit-mask-image: radial-gradient(120% 120% at 100% 0%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(120% 120% at 100% 0%, #000 30%, transparent 75%);
+}
+.hx-scene .hx-dots-bl {
+  bottom: 0; left: 0; width: 240px; height: 200px;
+  -webkit-mask-image: radial-gradient(120% 120% at 0% 100%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(120% 120% at 0% 100%, #000 30%, transparent 75%);
+}

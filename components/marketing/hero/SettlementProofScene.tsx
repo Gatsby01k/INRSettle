@@ -26,6 +26,10 @@ const STATIONS = [
 ] as const;
 
 function RailField() {
+  /* The brand sweep — faithful to the master render: a single point of
+     light near the dotted world map, from which gold and teal ribbons
+     travel TOGETHER as one bundle, curving down and to the right across
+     the whole frame. */
   return (
     <svg
       className="hx-rails"
@@ -35,74 +39,59 @@ function RailField() {
       aria-hidden="true"
     >
       <defs>
-        <linearGradient id="hxGold" x1="0" y1="0" x2="1030" y2="0" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#f2ad23" stopOpacity="0" />
-          <stop offset="0.25" stopColor="#f2ad23" stopOpacity="0.75" />
-          <stop offset="1" stopColor="#e8a012" stopOpacity="0.9" />
+        <linearGradient id="hxGold" x1="300" y1="280" x2="1650" y2="820" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#ffe9bd" stopOpacity="0.95" />
+          <stop offset="0.3" stopColor="#f2ad23" stopOpacity="0.6" />
+          <stop offset="1" stopColor="#f2ad23" stopOpacity="0.1" />
         </linearGradient>
-        <linearGradient id="hxTeal" x1="1180" y1="0" x2="1600" y2="0" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#00c79d" stopOpacity="0.9" />
-          <stop offset="0.75" stopColor="#0bb4c4" stopOpacity="0.55" />
-          <stop offset="1" stopColor="#0bb4c4" stopOpacity="0" />
+        <linearGradient id="hxTeal" x1="300" y1="300" x2="1650" y2="840" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#d8fff4" stopOpacity="0.95" />
+          <stop offset="0.3" stopColor="#00c79d" stopOpacity="0.55" />
+          <stop offset="1" stopColor="#0bb4c4" stopOpacity="0.1" />
         </linearGradient>
+        <radialGradient id="hxBurst" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stopColor="#ffffff" stopOpacity="0.95" />
+          <stop offset="0.35" stopColor="#ffe9bd" stopOpacity="0.55" />
+          <stop offset="1" stopColor="#ffe9bd" stopOpacity="0" />
+        </radialGradient>
       </defs>
 
-      {/* world-map suggestion: latitude arcs + corridor dots */}
-      <path d="M-40,140 Q 800,90 1640,140" stroke="rgba(7,17,31,0.05)" strokeWidth="1" />
-      <path d="M-40,380 Q 800,315 1640,380" stroke="rgba(7,17,31,0.045)" strokeWidth="1" />
-      <path d="M-40,620 Q 800,545 1640,620" stroke="rgba(7,17,31,0.035)" strokeWidth="1" />
-      <g fill="rgba(7,17,31,0.10)">
-        <circle cx="180" cy="205" r="1.6" /><circle cx="235" cy="182" r="1.6" /><circle cx="285" cy="214" r="1.6" />
-        <circle cx="330" cy="188" r="1.6" /><circle cx="1370" cy="182" r="1.6" /><circle cx="1425" cy="208" r="1.6" />
-        <circle cx="1480" cy="186" r="1.6" /><circle cx="255" cy="560" r="1.6" /><circle cx="310" cy="586" r="1.6" />
-        <circle cx="1400" cy="568" r="1.6" /><circle cx="1455" cy="592" r="1.6" /><circle cx="1330" cy="545" r="1.6" />
+      {/* dotted world-map suggestion, upper-left — halftone clusters */}
+      <g fill="rgba(7,17,31,0.12)">
+        {[
+          [70,120],[95,132],[120,118],[145,140],[110,158],[85,172],[135,168],[160,150],[185,166],[60,190],
+          [90,205],[120,198],[150,212],[178,196],[205,182],[230,168],[110,235],[140,246],[168,232],[196,244],
+          [230,258],[258,240],[286,228],[250,205],[278,190],[305,205],[330,190],[300,240],[325,255],[352,242],
+          [378,225],[352,208],[380,258],[405,244],[430,230],[405,205],[300,290],[330,300],[358,286],[385,296],
+          [412,282],[440,268],[440,300],[465,286],[490,272],[130,290],[158,300],[186,290],[95,262],[65,240],
+        ].map(([x, y], i) => (
+          <rect key={i} x={x} y={y} width="4" height="4" rx="1" />
+        ))}
       </g>
 
-      {/* THE GOLD RAIL — value entering the instrument */}
-      <path
-        className="hx-rail hx-rail--gold"
-        d="M-40,480 C 260,470 480,380 700,392 S 960,415 1030,405"
-        stroke="url(#hxGold)"
-        strokeWidth="2"
-        pathLength={1}
-      />
-      <path
-        className="hx-flow hx-flow--gold"
-        d="M-40,480 C 260,470 480,380 700,392 S 960,415 1030,405"
-        stroke="#ffd576"
-        strokeWidth="2.5"
-        pathLength={1}
-      />
+      {/* the light burst — origin of the sweep */}
+      <circle className="hx-burst" cx="330" cy="330" r="120" fill="url(#hxBurst)" />
+      <circle cx="330" cy="330" r="4" fill="#fff" />
 
-      {/* THE TEAL RAILS — proven finality leaving it */}
-      <path
-        className="hx-rail hx-rail--teal"
-        d="M1180,380 C 1300,368 1430,320 1640,330"
-        stroke="url(#hxTeal)"
-        strokeWidth="1.8"
-        pathLength={1}
-      />
-      <path
-        className="hx-rail hx-rail--teal hx-rail--teal2"
-        d="M1180,430 C 1310,448 1450,492 1640,486"
-        stroke="url(#hxTeal)"
-        strokeWidth="1.4"
-        pathLength={1}
-      />
-      <path
-        className="hx-flow hx-flow--teal"
-        d="M1180,380 C 1300,368 1430,320 1640,330"
-        stroke="#7df0d4"
-        strokeWidth="2.2"
-        pathLength={1}
-      />
-      <path
-        className="hx-flow hx-flow--teal hx-flow--teal2"
-        d="M1180,430 C 1310,448 1450,492 1640,486"
-        stroke="#7df0d4"
-        strokeWidth="1.8"
-        pathLength={1}
-      />
+      {/* THE SWEEP — gold and teal travelling together, one bundle */}
+      <path className="hx-rail hx-rail--gold" d="M330,330 C 620,300 940,430 1180,560 S 1560,780 1700,860"
+        stroke="url(#hxGold)" strokeWidth="2.4" pathLength={1} />
+      <path className="hx-rail hx-rail--gold" d="M332,318 C 640,280 960,400 1210,525 S 1580,730 1710,810"
+        stroke="url(#hxGold)" strokeWidth="1.2" opacity="0.7" pathLength={1} />
+      <path className="hx-rail hx-rail--teal" d="M328,344 C 600,330 920,470 1150,600 S 1540,830 1690,910"
+        stroke="url(#hxTeal)" strokeWidth="2.2" pathLength={1} />
+      <path className="hx-rail hx-rail--teal hx-rail--teal2" d="M326,358 C 580,360 900,505 1120,640 S 1520,880 1670,960"
+        stroke="url(#hxTeal)" strokeWidth="1.1" opacity="0.7" pathLength={1} />
+      {/* faint upward arcs out of the burst, like the render's fan */}
+      <path d="M330,330 C 480,220 700,170 920,180" stroke="rgba(242,173,35,0.16)" strokeWidth="1" />
+      <path d="M330,330 C 520,250 780,215 1020,240" stroke="rgba(11,180,196,0.14)" strokeWidth="1" />
+      <path d="M330,330 C 440,180 620,120 820,110" stroke="rgba(7,17,31,0.05)" strokeWidth="1" />
+
+      {/* flow pulses along the two main ribbons */}
+      <path className="hx-flow hx-flow--gold" d="M330,330 C 620,300 940,430 1180,560 S 1560,780 1700,860"
+        stroke="#ffd576" strokeWidth="2.8" pathLength={1} />
+      <path className="hx-flow hx-flow--teal" d="M328,344 C 600,330 920,470 1150,600 S 1540,830 1690,910"
+        stroke="#7df0d4" strokeWidth="2.4" pathLength={1} />
     </svg>
   );
 }
@@ -166,6 +155,8 @@ export function SettlementProofScene() {
   return (
     <section className="hx-scene" aria-label="INRSettle — settlement proof">
       <RailField />
+      <div className="hx-dots-tr" aria-hidden="true" />
+      <div className="hx-dots-bl" aria-hidden="true" />
 
       <div className="relative z-10 mx-auto grid min-h-[calc(100svh-4rem)] max-w-7xl items-center gap-14 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6 lg:py-10">
         <div className="max-w-xl">
