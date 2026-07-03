@@ -102,7 +102,7 @@ export default async function ReportsPage() {
                   "Audit trail",
                   "Finality decision",
                 ].map((item) => (
-                  <span key={item} className="case-chip case-chip--demo">{item}</span>
+                  <span key={item} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{item}</span>
                 ))}
               </div>
             </div>
@@ -147,7 +147,7 @@ export default async function ReportsPage() {
                       <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-slate-500">{item.description}</p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {item.contents.map((column) => (
-                          <span key={column} className="case-chip case-chip--demo">{column}</span>
+                          <span key={column} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{column}</span>
                         ))}
                       </div>
                     </div>

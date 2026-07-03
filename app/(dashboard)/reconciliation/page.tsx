@@ -30,6 +30,7 @@ import { prisma } from "@/lib/prisma";
 import { cn, formatCurrencyFull, formatDateTime, formatPercent } from "@/lib/utils";
 import { FlashMessage } from "@/components/ops/flash-message";
 import { FilterBar } from "@/components/ops/filter-bar";
+import { PageHeader } from "@/components/ops/page-header";
 import { AddRecordForm } from "@/components/dashboard/add-record-form";
 import { ReconciliationCommandBar } from "@/components/dashboard/reconciliation-command-bar";
 import { ReconciliationWorkspace } from "@/components/dashboard/reconciliation-workspace";
@@ -327,43 +328,17 @@ export default async function ReconciliationPage({
 
   return (
     <div className="space-y-4">
-      {/* Command header: independent evidence console band (mirrors Settlements) */}
-      <section className="conf-hero ov-reveal p-5 sm:p-6">
-        <div className="relative flex flex-wrap items-start justify-between gap-5">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="overview-live-badge inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-emerald-700">
-                <span className="ops-pulse ops-pulse--subtle" aria-hidden="true" />
-                Independent evidence console
-              </span>
-              {demoFocus ? <DemoFocusBadge /> : null}
-            </div>
-            <h1 className="conf-hero__headline mt-3">Reconciliation</h1>
-            <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-slate-500">
-              Provider proof is not enough. Every settlement must match an independent bank or PSP
-              record before it can reach finality.
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <span className="case-chip case-chip--gold">Provider claims excluded</span>
-              <span className="case-chip border-emerald-200 bg-emerald-50 text-emerald-700">External records only</span>
-              <span className="case-chip border-cyan-200 bg-cyan-50 text-cyan-800">Required before finality</span>
-            </div>
-          </div>
-          <div className="grid shrink-0 grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
-            {[
-              { label: "Matched", value: matchedCount, tone: "text-brand-emerald-ink" },
-              { label: "Manual review", value: manualReview, tone: manualReview ? "text-[#9b6810]" : "text-slate-400" },
-              { label: "Exceptions", value: exceptions, tone: exceptions ? "text-rose-600" : "text-slate-400" },
-              { label: "Match rate", value: formatPercent(matchRate), tone: "text-[#0a7d86]" },
-            ].map((stat) => (
-              <div key={stat.label} className="scase-stat">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.09em] text-slate-400">{stat.label}</p>
-                <p className={cn("scase-stat__value mt-1", stat.tone)}>{stat.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PageHeader
+        title="Reconciliation"
+        description="Provider proof is not enough — every settlement must match an independent bank or PSP record before finality. Provider claims never count."
+        actions={demoFocus ? <DemoFocusBadge /> : undefined}
+        stats={[
+          { label: "Matched", value: matchedCount, tone: "ok" as const },
+          { label: "Manual review", value: manualReview, tone: manualReview ? ("pending" as const) : ("neutral" as const) },
+          { label: "Exceptions", value: exceptions, tone: exceptions ? ("blocked" as const) : ("neutral" as const), href: "/reconciliation?status=EXCEPTION" },
+          { label: "Match rate", value: formatPercent(matchRate), tone: "info" as const },
+        ]}
+      />
 
       {params.error ? <FlashMessage message={params.error} tone="error" /> : null}
       {params.success === "created" ? (

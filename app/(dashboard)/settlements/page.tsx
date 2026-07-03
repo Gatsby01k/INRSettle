@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
 import { AreaTabs } from "@/components/ops/area-tabs";
+import { PageHeader } from "@/components/ops/page-header";
 import {
   autoMatchReconciliation,
   createSettlement,
@@ -587,39 +588,19 @@ export default async function SettlementsPage({
     <SettlementActionsProvider>
     <div className="space-y-4">
       <AreaTabs area="settlements" />
-      {/* Command header: operations console band */}
-      <section className="conf-hero ov-reveal p-5 sm:p-6">
-        <div className="relative flex flex-wrap items-start justify-between gap-5">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="overview-live-badge inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-emerald-700">
-                <span className="ops-pulse ops-pulse--subtle" aria-hidden="true" />
-                Operations console
-              </span>
-              {demoFocus ? <DemoFocusBadge /> : null}
-            </div>
-            <h1 className="conf-hero__headline mt-3">Settlements</h1>
-            <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-slate-500">
-              Track provider proof, reconciliation and approvals through to finality.
-            </p>
-          </div>
-          <div className="grid shrink-0 grid-cols-3 gap-x-6 gap-y-3 sm:grid-cols-6 lg:grid-cols-3 xl:grid-cols-6">
-            {[
-              { label: "Requested", value: requested, tone: "text-[#9b6810]" },
-              { label: "In flight", value: inFlight, tone: "text-[#0a7d86]" },
-              { label: "Needs review", value: needsReviewCount, tone: needsReviewCount ? "text-[#9b6810]" : "text-slate-400" },
-              { label: "Finality ready", value: finalityReadyCount, tone: "text-brand-emerald-ink" },
-              { label: "Reconciled", value: reconciledCount, tone: "text-brand-emerald-ink" },
-              { label: "Live test", value: liveTestCases, tone: liveTestCases ? "text-rose-600" : "text-slate-400" },
-            ].map((stat) => (
-              <div key={stat.label} className="scase-stat">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.09em] text-slate-400">{stat.label}</p>
-                <p className={cn("scase-stat__value mt-1", stat.tone)}>{stat.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PageHeader
+        title="Settlements"
+        description="Provider proof, reconciliation and approvals, tracked through to finality."
+        actions={demoFocus ? <DemoFocusBadge /> : undefined}
+        stats={[
+          { label: "Requested", value: requested, tone: requested ? ("pending" as const) : ("neutral" as const), href: `/settlements?status=REQUESTED${demoFocus ? "&demo=1" : ""}` },
+          { label: "In flight", value: inFlight, tone: "info" as const },
+          { label: "Needs review", value: needsReviewCount, tone: needsReviewCount ? ("pending" as const) : ("neutral" as const) },
+          { label: "Finality ready", value: finalityReadyCount, tone: "ok" as const },
+          { label: "Reconciled", value: reconciledCount, tone: "ok" as const, href: `/settlements?status=RECONCILED${demoFocus ? "&demo=1" : ""}` },
+          { label: "Live test", value: liveTestCases, tone: liveTestCases ? ("blocked" as const) : ("neutral" as const) },
+        ]}
+      />
 
       <SettlementAutoRefresh enabled={autoRefreshSettlements} />
 

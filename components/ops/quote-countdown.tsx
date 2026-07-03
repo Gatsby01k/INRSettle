@@ -28,9 +28,15 @@ export function QuoteCountdown({
   const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
-    setNow(Date.now());
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
+    const update = () => setNow(Date.now());
+    // First tick is deferred a frame: no synchronous setState inside the
+    // effect body, and server/client markup stays identical until then.
+    const first = setTimeout(update, 0);
+    const id = setInterval(update, 1000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(id);
+    };
   }, []);
 
   // Pre-mount placeholder keeps server and client markup identical.

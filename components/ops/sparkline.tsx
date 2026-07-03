@@ -94,18 +94,35 @@ export function Sparkline({
 export function TrendCard({
   label,
   value,
+  delta,
   hint,
   children,
 }: {
   label: string;
   value: string;
+  /** Comparison vs the prior window. `direction` colors it: "up" good, "down" bad, null neutral. */
+  delta?: { text: string; direction: "up" | "down" | null } | null;
   hint?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="ops-panel p-4">
+    <div className="ops-panel ops-card-hover p-4">
       <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-slate-950">{value}</p>
+      <div className="mt-1 flex items-baseline gap-2">
+        <p className="text-xl font-semibold tabular-nums tracking-tight text-slate-950">{value}</p>
+        {delta ? (
+          <span
+            className={cn(
+              "text-xs font-semibold tabular-nums",
+              delta.direction === "up" && "text-[var(--status-ok)]",
+              delta.direction === "down" && "text-[var(--status-blocked)]",
+              delta.direction === null && "text-slate-400",
+            )}
+          >
+            {delta.text}
+          </span>
+        ) : null}
+      </div>
       <div className="mt-2">{children}</div>
       {hint ? <p className="mt-1.5 text-xs text-slate-400">{hint}</p> : null}
     </div>

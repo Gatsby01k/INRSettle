@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, FileText, Plus } from "lucide-react";
+import { ArrowRight, Check, Clock, FileText, Plus, X } from "lucide-react";
 import { SettlementStatus } from "@prisma/client";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -26,6 +26,18 @@ export const metadata = { title: "Home" };
 
 const DAY = 24 * 60 * 60 * 1000;
 const WINDOW_DAYS = 30;
+
+function windowStart(multiple = 1) {
+  return new Date(Date.now() - WINDOW_DAYS * DAY * multiple);
+}
+
+/** Signed percentage delta vs the prior window, or null when not comparable. */
+function pctDelta(current: number, prior: number): string | null {
+  if (prior <= 0) return null;
+  const pct = Math.round(((current - prior) / prior) * 100);
+  if (pct === 0) return "±0%";
+  return `${pct > 0 ? "+" : ""}${pct}%`;
+}
 
 function dayKey(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -76,7 +88,8 @@ const STEP_LABEL: Record<StepState, string> = { ok: "Verified", pending: "Pendin
 export default async function DashboardPage() {
   const { organization } = await requireSession();
   const shadowConfig = getShadowConfig();
-  const since = new Date(Date.now() - WINDOW_DAYS * DAY);
+  const since = windowStart();
+  const compareSince = windowStart(2);
   const orgWhere = { organizationId: organization.id };
   const completedStatus = { in: [SettlementStatus.SETTLED, SettlementStatus.RECONCILED] };
 
@@ -120,7 +133,7 @@ export default async function DashboardPage() {
       },
     }),
     prisma.settlement.findMany({
-      where: { ...orgWhere, settledAt: { gte: since } },
+      where: { ...orgWhere, settledAt: { gte: compareSince } },
       select: {
         publicId: true,
         createdAt: true,
@@ -135,7 +148,7 @@ export default async function DashboardPage() {
       },
     }),
     prisma.reconciliationRecord.findMany({
-      where: { ...orgWhere, status: "EXCEPTION", createdAt: { gte: since } },
+      where: { ...orgWhere, status: "EXCEPTION", createdAt: { gte: compareSince } },
       select: { createdAt: true },
     }),
     prisma.settlement.findFirst({
@@ -227,8 +240,17 @@ export default async function DashboardPage() {
   const ttfByDay = new Map<string, number[]>();
   const exceptionsByDay = new Map<string, number>(dayKeys.map((k) => [k, 0]));
 
+  const prior = { volume: 0, total: 0, reconciled: 0, ttf: [] as number[], exceptions: 0 };
   for (const s of windowSettlements) {
     if (!s.settledAt) continue;
+    const inCurrentWindow = s.settledAt >= since;
+    if (!inCurrentWindow) {
+      prior.volume += inrLegOf(s);
+      prior.total += 1;
+      if (s.status === SettlementStatus.RECONCILED) prior.reconciled += 1;
+      if (s.reconciledAt) prior.ttf.push((s.reconciledAt.getTime() - s.createdAt.getTime()) / 3_600_000);
+      continue;
+    }
     const k = dayKey(s.settledAt);
     if (volumeByDay.has(k)) volumeByDay.set(k, (volumeByDay.get(k) ?? 0) + inrLegOf(s));
     const bucket = completedByDay.get(k) ?? { total: 0, reconciled: 0 };
@@ -242,6 +264,10 @@ export default async function DashboardPage() {
     }
   }
   for (const record of windowExceptions) {
+    if (record.createdAt < since) {
+      prior.exceptions += 1;
+      continue;
+    }
     const k = dayKey(record.createdAt);
     if (exceptionsByDay.has(k)) exceptionsByDay.set(k, (exceptionsByDay.get(k) ?? 0) + 1);
   }
@@ -265,6 +291,38 @@ export default async function DashboardPage() {
   const overallTtf = median([...ttfByDay.values()].flat());
   const exceptionSeries = dayKeys.map((k) => exceptionsByDay.get(k) ?? 0);
   const exceptionTotal = exceptionSeries.reduce((a, b) => a + b, 0);
+
+  // Comparisons vs the prior 30 days (direction encodes "good"/"bad").
+  const volumeDeltaText = pctDelta(totalVolume, prior.volume);
+  const volumeDelta = volumeDeltaText
+    ? { text: volumeDeltaText, direction: (totalVolume >= prior.volume ? "up" : "down") as "up" | "down" }
+    : null;
+  const priorMatchRate = prior.total > 0 ? Math.round((prior.reconciled / prior.total) * 100) : null;
+  const matchDelta =
+    overallMatchRate != null && priorMatchRate != null
+      ? {
+          text: `${overallMatchRate - priorMatchRate >= 0 ? "+" : ""}${overallMatchRate - priorMatchRate}pp`,
+          direction: (overallMatchRate >= priorMatchRate ? "up" : "down") as "up" | "down",
+        }
+      : null;
+  const priorTtf = median(prior.ttf);
+  const ttfDelta =
+    overallTtf != null && priorTtf != null
+      ? {
+          text: `${overallTtf <= priorTtf ? "−" : "+"}${Math.abs(Math.round((overallTtf - priorTtf) * 10) / 10)}h`,
+          direction: (overallTtf <= priorTtf ? "up" : "down") as "up" | "down",
+        }
+      : null;
+  const exceptionDelta =
+    prior.exceptions > 0 || exceptionTotal > 0
+      ? {
+          text: `${exceptionTotal - prior.exceptions >= 0 ? "+" : ""}${exceptionTotal - prior.exceptions}`,
+          direction:
+            exceptionTotal === prior.exceptions
+              ? null
+              : ((exceptionTotal < prior.exceptions ? "up" : "down") as "up" | "down"),
+        }
+      : null;
 
   /* ── Action queue ───────────────────────────────────────────────────── */
   const queue = [
@@ -332,7 +390,7 @@ export default async function DashboardPage() {
       <div className="space-y-5">
         <PageHeader
           title="Home"
-          description={`${organization.displayName} — settlement operations console.`}
+          description={`Settlement operations for ${organization.displayName}. All times IST.`}
           actions={
             <Button asChild variant="primary" size="sm">
               <Link href="/quotes" className="inline-flex items-center gap-1.5">
@@ -375,7 +433,7 @@ export default async function DashboardPage() {
     <div className="space-y-5">
       <PageHeader
         title="Home"
-        description={`${organization.displayName} — settlement operations console.`}
+        description={`Settlement operations for ${organization.displayName}. All times IST.`}
         actions={
           <>
             {latestCase ? (
@@ -444,28 +502,32 @@ export default async function DashboardPage() {
           <TrendCard
             label="Settled volume (INR leg)"
             value={totalVolume > 0 ? formatCurrencyCompact(Math.round(totalVolume), "INR") : "—"}
-            hint="By settlement date"
+            delta={volumeDelta}
+            hint="By settlement date · vs prior 30d"
           >
             <Sparkline values={volumeSeries} tone="info" />
           </TrendCard>
           <TrendCard
             label="Reconciliation match rate"
             value={overallMatchRate != null ? `${overallMatchRate}%` : "—"}
-            hint="Of settled cases, independently matched"
+            delta={matchDelta}
+            hint="Independently matched · vs prior 30d"
           >
             <Sparkline values={matchRateSeries} tone="ok" />
           </TrendCard>
           <TrendCard
             label="Time to finality (median)"
             value={overallTtf != null ? `${Math.round(overallTtf * 10) / 10}h` : "—"}
-            hint="Created → reconciled"
+            delta={ttfDelta}
+            hint="Created → reconciled · vs prior 30d"
           >
             <Sparkline values={ttfSeries} tone="pending" />
           </TrendCard>
           <TrendCard
             label="Reconciliation exceptions"
             value={String(exceptionTotal)}
-            hint={exceptionTotal ? "Needs operator review" : "None raised"}
+            delta={exceptionDelta}
+            hint={exceptionTotal ? "Needs operator review · vs prior 30d" : "None raised in 30 days"}
           >
             <Sparkline values={exceptionSeries} tone={exceptionTotal ? "blocked" : "neutral"} type="bars" />
           </TrendCard>
@@ -498,7 +560,13 @@ export default async function DashboardPage() {
             {pipeline.map((step, index) => (
               <div key={step.name} className={cn("conf-step", `conf-step--${step.state}`)}>
                 <span className="conf-step__dot" aria-hidden="true">
-                  {step.state === "ok" ? "✓" : step.state === "blocked" ? "✕" : "•"}
+                  {step.state === "ok" ? (
+                    <Check className="h-3 w-3" strokeWidth={3} />
+                  ) : step.state === "blocked" ? (
+                    <X className="h-3 w-3" strokeWidth={3} />
+                  ) : (
+                    <Clock className="h-3 w-3" strokeWidth={2.5} />
+                  )}
                 </span>
                 <p className="conf-step__index">STEP {index + 1}</p>
                 <p className="conf-step__name">{step.name}</p>
@@ -519,15 +587,34 @@ export default async function DashboardPage() {
         </div>
         {operationsStream.length ? (
           <div className="mt-2 divide-y divide-slate-100">
-            {operationsStream.map((log) => (
-              <div key={log.id} className="flex items-baseline gap-3 py-2">
-                <p className="min-w-0 flex-1 truncate text-sm text-slate-800">
-                  {STREAM_ACTIONS[log.action]}
-                  <span className="ml-2 text-xs text-slate-400">{log.user?.email ?? log.actorType.toLowerCase()}</span>
-                </p>
-                <Time value={log.createdAt} className="shrink-0 text-xs tabular-nums text-slate-400" />
-              </div>
-            ))}
+            {operationsStream.map((log) => {
+              const href =
+                log.resourceType === "settlement" && log.resourceId
+                  ? `/settlements/${log.resourceId}/report`
+                  : log.resourceType === "reconciliation_record"
+                    ? "/reconciliation"
+                    : null;
+              const row = (
+                <>
+                  <p className="min-w-0 flex-1 truncate text-sm text-slate-800">
+                    {STREAM_ACTIONS[log.action]}
+                    <span className="ml-2 text-xs text-slate-400">{log.user?.email ?? log.actorType.toLowerCase()}</span>
+                  </p>
+                  <Time value={log.createdAt} className="shrink-0 text-xs tabular-nums text-slate-400" />
+                </>
+              );
+              return href ? (
+                <Link
+                  key={log.id}
+                  href={href}
+                  className="-mx-2 flex items-baseline gap-3 rounded-md px-2 py-2 transition-colors hover:bg-slate-50"
+                >
+                  {row}
+                </Link>
+              ) : (
+                <div key={log.id} className="flex items-baseline gap-3 py-2">{row}</div>
+              );
+            })}
           </div>
         ) : (
           <p className="mt-3 text-sm text-slate-500">No evidence events yet.</p>

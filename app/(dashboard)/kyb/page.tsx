@@ -1,4 +1,6 @@
 import {
+  Check,
+  Minus,
   AlertTriangle,
   BadgeCheck,
   CheckCircle2,
@@ -101,7 +103,7 @@ function CounterpartyCard({ counterparty }: { counterparty: CounterpartyKyb }) {
             {counterparty.eligibility.map((item) => (
               <div key={item.label} className="prs-gate-item">
                 <span className={cn("prs-gate-dot", item.done ? "prs-gate-dot--done" : "prs-gate-dot--open")}>
-                  {item.done ? "✓" : "·"}
+                  {item.done ? <Check className="h-2.5 w-2.5" strokeWidth={3} aria-hidden="true" /> : <Minus className="h-2.5 w-2.5" aria-hidden="true" />}
                 </span>
                 <span className={item.done ? "text-slate-700" : "text-slate-500"}>
                   {item.label}

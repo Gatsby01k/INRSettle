@@ -174,7 +174,7 @@ export default async function MonitoringPage() {
           {/* Rules */}
           <div className="prs-panel p-4">
             <p className="prs-eyebrow flex items-center gap-1.5">
-              <BellRing className="h-3 w-3" aria-hidden="true" /> Alert rules · mock definitions
+              <BellRing className="h-3 w-3" aria-hidden="true" /> Alert rules · policy
             </p>
             <div className="mt-2">
               {INCIDENT_RULES.map((rule) => (
@@ -192,7 +192,7 @@ export default async function MonitoringPage() {
           {/* Queue */}
           <div className="prs-panel p-4">
             <p className="prs-eyebrow flex items-center gap-1.5">
-              <ListChecks className="h-3 w-3" aria-hidden="true" /> Incident queue · mock data
+              <ListChecks className="h-3 w-3" aria-hidden="true" /> Incident queue · sample data
             </p>
             <div className="mt-2 space-y-2.5">
               {INCIDENTS.map((incident) => (

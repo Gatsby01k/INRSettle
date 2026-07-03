@@ -245,7 +245,7 @@ export default async function AuditLogsPage({
             className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
           >
             <Download className="h-3.5 w-3.5" aria-hidden="true" />
-            Export CSV
+            Export all (CSV)
           </a>
         }
       />

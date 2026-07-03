@@ -390,7 +390,7 @@ export default async function SettlementReportPage({
           ) : null}
           <div className="mt-3 space-y-1.5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-              Shadow test checklist
+              Verification checklist
             </p>
             {checklist.map((item) => (
               <div key={item.key} className="check-item text-sm">

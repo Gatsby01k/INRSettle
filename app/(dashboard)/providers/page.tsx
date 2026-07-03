@@ -1,4 +1,6 @@
 import {
+  Check,
+  Minus,
   AlertTriangle,
   Archive,
   ArrowRight,
@@ -58,10 +60,6 @@ function ProviderDecisionCard({ provider }: { provider: ProviderRiskProfile }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-semibold tracking-tight text-slate-950">{provider.name}</h2>
-            <span className={cn("prs-chip", READINESS_CHIP[provider.overallReadiness])}>
-              <ShieldCheck className="h-3 w-3" aria-hidden="true" />
-              {provider.overallReadiness}
-            </span>
           </div>
           <p className="mt-1 text-xs text-slate-500">{provider.rail}</p>
         </div>
@@ -175,7 +173,7 @@ function ProviderDecisionCard({ provider }: { provider: ProviderRiskProfile }) {
             {provider.goLiveGate.map((item) => (
               <div key={item.label} className="prs-gate-item">
                 <span className={cn("prs-gate-dot", item.done ? "prs-gate-dot--done" : "prs-gate-dot--open")}>
-                  {item.done ? "✓" : "·"}
+                  {item.done ? <Check className="h-2.5 w-2.5" strokeWidth={3} aria-hidden="true" /> : <Minus className="h-2.5 w-2.5" aria-hidden="true" />}
                 </span>
                 <span className={item.done ? "text-slate-700" : "text-slate-500"}>
                   {item.label}

@@ -23,11 +23,11 @@ function StatusChip({ state }: { state: ChipState }) {
   return <Badge tone={tone}>{state}</Badge>;
 }
 
-function SectionTitle({ title, chip }: { title: string; chip: ChipState }) {
+function SectionTitle({ title, chip }: { title: string; chip?: ChipState }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <CardTitle>{title}</CardTitle>
-      <StatusChip state={chip} />
+      {chip ? <StatusChip state={chip} /> : null}
     </div>
   );
 }
@@ -79,7 +79,7 @@ export default async function SettingsPage({
       <form action={saveSettings} className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <SectionTitle title="General" chip="Active" />
+            <SectionTitle title="General" />
             <CardDescription>Workspace identity and legal entity.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
@@ -94,7 +94,7 @@ export default async function SettingsPage({
 
         <Card>
           <CardHeader>
-            <SectionTitle title="Treasury controls" chip="Active" />
+            <SectionTitle title="Treasury controls" />
             <CardDescription>Quote execution parameters and rate validity.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
@@ -113,7 +113,7 @@ export default async function SettingsPage({
 
         <Card>
           <CardHeader>
-            <SectionTitle title="Approval rules" chip="Active" />
+            <SectionTitle title="Approval rules" />
             <CardDescription>Maker-checker threshold for settlements.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
@@ -169,7 +169,7 @@ export default async function SettingsPage({
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <SectionTitle title="Audit & retention" chip="Active" />
+            <SectionTitle title="Audit & retention" />
             <CardDescription>Append-only evidence is retained automatically for every operational change.</CardDescription>
           </CardHeader>
           <CardContent>

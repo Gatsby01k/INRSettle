@@ -4,6 +4,7 @@ import { FileSearch, Lock } from "lucide-react";
 import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { AreaTabs } from "@/components/ops/area-tabs";
+import { PageHeader } from "@/components/ops/page-header";
 import { createQuote, createSettlement } from "@/lib/domain";
 import { friendlyErrorMessage } from "@/lib/errors";
 import { canCreateQuote, canCreateSettlement, roleErrorMessage } from "@/lib/permissions";
@@ -375,36 +376,16 @@ export default async function QuotesPage({
   return (
     <div className="space-y-4">
       <AreaTabs area="settlements" />
-      {/* 1 ── Quote command hero ─────────────────────────────────────────── */}
-      <section className="conf-hero ov-reveal p-5 sm:p-7">
-        <div className="relative">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="case-chip case-chip--shadow">USDT treasury → INR bank settlement</span>
-            <span className="case-chip case-chip--demo">Sandbox</span>
-            <span className="case-chip case-chip--demo">isTest enforced</span>
-            <span className="case-chip case-chip--demo">Live payouts disabled</span>
-            {demoFocus ? <DemoFocusBadge /> : null}
-          </div>
-          <h1 className="conf-hero__headline mt-4">Lock executable settlement terms.</h1>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
-            A settlement can only be created from a locked, unexpired quote.
-          </p>
-          <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-[var(--ops-line-soft)] pt-4">
-            {[
-              { label: "Active", value: String(activeCount), tone: "text-brand-emerald-ink" },
-              { label: "Accepted", value: String(acceptedCount), tone: "text-[#0a7d86]" },
-              { label: "Expired", value: String(expiredCount), tone: "text-[#9b6810]" },
-              { label: "Avg validity", value: avgValidityMin !== null ? `${avgValidityMin} min` : "—", tone: "text-slate-700" },
-              { label: "Last quote", value: lastQuoteAt ? formatDateTime(lastQuoteAt) : "—", tone: "text-slate-700" },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{stat.label}</p>
-                <p className={cn("mt-0.5 text-sm font-semibold tabular-nums tracking-tight", stat.tone)}>{stat.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PageHeader
+        title="Quotes"
+        description="Locked, time-boxed settlement terms. A settlement can only be created from an active, unexpired quote."
+        actions={demoFocus ? <DemoFocusBadge /> : undefined}
+        stats={[
+          { label: "Active", value: activeCount, tone: "ok" as const },
+          { label: "Accepted", value: acceptedCount, tone: "info" as const },
+          { label: "Expired", value: expiredCount, tone: expiredCount ? ("pending" as const) : ("neutral" as const), href: "/quotes?tab=expired" },
+        ]}
+      />
 
       <QuotesAutoRefresh enabled={activeCount > 0} />
 
@@ -582,7 +563,7 @@ export default async function QuotesPage({
         {tab === "expired" && filtered.length ? (
           <div className="flex flex-wrap items-center gap-2 border-b border-[var(--ops-line-soft)] bg-amber-50/40 px-3 py-2 text-xs text-slate-600">
             <span className="case-chip case-chip--gold">{expiredCount} expired</span>
-            <span>Expired quotes can't create settlements. Refresh to re-lock terms.</span>
+            <span>Expired quotes can&apos;t create settlements. Refresh to re-lock terms.</span>
           </div>
         ) : null}
 
