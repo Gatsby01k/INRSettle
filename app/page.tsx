@@ -95,6 +95,48 @@ function CtaPair({ className }: { className?: string }) {
   );
 }
 
+
+/** Engraved rail atlas — the brand motif as security print, not animation. */
+function RailAtlas() {
+  return (
+    <div className="lp-atlas" aria-hidden="true">
+      <svg viewBox="0 0 1400 520" fill="none" preserveAspectRatio="xMidYMin slice">
+        <defs>
+          <linearGradient id="railTeal" x1="0" y1="0" x2="1400" y2="0" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#0bb4c4" stopOpacity="0" />
+            <stop offset="0.3" stopColor="#0bb4c4" stopOpacity="0.35" />
+            <stop offset="0.7" stopColor="#00c79d" stopOpacity="0.3" />
+            <stop offset="1" stopColor="#00c79d" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="railGold" x1="0" y1="0" x2="1400" y2="0" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#f2ad23" stopOpacity="0" />
+            <stop offset="0.35" stopColor="#f2ad23" stopOpacity="0.4" />
+            <stop offset="0.75" stopColor="#f2ad23" stopOpacity="0.28" />
+            <stop offset="1" stopColor="#f2ad23" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* latitude hints — the map without the map */}
+        <path d="M-40,150 Q 700,110 1440,150" stroke="rgba(7,17,31,0.045)" strokeWidth="1" />
+        <path d="M-40,300 Q 700,255 1440,300" stroke="rgba(7,17,31,0.04)" strokeWidth="1" />
+        <path d="M-40,440 Q 700,390 1440,440" stroke="rgba(7,17,31,0.03)" strokeWidth="1" />
+        {/* settlement rails — one gold thread among teal */}
+        <path d="M-40,340 C 320,200 640,380 960,250 S 1300,180 1440,240" stroke="url(#railTeal)" strokeWidth="1.1" />
+        <path d="M-40,255 C 360,335 700,170 1040,280 S 1330,330 1440,290" stroke="url(#railGold)" strokeWidth="0.9" />
+        <path d="M-40,180 C 400,300 760,120 1120,250" stroke="url(#railTeal)" strokeWidth="0.7" strokeDasharray="1 7" />
+        {/* corridor nodes — engraved, still */}
+        <g>
+          <circle cx="410" cy="266" r="14" fill="rgba(0,199,157,0.07)" />
+          <circle cx="410" cy="266" r="2.2" fill="#0bb4c4" fillOpacity="0.55" />
+          <circle cx="880" cy="262" r="16" fill="rgba(242,173,35,0.08)" />
+          <circle cx="880" cy="262" r="2.4" fill="#f2ad23" fillOpacity="0.6" />
+          <circle cx="1180" cy="238" r="12" fill="rgba(0,199,157,0.06)" />
+          <circle cx="1180" cy="238" r="2" fill="#00c79d" fillOpacity="0.5" />
+        </g>
+      </svg>
+    </div>
+  );
+}
+
 /** The hero artifact: a faithful miniature of the product's actual output. */
 function ReportArtifact() {
   return (
@@ -158,9 +200,11 @@ export default function HomePage() {
         {/* ── Hero ──────────────────────────────────────────────────────── */}
         <section className="lp-hero relative overflow-hidden">
           <div className="lp-hero-light pointer-events-none" aria-hidden="true" />
+          <RailAtlas />
           <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:pb-24 lg:pt-20">
             <div>
-              <p className="lp-reveal lp-d1 inline-flex items-center gap-1.5 rounded-full border border-[var(--ops-line)] bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+              <p className="lp-reveal lp-d1 inline-flex items-center gap-2 rounded-full border border-[var(--ops-line)] bg-white/70 px-3 py-1 text-xs font-semibold text-slate-600">
+                <span className="lp-gold-dot" aria-hidden="true" />
                 Private beta — with selected payout and treasury teams
               </p>
               {/* Visual markup of THESIS — keep wording in sync with lib/copy.ts */}
@@ -287,15 +331,18 @@ export default function HomePage() {
         </section>
 
         {/* ── Closing CTA ──────────────────────────────────────────────── */}
-        <section className="lp-view mx-auto max-w-6xl px-4 py-20 text-center sm:px-6">
-          <h2 className="mx-auto max-w-2xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-            Prove your settlements are actually final.
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-slate-600">
-            Run a pilot on the payouts you already process. Your providers keep moving the money —
-            INRSettle proves what happened.
-          </p>
-          <CtaPair className="mt-7 justify-center" />
+        <section className="lp-view mx-auto max-w-6xl px-4 py-20 sm:px-6">
+          <div className="lp-cert mx-auto max-w-3xl px-6 py-14 text-center sm:px-14">
+            <div className="lp-cert-rule" aria-hidden="true" />
+            <h2 className="mx-auto mt-6 max-w-2xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+              Prove your settlements are actually final.
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-lg text-slate-600">
+              Run a pilot on the payouts you already process. Your providers keep moving the money —
+              INRSettle proves what happened.
+            </p>
+            <CtaPair className="mt-8 justify-center" />
+          </div>
         </section>
       </main>
 

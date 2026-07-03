@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 export function SiteHeader() {
   return (
     <header className="lp-glass sticky top-0 z-40">
+      <span className="lp-brandline" aria-hidden="true" />
       <nav
         className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6"
         aria-label="Primary"
@@ -54,7 +55,7 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-[var(--ops-line)] bg-slate-50/60">
+    <footer className="lp-footer-line bg-slate-50/60">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
         <div className="lg:col-span-2">
           <Link href="/" className="flex items-center gap-2.5">
@@ -100,8 +101,10 @@ export function SiteFooter() {
 export function SiteCta() {
   return (
     <section className="border-t border-[var(--ops-line)]">
-      <div className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6">
-        <h2 className="mx-auto max-w-2xl text-2xl font-semibold leading-tight tracking-tight text-slate-950 sm:text-3xl">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <div className="lp-cert mx-auto max-w-3xl px-6 py-12 text-center sm:px-12">
+        <div className="lp-cert-rule" aria-hidden="true" />
+        <h2 className="mx-auto mt-5 max-w-2xl text-2xl font-semibold leading-tight tracking-tight text-slate-950 sm:text-3xl">
           Prove your settlements are actually final.
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-slate-600">
@@ -114,6 +117,7 @@ export function SiteCta() {
           <Link href="/sample-report" className={cn(buttonVariants({ variant: "outline", size: "default" }))}>
             View a sample report
           </Link>
+        </div>
         </div>
       </div>
     </section>

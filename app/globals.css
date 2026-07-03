@@ -5729,3 +5729,103 @@ details[open] > .reconciliation-details-content {
   background: var(--status-ok); transition: right 0.4s var(--lp-ease-out);
 }
 .lp-ctrl:hover::after { right: 0; }
+
+/* =====================================================================
+   BRAND ENGRAVING — Creative Director pass II.
+   The INRSettle DNA (flowing rails, world-map motif, gold + teal, warm
+   light) rendered as SECURITY PRINT, not animation: the hairline
+   line-work of banknotes and bond certificates. Emerald remains strictly
+   semantic (= verified). Gold is the brand thread — warmth, never status.
+   ===================================================================== */
+
+/* ── The brandline: a gold→teal hairline crowning every public page ── */
+.lp-brandline {
+  display: block; height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%, rgba(242, 173, 35, 0.0) 6%, rgba(242, 173, 35, 0.85) 26%,
+    rgba(0, 199, 157, 0.8) 55%, rgba(11, 180, 196, 0.7) 78%, transparent 96%);
+}
+
+/* ── Hero lighting: warm key light joins the cool pair (paper at dawn) */
+.lp-hero-light {
+  background:
+    radial-gradient(46% 40% at 78% -4%, rgba(242, 173, 35, 0.09), transparent 64%),
+    radial-gradient(52% 42% at 20% -6%, rgba(0, 199, 157, 0.10), transparent 68%),
+    radial-gradient(40% 34% at 52% 6%, rgba(11, 180, 196, 0.06), transparent 66%),
+    radial-gradient(90% 60% at 50% -20%, rgba(7, 17, 31, 0.05), transparent 70%),
+    linear-gradient(180deg, #fcfbf8 0%, #ffffff 58%);
+}
+
+/* ── Engraved rail atlas (static SVG behind the hero) ─────────────── */
+.lp-atlas {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 92%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 92%);
+}
+.lp-atlas svg { width: 100%; height: 100%; }
+
+/* ── Warm alternating sections: paper, not gray ───────────────────── */
+.lp-view.border-y, .lp-view.border-t { border-color: rgba(7, 17, 31, 0.07); }
+section.lp-view.bg-slate-50\/60 {
+  background: linear-gradient(180deg, #fcfbf8 0%, #f8fafc 100%);
+}
+
+/* ── Document edges: gold-leaf details on the paper stack ─────────── */
+.lp-artifact-card::before {
+  background: linear-gradient(90deg,
+    transparent 6%, rgba(242, 173, 35, 0.55) 26%,
+    rgba(0, 199, 157, 0.5) 58%, rgba(11, 180, 196, 0.45) 78%, transparent 94%);
+}
+.lp-sheet--a { border-top: 1px solid rgba(242, 173, 35, 0.28); }
+
+/* ── Certificate CTA band: the closing section as an instrument ───── */
+.lp-cert {
+  position: relative; overflow: hidden; border-radius: 1.25rem;
+  border: 1px solid rgba(7, 17, 31, 0.09);
+  background:
+    radial-gradient(60% 90% at 18% 0%, rgba(0, 199, 157, 0.07), transparent 60%),
+    radial-gradient(55% 85% at 85% 8%, rgba(242, 173, 35, 0.08), transparent 62%),
+    linear-gradient(180deg, #fdfcf9, #ffffff 70%);
+  box-shadow:
+    0 1px 2px rgba(7, 17, 31, 0.05),
+    0 30px 60px -22px rgba(7, 17, 31, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.lp-cert::before {
+  /* engraved guilloché corner — fine concentric line-work */
+  content: ""; position: absolute; right: -70px; top: -70px; width: 260px; height: 260px;
+  border-radius: 9999px; pointer-events: none;
+  background: repeating-radial-gradient(circle at center,
+    rgba(242, 173, 35, 0.16) 0 1px, transparent 1px 9px);
+  -webkit-mask-image: radial-gradient(circle at center, #000 30%, transparent 72%);
+  mask-image: radial-gradient(circle at center, #000 30%, transparent 72%);
+}
+.lp-cert::after {
+  content: ""; position: absolute; left: -80px; bottom: -80px; width: 240px; height: 240px;
+  border-radius: 9999px; pointer-events: none;
+  background: repeating-radial-gradient(circle at center,
+    rgba(11, 180, 196, 0.14) 0 1px, transparent 1px 10px);
+  -webkit-mask-image: radial-gradient(circle at center, #000 30%, transparent 72%);
+  mask-image: radial-gradient(circle at center, #000 30%, transparent 72%);
+}
+.lp-cert-rule {
+  height: 1px; width: 72px; margin: 0 auto;
+  background: linear-gradient(90deg, transparent, rgba(242, 173, 35, 0.75), transparent);
+}
+
+/* ── Footer: hairline of the same thread ──────────────────────────── */
+.lp-footer-line {
+  border-top: none !important; position: relative;
+}
+.lp-footer-line::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 1px;
+  background: linear-gradient(90deg,
+    transparent, rgba(242, 173, 35, 0.4) 30%, rgba(0, 199, 157, 0.35) 65%, transparent);
+}
+
+/* ── Gold as brand-moment accent (non-semantic) ───────────────────── */
+.lp-gold-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 9999px;
+  background: radial-gradient(circle at 35% 30%, #ffd576, #f2ad23 60%, #c9880f);
+  box-shadow: 0 0 0 3px rgba(242, 173, 35, 0.14);
+}
