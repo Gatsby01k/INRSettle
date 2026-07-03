@@ -5429,3 +5429,111 @@ details[open] > .reconciliation-details-content {
   .proof-engine__capsule { width: 64px; height: 64px; border-radius: 20px; }
   .proof-engine__capsule img { width: 32px; height: 32px; }
 }
+
+/* =====================================================================
+   PUBLIC WEBSITE v2 — unified design for legacy marketing content.
+   The secondary public pages keep their content in static HTML; these
+   rules render that markup in the same language as the landing and the
+   console: white surfaces, ink text, hairline borders, one emerald
+   accent. Replaces styles.css entirely for public pages.
+   ===================================================================== */
+.mkt-legacy { color: #0f172a; font-size: 16px; line-height: 1.65; }
+.mkt-legacy .container { max-width: 72rem; margin: 0 auto; padding: 0 1rem; }
+@media (min-width: 640px) { .mkt-legacy .container { padding: 0 1.5rem; } }
+
+.mkt-legacy .page-hero { padding: 3.5rem 0 1rem; }
+.mkt-legacy .page-hero h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 600; letter-spacing: -0.02em; line-height: 1.12; color: #020617; }
+.mkt-legacy .page-hero p { margin-top: 0.9rem; max-width: 42rem; color: #475569; font-size: 1.06rem; }
+
+.mkt-legacy .eyebrow {
+  display: inline-flex; align-items: center; border-radius: 9999px;
+  border: 1px solid var(--ops-line); background: #f8fafc;
+  padding: 0.25rem 0.75rem; font-size: 0.75rem; font-weight: 600; color: #475569;
+  margin-bottom: 0.9rem;
+}
+
+.mkt-legacy .section { padding: 2.5rem 0; }
+.mkt-legacy .section.alt { background: rgba(248, 250, 252, 0.6); border-top: 1px solid var(--ops-line); border-bottom: 1px solid var(--ops-line); }
+.mkt-legacy h2 { font-size: clamp(1.35rem, 2.6vw, 1.7rem); font-weight: 600; letter-spacing: -0.015em; color: #020617; }
+.mkt-legacy h3 { font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em; color: #020617; }
+.mkt-legacy p { color: #475569; }
+.mkt-legacy .muted { color: #64748b; }
+.mkt-legacy a:not(.btn) { color: var(--status-ok); text-decoration: none; }
+.mkt-legacy a:not(.btn):hover { text-decoration: underline; }
+.mkt-legacy .section-head { margin-bottom: 1.5rem; }
+.mkt-legacy .section-head p { max-width: 44rem; margin-top: 0.5rem; }
+
+.mkt-legacy .grid-2, .mkt-legacy .grid-3, .mkt-legacy .grid-4 { display: grid; gap: 1rem; margin-top: 1.5rem; }
+@media (min-width: 640px) { .mkt-legacy .grid-2 { grid-template-columns: repeat(2, 1fr); } .mkt-legacy .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .mkt-legacy .grid-3 { grid-template-columns: repeat(3, 1fr); } .mkt-legacy .grid-4 { grid-template-columns: repeat(4, 1fr); } }
+.mkt-legacy .split { display: grid; gap: 1.5rem; margin-top: 1rem; }
+@media (min-width: 900px) { .mkt-legacy .split { grid-template-columns: 1fr 1fr; align-items: start; } }
+
+.mkt-legacy .card, .mkt-legacy .contact-box {
+  border-radius: 1rem; border: 1px solid var(--ops-line); background: #fff; padding: 1.5rem;
+}
+.mkt-legacy .card h3 { margin-top: 0.75rem; }
+.mkt-legacy .card p { margin-top: 0.5rem; font-size: 0.925rem; }
+.mkt-legacy .ico {
+  display: inline-flex; height: 2.5rem; width: 2.5rem; align-items: center; justify-content: center;
+  border-radius: 0.75rem; background: var(--status-ok-bg); color: var(--status-ok);
+  box-shadow: inset 0 0 0 1px var(--status-ok-line);
+}
+.mkt-legacy .ico.amber { background: var(--status-pending-bg); color: var(--status-pending); box-shadow: inset 0 0 0 1px var(--status-pending-line); }
+.mkt-legacy .ico svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.mkt-legacy .feature-list { margin-top: 1rem; display: grid; gap: 0.5rem; padding: 0; list-style: none; }
+.mkt-legacy .feature-list li { position: relative; padding-left: 1.4rem; color: #334155; font-size: 0.95rem; }
+.mkt-legacy .feature-list li::before {
+  content: ""; position: absolute; left: 0; top: 0.42em; width: 0.7rem; height: 0.38rem;
+  border-left: 2px solid var(--status-ok); border-bottom: 2px solid var(--status-ok); transform: rotate(-45deg);
+}
+
+.mkt-legacy .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  border-radius: 0.5rem; border: 1px solid var(--ops-line); background: #fff;
+  padding: 0.55rem 1.1rem; font-size: 0.9rem; font-weight: 600; color: #0f172a;
+  transition: background-color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+.mkt-legacy .btn:hover { background: #f8fafc; border-color: rgba(7, 17, 31, 0.2); text-decoration: none; }
+.mkt-legacy .btn.primary {
+  border-color: transparent; background: hsl(var(--primary)); color: #fff;
+  box-shadow: 0 8px 20px rgba(8, 127, 105, 0.24);
+}
+.mkt-legacy .btn.primary:hover { background: hsl(168 90% 28%); }
+
+.mkt-legacy .form { display: grid; gap: 0.75rem; }
+.mkt-legacy .form input, .mkt-legacy .form select, .mkt-legacy .form textarea {
+  width: 100%; border-radius: 0.5rem; border: 1px solid var(--ops-line); background: #fff;
+  padding: 0.6rem 0.8rem; font-size: 0.925rem; color: #0f172a;
+}
+.mkt-legacy .form input:focus, .mkt-legacy .form select:focus, .mkt-legacy .form textarea:focus {
+  outline: none; border-color: var(--status-ok); box-shadow: 0 0 0 3px rgba(0, 199, 157, 0.15);
+}
+.mkt-legacy .form textarea { min-height: 6.5rem; resize: vertical; }
+.mkt-legacy .form ::placeholder { color: #94a3b8; }
+.mkt-legacy .direct-contact { margin-top: 1.25rem; border-top: 1px solid var(--ops-line-soft); padding-top: 1rem; font-size: 0.875rem; }
+.mkt-legacy .direct-contact p { margin: 0.2rem 0; color: #64748b; }
+.mkt-legacy .intent-cta { margin-top: 1.25rem; }
+
+.mkt-legacy table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
+.mkt-legacy table th { text-align: left; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--ops-line); }
+.mkt-legacy table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(7, 17, 31, 0.06); color: #334155; }
+
+.mkt-legacy .pill { display: inline-flex; border-radius: 9999px; padding: 0.2rem 0.65rem; font-size: 0.75rem; font-weight: 600; background: var(--status-neutral-bg); color: var(--status-neutral); }
+.mkt-legacy .pill.ok { background: var(--status-ok-bg); color: var(--status-ok); }
+.mkt-legacy .notice { border-radius: 0.75rem; border: 1px solid var(--status-pending-line); background: var(--status-pending-bg); padding: 1rem 1.25rem; font-size: 0.9rem; color: #57534e; margin-top: 1.25rem; }
+.mkt-legacy .kbd, .mkt-legacy code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; background: #f1f5f9; border-radius: 0.35rem; padding: 0.12em 0.4em; color: #0f172a; }
+.mkt-legacy .code-panel, .mkt-legacy pre { border-radius: 0.75rem; background: #0b1626; color: #dbe7f3; padding: 1rem 1.25rem; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; margin-top: 1rem; }
+.mkt-legacy pre code { background: transparent; color: inherit; padding: 0; }
+
+.mkt-legacy .step { display: flex; gap: 0.9rem; align-items: flex-start; margin-top: 1rem; }
+.mkt-legacy .step-num { display: inline-flex; height: 1.75rem; width: 1.75rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px; background: var(--status-ok-bg); color: var(--status-ok); font-size: 0.8rem; font-weight: 700; }
+.mkt-legacy .timeline { border-left: 2px solid var(--ops-line); padding-left: 1.25rem; display: grid; gap: 1rem; margin-top: 1.25rem; }
+
+.mkt-legacy .legal { max-width: 46rem; }
+.mkt-legacy .legal h2 { margin-top: 2rem; font-size: 1.2rem; }
+.mkt-legacy .legal p, .mkt-legacy .legal li { font-size: 0.95rem; color: #475569; margin-top: 0.6rem; }
+.mkt-legacy .legal ul { padding-left: 1.25rem; }
+.mkt-legacy .narrow { max-width: 46rem; }
+.mkt-legacy .seo-cta { margin-top: 1.5rem; }

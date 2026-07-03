@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/ops/status-badge";
 import { StatRow } from "@/components/ops/stat-row";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 
 export const metadata: Metadata = {
   title: "Sample settlement report — INRSettle",
@@ -42,8 +43,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function SampleReportPage() {
   return (
-    <div className="app-surface min-h-screen py-8 text-slate-950">
-      <div className="mx-auto max-w-3xl space-y-4 px-4">
+    <div className="min-h-screen bg-white text-slate-950 antialiased">
+      <SiteHeader />
+      <div className="mx-auto max-w-3xl space-y-4 px-4 py-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
             href="/"
@@ -168,6 +170,7 @@ export default function SampleReportPage() {
           </Link>
         </div>
       </div>
+      <SiteFooter />
     </div>
   );
 }

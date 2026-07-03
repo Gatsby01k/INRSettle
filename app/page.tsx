@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowRight, Check, CheckCircle2, FileCheck2, Scale, ShieldCheck } from "lucide-react";
 import { NO_FUNDS_DISCLAIMER, THESIS } from "@/lib/copy";
+import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -149,29 +149,8 @@ function ReportArtifact() {
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white text-slate-950 antialiased">
-      {/* ── Nav ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 border-b border-[var(--ops-line)] bg-white/85 backdrop-blur-xl">
-        <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6" aria-label="Primary">
-          <Link href="/" className="flex items-center gap-2.5" aria-label="INRSettle home">
-            <Image src="/assets/mark.png" alt="" width={32} height={32} className="rounded-lg" />
-            <span className="text-[15px] font-semibold tracking-tight">INRSettle</span>
-          </Link>
-          <div className="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">
-            <a href="#how-it-works" className="transition-colors hover:text-slate-950">How it works</a>
-            <a href="#platform" className="transition-colors hover:text-slate-950">Platform</a>
-            <Link href="/security" className="transition-colors hover:text-slate-950">Security</Link>
-            <Link href="/docs" className="transition-colors hover:text-slate-950">Docs</Link>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link href="/login" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "hidden sm:inline-flex")}>
-              Sign in
-            </Link>
-            <Link href="/contact?intent=access" className={cn(buttonVariants({ variant: "primary", size: "sm" }))}>
-              Request access
-            </Link>
-          </div>
-        </nav>
-      </header>
+      {/* ── Nav (shared site chrome) ─────────────────────────────────── */}
+      <SiteHeader />
 
       <main>
         {/* ── Hero ──────────────────────────────────────────────────────── */}
@@ -320,45 +299,7 @@ export default function HomePage() {
       </main>
 
       {/* ── Footer ─────────────────────────────────────────────────────── */}
-      <footer className="border-t border-[var(--ops-line)] bg-slate-50/60">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
-          <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2.5">
-              <Image src="/assets/mark.png" alt="" width={28} height={28} className="rounded-lg" />
-              <span className="text-sm font-semibold tracking-tight">INRSettle</span>
-            </Link>
-            <p className="mt-3 max-w-sm text-sm leading-relaxed text-slate-500">
-              Settlement proof and finality review for teams that move money through providers.
-            </p>
-            <p className="mt-3 max-w-sm text-xs leading-relaxed text-slate-400">{NO_FUNDS_DISCLAIMER}</p>
-            <p className="mt-4 text-xs text-slate-400">
-              © 2026 INRSettle · Private beta ·{" "}
-              <a href="mailto:info@inrsettle.com" className="hover:text-slate-600">
-                info@inrsettle.com
-              </a>
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Product</p>
-            <ul className="mt-3 space-y-2 text-sm text-slate-600">
-              <li><a href="#how-it-works" className="hover:text-slate-950">How it works</a></li>
-              <li><Link href="/sample-report" className="hover:text-slate-950">Sample report</Link></li>
-              <li><Link href="/security" className="hover:text-slate-950">Security</Link></li>
-              <li><Link href="/compliance" className="hover:text-slate-950">Compliance</Link></li>
-              <li><Link href="/status" className="hover:text-slate-950">Status</Link></li>
-            </ul>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Company</p>
-            <ul className="mt-3 space-y-2 text-sm text-slate-600">
-              <li><Link href="/docs" className="hover:text-slate-950">Documentation</Link></li>
-              <li><Link href="/contact?intent=sales" className="hover:text-slate-950">Contact</Link></li>
-              <li><Link href="/legal/privacy" className="hover:text-slate-950">Privacy</Link></li>
-              <li><Link href="/legal/terms" className="hover:text-slate-950">Terms</Link></li>
-            </ul>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
