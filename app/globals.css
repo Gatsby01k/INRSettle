@@ -5967,3 +5967,106 @@ section.lp-view.bg-slate-50\/60 {
     to { opacity: 1; transform: none; }
   }
 }
+
+/* =====================================================================
+   THE EVIDENCE ENGINE · SCENES — each act is its own composition.
+   01 signature slip · 02 wire ticket · 03 the match · 04 the ledger
+   (the one dark object on the site) · 05 the verdict · distribution
+   list · signature page. No two scenes share a layout.
+   ===================================================================== */
+
+/* 01 — approval slip, resting on the spine */
+.ee-slip {
+  position: relative; background: #fff; border-radius: 0.9rem;
+  border: 1px solid rgba(7, 17, 31, 0.09);
+  box-shadow: 0 1px 2px rgba(7,17,31,0.05), 0 22px 44px -18px rgba(7,17,31,0.18);
+  transform: rotate(-1.2deg);
+  transition: transform 0.5s var(--lp-ease-out);
+}
+.ee-slip:hover { transform: rotate(0deg); }
+.ee-slip::after {
+  content: ""; position: absolute; inset: auto 1rem 0.9rem auto; width: 84px; height: 22px;
+  background:
+    linear-gradient(105deg, transparent 46%, rgba(7,17,31,0.5) 47%, rgba(7,17,31,0.5) 53%, transparent 54%),
+    repeating-linear-gradient(100deg, rgba(7,17,31,0.35) 0 1px, transparent 1px 7px);
+  opacity: 0.5; border-radius: 2px;
+  -webkit-mask-image: linear-gradient(90deg, #000 70%, transparent);
+  mask-image: linear-gradient(90deg, #000 70%, transparent);
+}
+
+/* 02 — wire ticket: one wide strip with perforation */
+.ee-ticket {
+  display: flex; flex-wrap: wrap; align-items: stretch; background: #fff;
+  border-radius: 1rem; border: 1px solid rgba(7, 17, 31, 0.09); overflow: hidden;
+  box-shadow: 0 1px 2px rgba(7,17,31,0.05), 0 28px 54px -22px rgba(7,17,31,0.16);
+}
+.ee-ticket > div {
+  flex: 1 1 10rem; padding: 1.1rem 1.25rem; position: relative;
+}
+.ee-ticket > div + div { border-left: 1.5px dashed rgba(7, 17, 31, 0.14); }
+.ee-ticket > div + div::before, .ee-ticket > div + div::after {
+  content: ""; position: absolute; left: -6px; width: 11px; height: 11px;
+  border-radius: 9999px; background: #fcfbf8; border: 1px solid rgba(7,17,31,0.1);
+}
+.ee-ticket > div + div::before { top: -6px; }
+.ee-ticket > div + div::after { bottom: -6px; }
+
+/* 03 — the match: claim vs record, meeting at the bracket */
+.ee-claim, .ee-bank {
+  background: #fff; border-radius: 0.9rem; padding: 1.1rem 1.25rem;
+  border: 1px solid rgba(7,17,31,0.09);
+  box-shadow: 0 1px 2px rgba(7,17,31,0.05), 0 20px 40px -18px rgba(7,17,31,0.16);
+  transition: transform 0.5s var(--lp-ease-out);
+}
+.ee-claim { transform: rotate(-2deg); border-top: 3px solid var(--status-pending); }
+.ee-bank { transform: rotate(2deg); border-top: 3px solid var(--status-ok); }
+.ee-match-scene:hover .ee-claim { transform: rotate(-0.5deg) translateX(4px); }
+.ee-match-scene:hover .ee-bank { transform: rotate(0.5deg) translateX(-4px); }
+.ee-bracket {
+  display: grid; place-items: center; width: 58px; height: 58px; border-radius: 9999px;
+  background: radial-gradient(circle at 32% 28%, #fff, #f0fdf8);
+  border: 1px solid var(--status-ok-line);
+  box-shadow: 0 10px 24px -8px rgba(0,199,157,0.35);
+  color: var(--status-ok); font-weight: 700;
+}
+
+/* 04 — the ledger: the single dark object on the site */
+.ee-ledger {
+  background:
+    radial-gradient(70% 50% at 80% -10%, rgba(0,199,157,0.12), transparent 60%),
+    linear-gradient(180deg, #0a1626, #0e2036);
+  color: #e6eef7; border-radius: 1.1rem; border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 40px 80px -30px rgba(7,17,31,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.ee-ledger-row { display: flex; justify-content: space-between; gap: 1rem;
+  padding: 0.55rem 0; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 0.8rem; }
+.ee-ledger-row:last-child { border-bottom: 0; }
+.ee-ledger-row .ok { color: #5ff0cf; }
+
+/* distribution list — the report's recipients, as a ruled document */
+.ee-dossier {
+  background: linear-gradient(180deg, #fffdf9, #ffffff);
+  border: 1px solid rgba(7,17,31,0.09); border-radius: 1.1rem;
+  box-shadow: 0 1px 2px rgba(7,17,31,0.05), 0 30px 60px -26px rgba(7,17,31,0.16);
+}
+.ee-dossier-row {
+  display: grid; grid-template-columns: 3rem 1fr; gap: 1rem; align-items: baseline;
+  padding: 1.1rem 1.5rem; border-bottom: 1px dashed rgba(7,17,31,0.12);
+  transition: background-color 0.35s var(--lp-ease-out), padding-left 0.35s var(--lp-ease-out);
+}
+.ee-dossier-row:last-child { border-bottom: 0; }
+.ee-dossier-row:hover { background: rgba(242,173,35,0.04); padding-left: 1.9rem; }
+.ee-dossier-num { font-size: 0.75rem; font-weight: 700; color: var(--status-pending); letter-spacing: 0.08em; }
+
+/* signature page — the close as the last page of an instrument */
+.ee-signature { position: relative; }
+.ee-signature::before {
+  content: ""; position: absolute; left: 50%; top: 0; height: 4.5rem; width: 1px;
+  transform: translateX(-0.5px);
+  background: linear-gradient(180deg, rgba(242,173,35,0.5), transparent);
+}
+.ee-sigline {
+  height: 1px; width: 200px; margin: 0 auto;
+  background: rgba(7,17,31,0.35);
+}

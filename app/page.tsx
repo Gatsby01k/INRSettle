@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Check, FileClock, FileCheck2, Landmark, Scale, ShieldCheck } from "lucide-react";
+import { ArrowRight, Check, ShieldCheck } from "lucide-react";
 import { NO_FUNDS_DISCLAIMER } from "@/lib/copy";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 import { buttonVariants } from "@/components/ui/button";
@@ -32,84 +32,6 @@ export const metadata: Metadata = {
  */
 
 /* ── The five acts of evidence ──────────────────────────────────────── */
-const ACTS = [
-  {
-    n: "01",
-    title: "Approval, before anything moves",
-    body: "Every settlement starts from quote-locked terms and a recorded approval. Creators cannot approve their own settlements — dual control is enforced, not optional.",
-    icon: ShieldCheck,
-    fragment: {
-      heading: "Approval record",
-      rows: [
-        ["Quote", "83.1500 INR/USDT · locked · 15 min window"],
-        ["Approved by", "Treasury manager · second operator"],
-        ["Control", "Dual-control · self-approval rejected"],
-      ],
-      stamp: "Recorded",
-    },
-  },
-  {
-    n: "02",
-    title: "The provider executes. The proof is captured.",
-    body: "Your provider moves the money. INRSettle captures the provider’s own execution record — transaction ID, UTR, reported amount — delivered over signed webhooks.",
-    icon: Landmark,
-    fragment: {
-      heading: "Provider proof",
-      rows: [
-        ["Provider", "PontisGlobe (sandbox)"],
-        ["Transaction", "sb_demo_pontis_001 · UTR verified"],
-        ["Received via", "Signed webhook · HMAC verified"],
-      ],
-      stamp: "Captured",
-    },
-  },
-  {
-    n: "03",
-    title: "One side’s word is never enough",
-    body: "Bank and PSP records are matched against every settlement — amount, currency, value date. Provider claims are excluded from reconciliation by design; auto-match links only at 100% confidence.",
-    icon: Scale,
-    fragment: {
-      heading: "Independent reconciliation",
-      rows: [
-        ["Source", "Bank statement · BANK-STMT-04412"],
-        ["Match", "MATCHED · 100% confidence"],
-        ["Rule", "Provider claims never count"],
-      ],
-      stamp: "Matched",
-    },
-  },
-  {
-    n: "04",
-    title: "Every action, on the record",
-    body: "Approvals, transitions, matches and decisions are written to an append-only audit trail with actor and before/after state. When a payout is questioned, the answer is a query — not a memory.",
-    icon: FileClock,
-    fragment: {
-      heading: "Audit trail",
-      rows: [
-        ["APPROVED → EXECUTING", "10:52 IST · treasury manager"],
-        ["EXECUTING → SETTLED", "11:19 IST · provider webhook"],
-        ["SETTLED → RECONCILED", "14:03 IST · auto-match 100%"],
-      ],
-      stamp: "Append-only",
-    },
-  },
-  {
-    n: "05",
-    title: "Finality is a decision, made on evidence",
-    body: "A deterministic engine weighs the four inputs — proof, independent match, approval, guardrails — and renders the decision. The same engine answers the console and the API; they can never disagree.",
-    icon: FileCheck2,
-    fragment: {
-      heading: "Finality review",
-      rows: [
-        ["Provider proof", "Verified"],
-        ["Independent reconciliation", "Verified"],
-        ["Recorded approval", "Verified"],
-      ],
-      stamp: "Ready to finalize",
-    },
-  },
-] as const;
-
 const AUDIENCES = [
   { who: "Payout operators", need: "Approval gates, provider proof and a finality queue instead of spreadsheets." },
   { who: "PSPs & payout providers", need: "Independent settlement evidence for your customers, and documented go-live readiness." },
@@ -265,7 +187,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ════ THE ASSEMBLY · five acts along the spine ══════════════ */}
+        {/* ════ THE ASSEMBLY · five scenes, five compositions ═════════ */}
         <section id="how-it-works" className="relative scroll-mt-20" aria-label="How the evidence assembles">
           <div className="ee-spine" aria-hidden="true" />
 
@@ -278,45 +200,162 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div className="mx-auto max-w-6xl px-4 pb-8 sm:px-6">
-            {ACTS.map((act, index) => {
-              const Icon = act.icon;
-              const flip = index % 2 === 1;
-              return (
-                <article key={act.n} className="ee-act relative py-14 lg:py-16">
-                  <span className="ee-node" aria-hidden="true" />
-                  <div className={cn("grid items-center gap-8 lg:grid-cols-2 lg:gap-20", flip && "lg:[direction:rtl]")}>
-                    <div className="lg:[direction:ltr]">
-                      <p className="ee-act-num" aria-hidden="true">{act.n}</p>
-                      <h3 className="mt-2 max-w-md text-2xl font-semibold leading-snug tracking-tight">{act.title}</h3>
-                      <p className="mt-3 max-w-md text-[15px] leading-relaxed text-slate-600">{act.body}</p>
-                    </div>
-                    <div className="lg:[direction:ltr]">
-                      <div className="ee-fragment p-5">
-                        <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2.5 pl-2">
-                          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">
-                            <Icon className="h-3.5 w-3.5 text-[var(--status-ok)]" aria-hidden="true" />
-                            {act.fragment.heading}
-                          </p>
-                          <span className="rounded-full bg-[var(--status-ok-bg)] px-2 py-0.5 text-[11px] font-semibold text-[var(--status-ok)]">
-                            {act.fragment.stamp}
-                          </span>
-                        </div>
-                        <dl className="mt-3 space-y-2 pl-2">
-                          {act.fragment.rows.map(([k, v]) => (
-                            <div key={k} className="flex items-baseline justify-between gap-4">
-                              <dt className="shrink-0 text-xs text-slate-400">{k}</dt>
-                              <dd className="text-right text-[13px] font-medium tabular-nums text-slate-800">{v}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </div>
-                    </div>
+          {/* 01 · THE SIGNATURE — an approval slip lands on the spine */}
+          <article className="ee-act relative mx-auto max-w-2xl px-4 py-16 text-center sm:px-6">
+            <p className="ee-act-num" aria-hidden="true">01</p>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight">Approval, before anything moves</h3>
+            <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-slate-600">
+              Every settlement starts from quote-locked terms and a recorded approval. Creators cannot
+              approve their own settlements — dual control is enforced, not optional.
+            </p>
+            <div className="ee-slip relative z-10 mx-auto mt-9 max-w-md p-5 text-left">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">Approval record</p>
+                <span className="rounded-full bg-[var(--status-ok-bg)] px-2 py-0.5 text-[11px] font-semibold text-[var(--status-ok)]">Recorded</span>
+              </div>
+              <dl className="mt-3 space-y-2">
+                {[
+                  ["Quote", "83.1500 INR/USDT · locked · 15 min"],
+                  ["Approved by", "Treasury manager · second operator"],
+                  ["Control", "Dual-control · self-approval rejected"],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex items-baseline justify-between gap-4">
+                    <dt className="shrink-0 text-xs text-slate-400">{k}</dt>
+                    <dd className="text-right text-[13px] font-medium text-slate-800">{v}</dd>
                   </div>
-                </article>
-              );
-            })}
-          </div>
+                ))}
+              </dl>
+            </div>
+          </article>
+
+          {/* 02 · THE WIRE — provider proof as a full-width ticket */}
+          <article className="ee-act relative px-4 py-16 sm:px-6">
+            <div className="mx-auto max-w-6xl">
+              <div className="max-w-lg">
+                <p className="ee-act-num" aria-hidden="true">02</p>
+                <h3 className="mt-2 text-2xl font-semibold tracking-tight">The provider executes. The proof is captured.</h3>
+                <p className="mt-3 text-[15px] leading-relaxed text-slate-600">
+                  Your provider moves the money. INRSettle captures the provider&rsquo;s own execution
+                  record — transaction ID, UTR, reported amount — delivered over signed webhooks.
+                </p>
+              </div>
+              <div className="ee-ticket relative z-10 mt-9">
+                {[
+                  ["Provider", "PontisGlobe (sandbox)"],
+                  ["Transaction", "sb_demo_pontis_001"],
+                  ["UTR", "UTR2606DEMO0001 · verified"],
+                  ["Received via", "Signed webhook · HMAC"],
+                ].map(([k, v]) => (
+                  <div key={k}>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">{k}</p>
+                    <p className="mt-1 text-sm font-medium tabular-nums text-slate-900">{v}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </article>
+
+          {/* 03 · THE MATCH — claim meets independent record */}
+          <article className="ee-act ee-match-scene relative px-4 py-16 text-center sm:px-6">
+            <p className="ee-act-num" aria-hidden="true">03</p>
+            <h3 className="mx-auto mt-2 max-w-xl text-2xl font-semibold tracking-tight">One side&rsquo;s word is never enough</h3>
+            <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-slate-600">
+              Bank and PSP records are matched against every settlement — amount, currency, value date.
+              Provider claims are excluded from reconciliation by design.
+            </p>
+            <div className="relative z-10 mx-auto mt-10 flex max-w-4xl flex-col items-center gap-5 lg:flex-row lg:items-stretch lg:gap-0">
+              <div className="ee-claim w-full flex-1 text-left">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--status-pending)]">Provider claim · excluded from matching</p>
+                <p className="mt-2 text-sm font-medium text-slate-900">status: completed</p>
+                <p className="text-sm tabular-nums text-slate-600">reported ₹8,31,500.00</p>
+              </div>
+              <div className="relative z-20 -my-3 flex items-center justify-center lg:-mx-5 lg:my-auto">
+                <span className="ee-bracket text-lg" aria-label="matched">=</span>
+              </div>
+              <div className="ee-bank w-full flex-1 text-left">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--status-ok)]">Bank record · independent evidence</p>
+                <p className="mt-2 text-sm font-medium text-slate-900">BANK-STMT-04412</p>
+                <p className="text-sm tabular-nums text-slate-600">₹8,31,500.00 · value date 12 Jun 2026</p>
+              </div>
+            </div>
+            <p className="relative z-10 mt-6 inline-flex items-center gap-1.5 rounded-full border border-[var(--status-ok-line)] bg-[var(--status-ok-bg)] px-3 py-1 text-xs font-semibold text-[var(--status-ok)]">
+              <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />
+              MATCHED · 100% — amount + currency + value date
+            </p>
+          </article>
+
+          {/* 04 · THE LEDGER — the black-box recorder, the one dark object */}
+          <article className="ee-act relative px-4 py-16 sm:px-6">
+            <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-16">
+              <div className="ee-ledger relative z-10 p-6">
+                <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">Audit trail</p>
+                  <p className="text-[11px] text-white/40">append-only</p>
+                </div>
+                <div className="mt-2">
+                  {[
+                    ["PENDING_APPROVAL → APPROVED", "10:41:07 IST"],
+                    ["APPROVED → EXECUTING", "10:52:31 IST"],
+                    ["EXECUTING → SETTLED", "11:19:04 IST"],
+                    ["SETTLED → RECONCILED", "14:03:56 IST"],
+                  ].map(([event, at]) => (
+                    <div key={event} className="ee-ledger-row">
+                      <span className="ok">{event}</span>
+                      <span className="text-white/45">{at}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-[11px] leading-relaxed text-white/40">
+                  Actor and before/after state recorded on every event.
+                </p>
+              </div>
+              <div>
+                <p className="ee-act-num" aria-hidden="true">04</p>
+                <h3 className="mt-2 text-2xl font-semibold tracking-tight">Every action, on the record</h3>
+                <p className="mt-3 max-w-md text-[15px] leading-relaxed text-slate-600">
+                  Approvals, transitions, matches and decisions are written to an append-only audit
+                  trail. When a payout is questioned, the answer is a query — not a memory.
+                </p>
+              </div>
+            </div>
+          </article>
+
+          {/* 05 · THE VERDICT ARRIVES — the finality decision, sealed */}
+          <article className="ee-act relative px-4 pb-20 pt-16 sm:px-6">
+            <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
+              <div>
+                <p className="ee-act-num" aria-hidden="true">05</p>
+                <h3 className="mt-2 text-2xl font-semibold tracking-tight">Finality is a decision, made on evidence</h3>
+                <p className="mt-3 max-w-md text-[15px] leading-relaxed text-slate-600">
+                  A deterministic engine weighs the four inputs — proof, independent match, approval,
+                  guardrails — and renders the decision. The same engine answers the console and the
+                  API; they can never disagree.
+                </p>
+              </div>
+              <div className="ee-fragment relative z-10 p-6" style={{ transform: "rotate(0.8deg)" }}>
+                <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3 pl-2">
+                  <p className="text-sm font-semibold tracking-tight text-slate-950">Finality review</p>
+                  <span className="rounded-full bg-[var(--status-ok-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--status-ok)]">Ready to finalize</span>
+                </div>
+                <dl className="mt-3 space-y-2.5 pl-2">
+                  {[
+                    ["Provider proof", "Verified"],
+                    ["Independent reconciliation", "Verified"],
+                    ["Recorded approval", "Verified"],
+                    ["Guardrails", "Within cap · live payouts disabled"],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex items-baseline justify-between gap-4">
+                      <dt className="text-[13px] text-slate-500">{k}</dt>
+                      <dd className="text-right text-[13px] font-medium text-[var(--status-ok)]">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <span className="ee-seal" aria-hidden="true">
+                  <Check className="h-6 w-6" strokeWidth={2.75} />
+                </span>
+              </div>
+            </div>
+          </article>
         </section>
 
         {/* ════ THE VERDICT ═══════════════════════════════════════════ */}
@@ -341,23 +380,24 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ════ WHO RELIES ON IT ══════════════════════════════════════ */}
-        <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6" aria-label="Who relies on it">
-          <h2 className="max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
-            Built for teams accountable for payouts they don&rsquo;t execute themselves.
+        {/* ════ DISTRIBUTION — who this document is prepared for ═════ */}
+        <section className="mx-auto max-w-3xl px-4 py-20 sm:px-6" aria-label="Distribution">
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.14em] text-[var(--status-pending)]">Distribution</p>
+          <h2 className="mx-auto mt-3 max-w-xl text-center text-3xl font-semibold tracking-tight sm:text-4xl">
+            This record is prepared for.
           </h2>
-          <div className="mt-10 grid gap-x-14 gap-y-8 sm:grid-cols-2">
+          <div className="ee-dossier mt-10">
             {AUDIENCES.map((audience, index) => (
-              <div key={audience.who} className="lp-rule border-l-2 border-[var(--status-ok-line)] pl-5">
-                <p className="text-xs font-semibold tabular-nums text-[var(--status-pending)]">
-                  {String(index + 1).padStart(2, "0")}
-                </p>
-                <h3 className="mt-1 text-lg font-semibold tracking-tight text-slate-950">{audience.who}</h3>
-                <p className="mt-1.5 text-[15px] leading-relaxed text-slate-600">{audience.need}</p>
+              <div key={audience.who} className="ee-dossier-row">
+                <span className="ee-dossier-num">{String(index + 1).padStart(2, "0")}</span>
+                <span>
+                  <span className="block text-base font-semibold tracking-tight text-slate-950">{audience.who}</span>
+                  <span className="mt-0.5 block text-sm leading-relaxed text-slate-600">{audience.need}</span>
+                </span>
               </div>
             ))}
           </div>
-          <p className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-[var(--ops-line)] pt-6 text-sm font-medium text-slate-600">
+          <p className="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 text-sm font-medium text-slate-600">
             <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
               <ShieldCheck className="h-4 w-4 text-[var(--status-ok)]" aria-hidden="true" />
               Enforced, not optional
@@ -370,33 +410,34 @@ export default function HomePage() {
           </p>
         </section>
 
-        {/* ════ THE CLOSE · the spine is sealed ═══════════════════════ */}
-        <section className="relative pb-24 pt-8 text-center">
-          <div className="mx-auto max-w-2xl px-4 sm:px-6">
-            <span
-              className="ee-seal relative mx-auto grid"
-              style={{ position: "relative", right: "auto", bottom: "auto" }}
-              aria-hidden="true"
-            >
-              <Check className="h-6 w-6" strokeWidth={2.75} />
-            </span>
-            <h2 className="mt-6 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-              Prove your settlements are actually final.
-            </h2>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-slate-600">
-              Run a pilot on the payouts you already process. Your providers keep moving the money.
+        {/* ════ THE SIGNATURE PAGE — the instrument closes ════════════ */}
+        <section className="ee-signature relative px-4 pb-24 pt-24 text-center sm:px-6">
+          <span
+            className="ee-seal relative mx-auto grid"
+            style={{ position: "relative", right: "auto", bottom: "auto" }}
+            aria-hidden="true"
+          >
+            <Check className="h-6 w-6" strokeWidth={2.75} />
+          </span>
+          <h2 className="mx-auto mt-7 max-w-2xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+            Prove your settlements are actually final.
+          </h2>
+          <div className="mt-10">
+            <div className="ee-sigline" aria-hidden="true" />
+            <p className="mt-2.5 text-sm italic text-slate-500">
+              Providers move money. INRSettle proves what happened.
             </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                href="/contact?intent=access"
-                className={cn(buttonVariants({ variant: "primary", size: "lg" }), "lp-cta-primary")}
-              >
-                Start a pilot
-              </Link>
-              <Link href="/contact?intent=sales" className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
-                Talk to us
-              </Link>
-            </div>
+          </div>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/contact?intent=access"
+              className={cn(buttonVariants({ variant: "primary", size: "lg" }), "lp-cta-primary")}
+            >
+              Start a pilot
+            </Link>
+            <Link href="/contact?intent=sales" className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+              Talk to us
+            </Link>
           </div>
         </section>
       </main>
