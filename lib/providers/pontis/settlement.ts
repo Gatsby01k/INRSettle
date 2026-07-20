@@ -501,10 +501,15 @@ export async function resolvePayoutByTransaction(
 
   const outcome = mapPontisStatus(status);
   if (outcome === "pending") {
-    return { settlementId: settlement.id, status: settlement.status, skipped: true };
+    return {
+      settlementId: settlement.id,
+      organizationId: settlement.organizationId,
+      status: settlement.status,
+      skipped: true,
+    };
   }
 
-  return applyPayoutResolution({
+  const resolution = await applyPayoutResolution({
     settlement,
     outcome,
     userId: settlement.createdById,
@@ -516,6 +521,7 @@ export async function resolvePayoutByTransaction(
     receivedVia: ProofReceivedVia.WEBHOOK,
     actorType: AuditActorType.SYSTEM,
   });
+  return { ...resolution, organizationId: settlement.organizationId };
 }
 
 /**

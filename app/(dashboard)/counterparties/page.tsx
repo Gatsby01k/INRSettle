@@ -43,8 +43,8 @@ export default async function CounterpartiesPage() {
     <div className="space-y-6">
       <AreaTabs area="providers" />
       <PageHeader
-        title="Counterparties"
-        description="Exchanges, PSPs and banking partners that settle across your corridors."
+        title="Counterparties · illustrative dataset"
+        description="Static sample rows from lib/treasury.ts for interface demonstration. These are not database records, verified relationships, customer claims or production KYB state."
       />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

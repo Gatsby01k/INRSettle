@@ -20,6 +20,9 @@ import type { PontisPayoutRequest } from "./client";
  */
 
 export const GATEWAY_SECRET_HEADER = "x-inrsettle-gateway-secret";
+export const GATEWAY_WEBHOOK_TIMESTAMP_HEADER = "x-inrsettle-gateway-timestamp";
+export const GATEWAY_WEBHOOK_SIGNATURE_HEADER = "x-inrsettle-gateway-signature";
+const GATEWAY_WEBHOOK_MAX_AGE_SECONDS = 300;
 
 export type PontisGatewayConfig = {
   url: string;
@@ -84,6 +87,40 @@ export function verifyGatewaySecret(provided: string | null | undefined): boolea
   const b = Buffer.from(secret);
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
+}
+
+/**
+ * Verifies a Pontis webhook forwarded by the static-IP gateway. The Pontis HMAC
+ * secret remains on the gateway; the app only receives a separately signed,
+ * short-lived internal callback using PONTIS_GATEWAY_WEBHOOK_SECRET.
+ */
+export function verifyGatewayWebhookSignature(
+  timestampHeader: string | null | undefined,
+  signatureHeader: string | null | undefined,
+  rawBody: string,
+): boolean {
+  const secret = process.env.PONTIS_GATEWAY_WEBHOOK_SECRET?.trim();
+  if (!secret || !timestampHeader || !signatureHeader?.startsWith("sha256=")) return false;
+
+  const age = Math.floor(Date.now() / 1000) - Number(timestampHeader);
+  if (
+    !Number.isFinite(age) ||
+    age > GATEWAY_WEBHOOK_MAX_AGE_SECONDS ||
+    age < -GATEWAY_WEBHOOK_MAX_AGE_SECONDS
+  ) {
+    return false;
+  }
+
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(`${timestampHeader}.${rawBody}`)
+    .digest("hex");
+  const provided = signatureHeader.slice("sha256=".length);
+  if (!/^[0-9a-f]{64}$/i.test(provided)) return false;
+
+  const a = Buffer.from(provided, "hex");
+  const b = Buffer.from(expected, "hex");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 async function gatewayPost(path: string, body: unknown): Promise<PontisGatewayResult> {

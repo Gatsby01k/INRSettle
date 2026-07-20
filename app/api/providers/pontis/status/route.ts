@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jsonError } from "@/lib/api";
+import { jsonError, requireApiContext } from "@/lib/api";
+import { canManageSettings, roleErrorMessage } from "@/lib/permissions";
 import { getPayoutStatus, isPontisConfigured, loginOrThrow } from "@/lib/providers/pontis/client";
 import { payoutStatusRequestSchema } from "@/lib/providers/pontis/schema";
 
@@ -15,6 +16,8 @@ export const runtime = "nodejs";
 export async function GET(request: NextRequest) {
   const gate = devOnlyGuard();
   if (gate) return gate;
+  const authError = await requireProviderAdmin();
+  if (authError) return authError;
 
   const transactionId = request.nextUrl.searchParams.get("transaction_id") ?? "";
   return handle(transactionId);
@@ -23,6 +26,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const gate = devOnlyGuard();
   if (gate) return gate;
+  const authError = await requireProviderAdmin();
+  if (authError) return authError;
 
   let rawBody: unknown = {};
   try {
@@ -33,6 +38,15 @@ export async function POST(request: NextRequest) {
   const transactionId =
     (rawBody as { transaction_id?: unknown })?.transaction_id?.toString?.() ?? "";
   return handle(transactionId);
+}
+
+async function requireProviderAdmin(): Promise<NextResponse | null> {
+  const { context, error } = await requireApiContext();
+  if (error) return error;
+  if (!canManageSettings(context.membership.role)) {
+    return NextResponse.json({ error: roleErrorMessage(context.membership.role) }, { status: 403 });
+  }
+  return null;
 }
 
 async function handle(transactionId: string) {

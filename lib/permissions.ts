@@ -47,9 +47,23 @@ export function canRunReconciliationMatch(role: Role) {
   return canWriteSettlement(role);
 }
 
+/** Funding confirmations and exceptions stay with approver-class roles. */
+export function canManageFunding(role: Role) {
+  return canApproveSettlement(role);
+}
+
 /** FINANCE_VIEWER is the read-only auditor role: no mutations anywhere. */
 export function isReadOnly(role: Role) {
   return role === Role.FINANCE_VIEWER;
+}
+
+/**
+ * Account/beneficiary identifiers are operational PII. The auditor-style
+ * FINANCE_VIEWER role receives masked values; operational and compliance roles
+ * retain access needed to execute or investigate a settlement.
+ */
+export function canViewSensitiveFinancialData(role: Role) {
+  return role !== Role.FINANCE_VIEWER;
 }
 
 /** Standard rejection copy for blocked mutations. */
@@ -57,4 +71,18 @@ export function roleErrorMessage(role: Role) {
   return isReadOnly(role)
     ? "Read-only role cannot perform this action."
     : "Your role does not allow this action.";
+}
+
+export function approvalMfaViolation(input: {
+  requireMfaForApproval: boolean;
+  mfaEnabled: boolean;
+  mfaStepUpFresh: boolean;
+}): string | null {
+  if (input.requireMfaForApproval && !input.mfaEnabled) {
+    return "MFA enrollment is required by organization policy before approvals are allowed. Open Security settings.";
+  }
+  if (input.requireMfaForApproval && !input.mfaStepUpFresh) {
+    return "A fresh MFA step-up is required before approval. Open Security settings and verify a current code.";
+  }
+  return null;
 }

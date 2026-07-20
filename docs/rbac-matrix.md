@@ -18,6 +18,7 @@ RBAC controls *what you can do*, membership controls *what you can see*.
 | Run auto-match | ✓ | ✓ | ✓ | ✓ | — | — |
 | Approve lifecycle (REQUESTED → APPROVED) | ✓* | ✓* | ✓* | — | — | — |
 | Approve finality | ✓* | ✓* | ✓* | — | — | — |
+| Manage / confirm funding | ✓* | ✓* | ✓* | — | — | — |
 | View reports | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | View audit logs | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | View Provider Risk Shield | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -25,10 +26,16 @@ RBAC controls *what you can do*, membership controls *what you can see*.
 | Compliance review / flag only | ✓ | ✓ | — | — | ✓ | — |
 
 `✓*` = **dual control**: the settlement **creator can never approve their own
-settlement** — neither the lifecycle APPROVED transition nor finality. A
-different operator with an approval role must approve. Both checks are
-enforced server-side (`lifecycleApprovalViolation` for lifecycle; the
-`approveFinality` action + `lib/live-pilot.ts` for finality).
+settlement** for lifecycle approval, funding confirmation or finality. A
+different user with an approval role must approve. Checks are enforced
+server-side in `lib/settlement-actions.ts`, settlement/funding actions and the
+finality action.
+
+When `requireMfaForApproval` is enabled, approval and FUNDED confirmation also
+require `User.mfaEnabled=true` and a session MFA assertion no older than ten
+minutes. TOTP secrets are encrypted with `MFA_ENCRYPTION_KEY`; recovery codes
+are one-time keyed hashes. WebAuthn, administrative recovery and distributed
+IP/device rate limiting remain future hardening items.
 
 ## Role intents
 

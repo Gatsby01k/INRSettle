@@ -1,10 +1,10 @@
 import { Check, ShieldCheck } from "lucide-react";
 import { requireSession } from "@/lib/auth";
+import { canApproveSettlement, canViewSensitiveFinancialData } from "@/lib/permissions";
+import { formatDateTime, maskFinancialIdentifier } from "@/lib/utils";
 import { AreaTabs } from "@/components/ops/area-tabs";
 import { prisma } from "@/lib/prisma";
-import { canApproveSettlement } from "@/lib/permissions";
 import { ACCESS_ROLES, DEMO_TEAM } from "@/lib/treasury";
-import { formatDateTime } from "@/lib/utils";
 import { PageHeader } from "@/components/ops/page-header";
 import { MetricCard } from "@/components/ops/metric-card";
 import { StatusBadge } from "@/components/ops/status-badge";
@@ -22,7 +22,8 @@ import {
 export const metadata = { title: "Team" };
 
 export default async function TeamPage() {
-  const { user, organization } = await requireSession();
+  const { user, organization, membership: activeMembership } = await requireSession();
+  const canViewSensitive = canViewSensitiveFinancialData(activeMembership.role);
 
   // Real, login-capable members of this organization (read-only — RBAC and
   // auth are untouched). These are the users who can actually act in the app,
@@ -35,7 +36,9 @@ export default async function TeamPage() {
 
   const realMembers = memberships.map((membership) => ({
     name: membership.user.name,
-    email: membership.user.email,
+    email: canViewSensitive
+      ? membership.user.email
+      : maskFinancialIdentifier(membership.user.email),
     role: membership.role,
     isYou: membership.user.id === user.id,
     canApprove: canApproveSettlement(membership.role),

@@ -5,7 +5,8 @@ import type { Prisma } from "@prisma/client";
 import { requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AUDIT_CLAIM } from "@/lib/copy";
-import { cn } from "@/lib/utils";
+import { cn, maskFinancialIdentifier } from "@/lib/utils";
+import { canViewSensitiveFinancialData } from "@/lib/permissions";
 import { PageHeader } from "@/components/ops/page-header";
 import { DataTable, parseTableState, type DataTableColumn } from "@/components/ops/data-table";
 import { EmptyState } from "@/components/ops/empty-state";
@@ -105,7 +106,8 @@ export default async function AuditLogsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { organization } = await requireSession();
+  const { organization, membership } = await requireSession();
+  const canViewSensitive = canViewSensitiveFinancialData(membership.role);
   const params = await searchParams;
   const state = parseTableState(params, { sortKey: "createdAt", sortDir: "desc" });
 
@@ -184,7 +186,9 @@ export default async function AuditLogsPage({
         <div className="min-w-0">
           <p className="text-xs font-medium text-slate-700">{ACTOR_LABEL[log.actorType] ?? log.actorType}</p>
           <p className="truncate text-xs text-slate-400">
-            {log.user?.email ?? (log.actorType === "API" ? "Provider integration" : "System")}
+            {log.user?.email
+              ? (canViewSensitive ? log.user.email : maskFinancialIdentifier(log.user.email))
+              : (log.actorType === "API" ? "Provider integration" : "System")}
           </p>
         </div>
       ),

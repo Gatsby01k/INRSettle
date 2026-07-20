@@ -15,6 +15,7 @@ Pontis API keys therefore never live on Vercel.
 | POST   | `/health`        | none                              | Liveness check.                      |
 | POST   | `/pontis/payout` | `x-inrsettle-gateway-secret`      | Login + `sendPayoutRequest`.         |
 | POST   | `/pontis/status` | `x-inrsettle-gateway-secret`      | Login + `getPayoutStatus`.           |
+| POST   | `/pontis/webhook` | Pontis HMAC headers              | Verify provider callback and forward it to INRSettle. |
 
 Protected endpoints require the shared secret in the
 `x-inrsettle-gateway-secret` header. It is compared in constant time against
@@ -66,6 +67,8 @@ git-ignored — never commit real secrets):
 ```
 PORT
 INRSETTLE_GATEWAY_SECRET
+INRSETTLE_APP_WEBHOOK_URL       # https://app.example.com/api/providers/pontis/webhook
+INRSETTLE_APP_WEBHOOK_SECRET    # separate callback signing secret
 PONTIS_BASE_URL
 PONTIS_API_KEY
 PONTIS_ENCRYPTION_SECRET   # base64url, decodes to exactly 32 bytes
@@ -150,7 +153,19 @@ The INRSettle app on Vercel only needs:
 ```
 PONTIS_GATEWAY_URL=https://your-vps-host.example.com
 PONTIS_GATEWAY_SECRET=<same value as INRSETTLE_GATEWAY_SECRET here>
+PONTIS_GATEWAY_WEBHOOK_SECRET=<same value as INRSETTLE_APP_WEBHOOK_SECRET here>
 ```
 
 Do **not** set any `PONTIS_*` API credentials on Vercel — they belong only on
 this VPS.
+
+Configure the Pontis callback URL as
+`https://your-vps-host.example.com/pontis/webhook`. The gateway verifies the
+Pontis HMAC over the exact raw bytes, validates the final-state payload, then
+re-signs those same bytes for the application callback. The app never needs the
+Pontis HMAC or API credentials.
+
+The application writes verified events to its durable webhook inbox before
+processing. The gateway currently forwards synchronously; production deployment
+still needs a monitored retry/outbox on the gateway for the case where the app
+is unavailable and the provider does not redeliver.

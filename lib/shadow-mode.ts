@@ -186,7 +186,7 @@ export function buildShadowChecklist(
       label: "Beneficiary details recorded",
       done: Boolean(settlement.targetAccount && settlement.targetAccount.trim().length >= 3),
       detail: settlement.targetAccount?.trim()
-        ? `Target account: ${settlement.targetAccount}. Verify against partner records before any live test.`
+        ? "Target account is present. Verify the restricted identifier against partner records before any live test."
         : "Record the beneficiary/target account.",
     },
     {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { OrganizationStatus } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { friendlyErrorMessage } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
@@ -17,7 +18,11 @@ export async function requireApiContext() {
     include: { user: true, organization: true },
   });
 
-  if (!membership) {
+  if (
+    !membership ||
+    membership.organization.status !== OrganizationStatus.ACTIVE ||
+    membership.user.authVersion !== session.authVersion
+  ) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) as NextResponse };
   }
 
@@ -26,6 +31,7 @@ export async function requireApiContext() {
       user: membership.user,
       organization: membership.organization,
       membership,
+      session,
     },
   };
 }

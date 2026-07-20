@@ -1,308 +1,308 @@
-import {
-  Check,
-  Minus,
-  AlertTriangle,
-  Archive,
-  ArrowRight,
-  CheckCircle2,
-  CircleSlash,
-  Gauge,
-  ListChecks,
-  ShieldCheck,
-} from "lucide-react";
-import { requireSession } from "@/lib/auth";
+import { AlertTriangle, CheckCircle2, Database, KeyRound, Link2, Webhook } from "lucide-react";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { AreaTabs } from "@/components/ops/area-tabs";
-import { PROVIDER_RISK_PROFILES, type ProviderRiskProfile, type ReadinessLabel } from "@/lib/provider-risk/mock";
-import { PageHeader } from "@/components/ops/page-header";
-import { cn } from "@/lib/utils";
+import {
+  DataGrid,
+  DataGridBody,
+  DataGridHead,
+  DataGridRow,
+  DataGridTd,
+  DataGridTh,
+} from "@/components/ops/data-grid";
+import { PageHeader, SectionHeader } from "@/components/ops/page-header";
+import { StatusBadge, StatusChip } from "@/components/ops/status-badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { isMfaStepUpFresh, requireSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { providerCatalog } from "@/lib/providers/registry";
+import { approvalMfaViolation, canApproveSettlement } from "@/lib/permissions";
+import {
+  confirmProviderOperationNoEffect,
+  NO_EFFECT_CONFIRMATION,
+  syncReviewRequiredOperation,
+} from "@/lib/providers/resolution";
+import { friendlyErrorMessage } from "@/lib/errors";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { Input } from "@/components/ui/input";
+import { FlashMessage } from "@/components/ops/flash-message";
 
-export const metadata = { title: "Provider readiness" };
+export const metadata = { title: "Provider integrations" };
 
-// Provider Risk Shield — UI-ONLY risk visibility layer.
-// Renders static mock data from lib/provider-risk/mock.ts. This page makes
-// no provider API calls, reads no provider secrets, and exposes no execution
-// control. All derived values below (decision label, verified/blocker split,
-// next actions) are pure DISPLAY transforms of the same snapshot data.
-
-const READINESS_CHIP: Record<ReadinessLabel, string> = {
-  "Sandbox Verified": "prs-chip--ok",
-  "Pilot Ready": "prs-chip--ok",
-  "Commercial Review": "prs-chip--pending",
-  "Pilot Blocked": "prs-chip--blocked",
-};
-
-// Display-only decision wording per readiness state (no new logic).
-const DECISION_LABEL: Record<ReadinessLabel, string> = {
-  "Sandbox Verified": "Shadow-ready only",
-  "Pilot Ready": "Pilot ready",
-  "Commercial Review": "Commercial review pending",
-  "Pilot Blocked": "Not ready for real pilot",
-};
-
-function decisionChip(readiness: ReadinessLabel) {
-  return READINESS_CHIP[readiness];
+function timestamp(value: Date | null) {
+  return value ? value.toISOString().replace("T", " ").slice(0, 19) + " UTC" : "Never";
 }
 
-function ProviderDecisionCard({ provider }: { provider: ProviderRiskProfile }) {
-  const gateDone = provider.goLiveGate.filter((item) => item.done).length;
-  const gateTotal = provider.goLiveGate.length;
-  // Pure display split of the existing passport rows.
-  const verified = provider.passport.filter((f) => f.state === "ok" && f.label !== "Overall readiness");
-  const factorTotal = provider.passport.filter((f) => f.label !== "Overall readiness").length;
-  const openIssues = provider.passport.filter((f) => f.state !== "ok" && f.label !== "Overall readiness");
-  // Next actions: the first open gate items, verbatim from the snapshot.
-  const nextActions = provider.goLiveGate.filter((item) => !item.done).slice(0, 4);
+async function resolveOperation(formData: FormData) {
+  "use server";
+  const { user, organization, membership, session } = await requireSession();
+  if (!canApproveSettlement(membership.role)) redirect("/providers");
+  const operationId = String(formData.get("operationId") ?? "");
+  const action = String(formData.get("resolutionAction") ?? "");
+  let success = "no_effect";
 
-  return (
-    <section className="prs-card p-4 sm:p-5" aria-label={`${provider.name} readiness decision`}>
-      {/* ---- Provider summary surface ---- */}
-      <div className="prs-panel relative flex flex-wrap items-center gap-x-5 gap-y-3 p-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-semibold tracking-tight text-slate-950">{provider.name}</h2>
-          </div>
-          <p className="mt-1 text-xs text-slate-500">{provider.rail}</p>
-        </div>
-
-        <div className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2">
-          <div>
-            <p className="prs-eyebrow">Readiness factors</p>
-            <div className="mt-1 flex items-center gap-2.5">
-              <span className="text-2xl font-semibold tabular-nums leading-none text-slate-950">
-                {verified.length}
-                <span className="text-xs font-medium text-slate-400">/{factorTotal} verified</span>
-              </span>
-              <div
-                className="prs-score-track w-24"
-                role="img"
-                aria-label={`${verified.length} of ${factorTotal} readiness factors verified`}
-              >
-                <div className="prs-score-fill" style={{ width: `${Math.round((verified.length / factorTotal) * 100)}%` }} />
-              </div>
-            </div>
-          </div>
-          <div>
-            <p className="prs-eyebrow">Gate</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums leading-none text-slate-950">
-              {gateDone}
-              <span className="text-xs font-medium text-slate-400">/{gateTotal}</span>
-            </p>
-          </div>
-          <div>
-            <p className="prs-eyebrow">Decision</p>
-            <span className={cn("prs-chip mt-1", decisionChip(provider.overallReadiness))}>
-              {DECISION_LABEL[provider.overallReadiness]}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* ---- Recommended next actions (prominent) ---- */}
-      <div className="prs-panel relative mt-3 border-[var(--status-pending-line)] bg-[var(--status-pending-bg)] p-4">
-        <p className="prs-eyebrow flex items-center gap-1.5 text-[var(--status-pending)]">
-          <ArrowRight className="h-3 w-3" aria-hidden="true" /> Recommended next actions
-        </p>
-        <ol className="mt-2 grid gap-1.5 sm:grid-cols-2">
-          {nextActions.map((action, index) => (
-            <li key={action.label} className="flex items-start gap-2 text-[12.5px] leading-snug text-slate-700">
-              <span className="mt-px flex h-[18px] w-5 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[10px] font-bold text-[var(--status-pending)]">
-                {index + 1}
-              </span>
-              <span>
-                {action.label}
-                {action.note ? <span className="block text-[11px] text-slate-400">{action.note}</span> : null}
-              </span>
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      {/* ---- Modules: Verified / Blockers / Gate / Exposure ---- */}
-      <div className="relative mt-3 grid gap-3 lg:grid-cols-2">
-        {/* A. Verified */}
-        <div className="prs-panel p-4">
-          <p className="prs-eyebrow flex items-center gap-1.5 text-[var(--status-ok)]">
-            <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> Verified
-          </p>
-          <ul className="mt-2 space-y-1.5">
-            {verified.map((field) => (
-              <li key={field.label} className="flex items-start gap-1.5 text-[12px] leading-snug">
-                <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--status-ok)]" aria-hidden="true" />
-                <span className="text-slate-700">
-                  {field.label}
-                  <span className="block text-[11px] text-slate-400">{field.value}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* B. Blockers / open issues */}
-        <div className="prs-panel p-4">
-          <p className="prs-eyebrow flex items-center gap-1.5 text-[var(--status-blocked)]">
-            <CircleSlash className="h-3 w-3" aria-hidden="true" /> Blockers & open issues
-          </p>
-          <ul className="mt-2 space-y-1.5">
-            {openIssues.map((field) => (
-              <li key={field.label} className="flex items-start gap-1.5 text-[12px] leading-snug">
-                <AlertTriangle
-                  className={cn("mt-0.5 h-3 w-3 shrink-0", field.state === "blocked" ? "text-[var(--status-blocked)]" : "text-[var(--status-pending)]")}
-                  aria-hidden="true"
-                />
-                <span className={field.state === "blocked" ? "text-[var(--status-blocked)]" : "text-slate-700"}>
-                  {field.label}
-                  <span className="block text-[11px] text-slate-400">{field.value}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* C. Go-live gate */}
-        <div className="prs-panel p-4">
-          <div className="flex items-center justify-between gap-2">
-            <p className="prs-eyebrow flex items-center gap-1.5">
-              <ListChecks className="h-3 w-3" aria-hidden="true" /> Go-live gate · before real pilot
-            </p>
-            <span className="prs-chip prs-chip--neutral">{gateDone}/{gateTotal}</span>
-          </div>
-          <div className="prs-score-track mt-2.5" role="img" aria-label={`Gate ${gateDone} of ${gateTotal} complete`}>
-            <div className="prs-score-fill" style={{ width: `${Math.round((gateDone / gateTotal) * 100)}%` }} />
-          </div>
-          <div className="mt-2">
-            {provider.goLiveGate.map((item) => (
-              <div key={item.label} className="prs-gate-item">
-                <span className={cn("prs-gate-dot", item.done ? "prs-gate-dot--done" : "prs-gate-dot--open")}>
-                  {item.done ? <Check className="h-2.5 w-2.5" strokeWidth={3} aria-hidden="true" /> : <Minus className="h-2.5 w-2.5" aria-hidden="true" />}
-                </span>
-                <span className={item.done ? "text-slate-700" : "text-slate-500"}>
-                  {item.label}
-                  {item.note ? <span className="block text-[11px] text-[var(--status-pending)]">{item.note}</span> : null}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* D. Exposure limits + controls */}
-        <div className="flex flex-col gap-3">
-          <div className="prs-panel p-4">
-            <p className="prs-eyebrow flex items-center gap-1.5">
-              <Gauge className="h-3 w-3" aria-hidden="true" /> Exposure limits
-            </p>
-            <dl className="mt-2">
-              <div className="prs-passport-row">
-                <dt>Max transaction</dt>
-                <dd className="text-slate-700">{provider.exposure.maxTransaction}</dd>
-              </div>
-              <div className="prs-passport-row">
-                <dt>Daily exposure</dt>
-                <dd className="text-slate-700">{provider.exposure.dailyExposure}</dd>
-              </div>
-              <div className="prs-passport-row">
-                <dt>Pending exposure</dt>
-                <dd className="text-slate-700">{provider.exposure.pendingExposure}</dd>
-              </div>
-              <div className="prs-passport-row">
-                <dt>Unresolved payouts</dt>
-                <dd className={provider.exposure.unresolvedPayouts === 0 ? "prs-val--ok" : "prs-val--blocked"}>
-                  {provider.exposure.unresolvedPayouts}
-                </dd>
-              </div>
-            </dl>
-            <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
-              <span className="font-semibold text-slate-500">Auto-freeze:</span> {provider.exposure.autoFreezeRule}
-            </p>
-          </div>
-
-          {/* Evidence + kill switch, compact secondary row */}
-          <div className="prs-panel p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="prs-eyebrow flex items-center gap-1.5">
-                <Archive className="h-3 w-3" aria-hidden="true" /> Evidence on file
-              </p>
-            </div>
-            <ul className="mt-2 space-y-1">
-              {provider.evidence.map((item) => (
-                <li key={item.label} className="flex items-start gap-1.5 text-[11.5px] leading-snug">
-                  {item.state === "received" ? (
-                    <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[var(--status-ok)]" aria-hidden="true" />
-                  ) : (
-                    <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-[var(--status-blocked)]" aria-hidden="true" />
-                  )}
-                  <span className={item.state === "received" ? "text-slate-700" : "text-[var(--status-blocked)]"}>{item.label}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-2 text-xs leading-relaxed text-slate-400">
-              Freeze policy: new payouts to a provider stop automatically per the auto-freeze rule above; status
-              checks and reporting stay available, and the action is audit-logged.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
+  try {
+    if (action === "SYNC_STATUS") {
+      const result = await syncReviewRequiredOperation(operationId, user.id, organization.id);
+      success = result.resolved ? "resolved" : "inconclusive";
+    } else {
+      const mfaViolation = approvalMfaViolation({
+        requireMfaForApproval: true,
+        mfaEnabled: user.mfaEnabled,
+        mfaStepUpFresh: isMfaStepUpFresh(session),
+      });
+      if (mfaViolation) throw new Error(mfaViolation);
+      await confirmProviderOperationNoEffect({
+        operationId,
+        userId: user.id,
+        organizationId: organization.id,
+        confirmation: String(formData.get("confirmation") ?? ""),
+        note: String(formData.get("note") ?? ""),
+      });
+    }
+  } catch (error) {
+    redirect(`/providers?error=${encodeURIComponent(friendlyErrorMessage(error))}`);
+  }
+  revalidatePath("/providers");
+  redirect(`/providers?success=${success}`);
 }
 
-export default async function ProvidersPage() {
-  await requireSession();
+export default async function ProvidersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; success?: string }>;
+}) {
+  const { organization, membership } = await requireSession();
+  const params = await searchParams;
+  const canResolve = canApproveSettlement(membership.role);
+  const catalog = providerCatalog();
+  const [connections, operations, webhookEvents] = await Promise.all([
+    prisma.providerConnection.findMany({
+      where: { organizationId: organization.id },
+      orderBy: { providerCode: "asc" },
+    }),
+    prisma.providerOperation.findMany({
+      where: { organizationId: organization.id },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: { settlement: { select: { publicId: true } } },
+    }),
+    prisma.providerWebhookEvent.findMany({
+      where: { organizationId: organization.id },
+      orderBy: { receivedAt: "desc" },
+      take: 20,
+    }),
+  ]);
+
+  const connectionByCode = new Map(connections.map((connection) => [connection.providerCode, connection]));
+  const reviewRequired = operations.filter((operation) => operation.status === "REVIEW_REQUIRED").length;
+  const webhookFailures = webhookEvents.filter((event) => event.status === "FAILED").length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <AreaTabs area="providers" />
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <PageHeader
-          title="Provider readiness"
-          description="Risk visibility and the go-live gate for every payout rail — sandbox verification, KYB, commercial review and production onboarding, decided on evidence."
+      <PageHeader
+        title="Provider integrations"
+        description="Tenant connections, connector capabilities, durable outbound operations and verified webhook receipts. This is integration telemetry — not provider due diligence, liquidity availability or a claim that a partner is production-ready."
+        stats={[
+          { label: "Registered connectors", value: catalog.length, tone: "neutral" },
+          { label: "Tenant connections", value: connections.length, tone: connections.length ? "info" : "pending" },
+          { label: "Review required", value: reviewRequired, tone: reviewRequired ? "blocked" : "ok" },
+          { label: "Webhook failures", value: webhookFailures, tone: webhookFailures ? "blocked" : "ok" },
+        ]}
+      />
+
+      {params.error ? <FlashMessage message={params.error} tone="error" /> : null}
+      {params.success === "resolved" ? <FlashMessage message="Operation resolved from final provider status." /> : null}
+      {params.success === "inconclusive" ? <FlashMessage message="Status remains non-final; operation stays in review." tone="error" /> : null}
+      {params.success === "no_effect" ? <FlashMessage message="No-effect resolution recorded; settlement moved to FAILED." /> : null}
+
+      <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        <p>
+          <span className="font-semibold">Prospective InvoiceMate / PayMate connector is not registered.</span>{" "}
+          No authoritative API schema, sandbox credentials, webhook signing contract or status mapping exists in this repository, so none has been invented. It should implement the same connector contract after those artifacts are supplied.
+        </p>
+      </div>
+
+      <section>
+        <SectionHeader
+          title="Connector catalog"
+          description="Runtime availability comes from server configuration. Tenant readiness comes from ProviderConnection and is required before execution."
         />
-        {/* Status summary: per-provider decision at a glance (current data only) */}
-        <div className="flex flex-wrap gap-2">
-          {PROVIDER_RISK_PROFILES.map((provider) => {
-            const gateDone = provider.goLiveGate.filter((item) => item.done).length;
+        <div className="grid gap-4 lg:grid-cols-2">
+          {catalog.map((provider) => {
+            const connection = connectionByCode.get(provider.code);
             return (
-              <div
-                key={provider.id}
-                className="flex items-center gap-3 rounded-xl border border-[var(--ops-line)] bg-white px-3 py-2 shadow-ops-xs"
-              >
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">{provider.name}</p>
-                  <p className="text-xs font-semibold text-slate-700">
-                    {provider.passport.filter((f) => f.state === "ok" && f.label !== "Overall readiness").length}/
-                    {provider.passport.filter((f) => f.label !== "Overall readiness").length} factors · gate{" "}
-                    {gateDone}/{provider.goLiveGate.length}
+              <Card key={provider.code}>
+                <CardHeader>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <CardTitle>{provider.displayName}</CardTitle>
+                      <CardDescription>Connector code: {provider.code} · stored name: {provider.persistedName}</CardDescription>
+                    </div>
+                    <StatusChip tone={provider.configured ? "success" : "neutral"} dot>
+                      {provider.configured ? "Runtime configured" : "Runtime not configured"}
+                    </StatusChip>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    {provider.capabilities.map((capability) => (
+                      <StatusChip key={capability} tone="info">{capability.replaceAll("_", " ")}</StatusChip>
+                    ))}
+                  </div>
+                  <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                      <dt className="text-xs font-medium text-slate-500">Tenant connection</dt>
+                      <dd className="mt-1 font-semibold text-slate-900">{connection?.status ?? "NOT REGISTERED"}</dd>
+                    </div>
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                      <dt className="text-xs font-medium text-slate-500">Credential reference</dt>
+                      <dd className="mt-1 flex items-center gap-1.5 font-semibold text-slate-900">
+                        <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
+                        {connection?.credentialsRef ? "Recorded (value hidden)" : "Not recorded"}
+                      </dd>
+                    </div>
+                  </dl>
+                  <p className="text-xs leading-relaxed text-slate-500">
+                    Status polling: {provider.supportsStatusPoll ? "adapter registered" : "not implemented"}. Last recorded health check: {timestamp(connection?.lastHealthAt ?? null)}.
                   </p>
-                </div>
-                <span
-                  className={cn(
-                    "case-chip",
-                    provider.overallReadiness === "Pilot Blocked"
-                      ? "case-chip--live"
-                      : provider.overallReadiness === "Commercial Review"
-                        ? "case-chip--gold"
-                        : "border-emerald-200 bg-emerald-50 text-emerald-700",
-                  )}
-                >
-                  {DECISION_LABEL[provider.overallReadiness]}
-                </span>
-              </div>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* Safety note — slim, single line */}
-      <div className="flex items-center gap-2 rounded-xl border border-[var(--ops-line)] bg-white px-3 py-2">
-        <ShieldCheck className="h-4 w-4 shrink-0 text-brand-emerald-ink" aria-hidden="true" />
-        <p className="text-xs leading-relaxed text-slate-600">
-          <span className="font-semibold text-slate-900">Risk visibility layer only</span> — no payout execution,
-          no fund movement, no live provider access. Local assessment snapshot.
-        </p>
-      </div>
+      <section>
+        <SectionHeader
+          title="Outbound operation ledger"
+          description="Created before provider side effects. REVIEW_REQUIRED operations are never automatically re-submitted."
+        />
+        <DataGrid>
+          <table className="w-full min-w-[900px]">
+            <DataGridHead>
+              <DataGridTh>Created</DataGridTh>
+              <DataGridTh>Provider</DataGridTh>
+              <DataGridTh>Operation</DataGridTh>
+              <DataGridTh>Settlement</DataGridTh>
+              <DataGridTh>Status</DataGridTh>
+              <DataGridTh>Attempts</DataGridTh>
+              <DataGridTh>Provider reference</DataGridTh>
+              <DataGridTh>Error</DataGridTh>
+              <DataGridTh>Resolution</DataGridTh>
+            </DataGridHead>
+            <DataGridBody>
+              {operations.length ? operations.map((operation) => (
+                <DataGridRow key={operation.id}>
+                  <DataGridTd className="whitespace-nowrap text-xs text-slate-500">{timestamp(operation.createdAt)}</DataGridTd>
+                  <DataGridTd className="font-medium">{operation.providerCode}</DataGridTd>
+                  <DataGridTd>{operation.operationType.replaceAll("_", " ")}</DataGridTd>
+                  <DataGridTd>{operation.settlement?.publicId ?? "—"}</DataGridTd>
+                  <DataGridTd><StatusBadge status={operation.status} /></DataGridTd>
+                  <DataGridTd>{operation.attemptCount}</DataGridTd>
+                  <DataGridTd className="font-mono text-xs">{operation.providerReference ?? "—"}</DataGridTd>
+                  <DataGridTd className="max-w-64 truncate text-xs text-slate-500" title={operation.errorMessage ?? undefined}>
+                    {operation.errorCode ?? operation.errorMessage ?? "—"}
+                  </DataGridTd>
+                  <DataGridTd className="min-w-72">
+                    {operation.status === "REVIEW_REQUIRED" && canResolve ? (
+                      <div className="flex flex-col gap-2">
+                        <form action={resolveOperation}>
+                          <input type="hidden" name="operationId" value={operation.id} />
+                          <input type="hidden" name="resolutionAction" value="SYNC_STATUS" />
+                          <SubmitButton size="sm" variant="outline" pendingText="Checking…">
+                            Sync provider status
+                          </SubmitButton>
+                        </form>
+                        <details className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs">
+                          <summary className="cursor-pointer font-semibold text-amber-900">Confirm no side effect</summary>
+                          <form action={resolveOperation} className="mt-2 space-y-2">
+                            <input type="hidden" name="operationId" value={operation.id} />
+                            <input type="hidden" name="resolutionAction" value="CONFIRM_NO_EFFECT" />
+                            <Input name="note" minLength={12} maxLength={1000} required placeholder="External verification source and result" />
+                            <Input name="confirmation" required placeholder={NO_EFFECT_CONFIRMATION} />
+                            <SubmitButton size="sm" variant="destructive" pendingText="Recording…">
+                              Fail settlement and close
+                            </SubmitButton>
+                          </form>
+                        </details>
+                      </div>
+                    ) : operation.resolvedAt ? (
+                      <span className="text-xs text-slate-500">
+                        {timestamp(operation.resolvedAt)}
+                      </span>
+                    ) : "—"}
+                  </DataGridTd>
+                </DataGridRow>
+              )) : (
+                <DataGridRow>
+                  <DataGridTd className="py-8 text-center text-slate-500" colSpan={9}>
+                    No provider operations recorded for this organization.
+                  </DataGridTd>
+                </DataGridRow>
+              )}
+            </DataGridBody>
+          </table>
+        </DataGrid>
+      </section>
 
-      {PROVIDER_RISK_PROFILES.map((provider) => (
-        <ProviderDecisionCard key={provider.id} provider={provider} />
-      ))}
+      <section>
+        <SectionHeader
+          title="Verified webhook inbox"
+          description="Only deliveries that passed connector signature verification appear here; payloads remain server-side."
+        />
+        <DataGrid>
+          <table className="w-full min-w-[760px]">
+            <DataGridHead>
+              <DataGridTh>Received</DataGridTh>
+              <DataGridTh>Provider</DataGridTh>
+              <DataGridTh>Event key</DataGridTh>
+              <DataGridTh>Signature</DataGridTh>
+              <DataGridTh>Status</DataGridTh>
+              <DataGridTh>Processed</DataGridTh>
+            </DataGridHead>
+            <DataGridBody>
+              {webhookEvents.length ? webhookEvents.map((event) => (
+                <DataGridRow key={event.id}>
+                  <DataGridTd className="whitespace-nowrap text-xs text-slate-500">{timestamp(event.receivedAt)}</DataGridTd>
+                  <DataGridTd className="font-medium">{event.providerCode}</DataGridTd>
+                  <DataGridTd className="max-w-80 truncate font-mono text-xs" title={event.eventKey}>{event.eventKey}</DataGridTd>
+                  <DataGridTd>
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> valid
+                    </span>
+                  </DataGridTd>
+                  <DataGridTd><StatusBadge status={event.status} /></DataGridTd>
+                  <DataGridTd className="whitespace-nowrap text-xs text-slate-500">{timestamp(event.processedAt)}</DataGridTd>
+                </DataGridRow>
+              )) : (
+                <DataGridRow>
+                  <DataGridTd className="py-8 text-center text-slate-500" colSpan={6}>
+                    No verified webhook deliveries are linked to this organization.
+                  </DataGridTd>
+                </DataGridRow>
+              )}
+            </DataGridBody>
+          </table>
+        </DataGrid>
+      </section>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardHeader><Database className="h-5 w-5 text-slate-500" /><CardTitle>Durable state</CardTitle></CardHeader>
+          <CardContent className="text-sm text-slate-600">Connections, operations, funding and verified webhook receipts are persisted per tenant.</CardContent>
+        </Card>
+        <Card>
+          <CardHeader><Link2 className="h-5 w-5 text-slate-500" /><CardTitle>Explicit selection</CardTitle></CardHeader>
+          <CardContent className="text-sm text-slate-600">No environment-precedence routing. Each execution names one registered connector.</CardContent>
+        </Card>
+        <Card>
+          <CardHeader><Webhook className="h-5 w-5 text-slate-500" /><CardTitle>Recovery boundary</CardTitle></CardHeader>
+          <CardContent className="text-sm text-slate-600">Uncertain execution stops for operator review; status polling remains available for recovery.</CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

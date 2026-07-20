@@ -42,8 +42,8 @@ export default async function AccountsPage() {
     <div className="space-y-6">
       <AreaTabs area="settings" />
       <PageHeader
-        title="Accounts"
-        description="Reference balances you record for operations. INRSettle holds no funds and provides no liquidity."
+        title="Accounts · illustrative dataset"
+        description="Static sample references from lib/treasury.ts, not connected balances or bank/wallet integrations. INRSettle holds no funds and provides no liquidity."
       />
 
       <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">

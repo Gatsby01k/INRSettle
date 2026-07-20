@@ -1,8 +1,10 @@
 import "server-only";
 
+import crypto from "node:crypto";
 import { AuditActorType, Prisma, ProofReceivedVia, type ProviderProof } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
+import { UserFacingError } from "@/lib/errors";
 
 export type { ProviderProof };
 export { ProofReceivedVia };
@@ -37,6 +39,19 @@ function asDecimal(value: number | string | null | undefined): Prisma.Decimal | 
   return new Prisma.Decimal(num);
 }
 
+export function providerProofDedupeKey(input: Pick<
+  RecordProviderProofInput,
+  "settlementId" | "provider" | "providerTransactionId" | "providerStatus" | "receivedVia"
+>): string {
+  return crypto.createHash("sha256").update([
+    input.settlementId,
+    input.provider.trim().toLowerCase(),
+    input.providerTransactionId?.trim() ?? "",
+    input.providerStatus.trim().toLowerCase(),
+    input.receivedVia,
+  ].join("\u0000")).digest("hex");
+}
+
 /**
  * Persists an append-only provider proof row and writes a `provider.proof.recorded`
  * audit entry.
@@ -56,52 +71,60 @@ function asDecimal(value: number | string | null | undefined): Prisma.Decimal | 
  * without evidence.
  */
 export async function recordProviderProof(input: RecordProviderProofInput): Promise<ProviderProof> {
-  const duplicate = await prisma.providerProof.findFirst({
-    where: {
-      settlementId: input.settlementId,
-      provider: input.provider,
-      providerTransactionId: input.providerTransactionId?.trim() || null,
-      providerStatus: { equals: input.providerStatus.trim(), mode: "insensitive" },
-      receivedVia: input.receivedVia,
-    },
-    orderBy: { receivedAt: "desc" },
-  });
-  if (duplicate) return duplicate;
+  const provider = input.provider.trim();
+  const providerStatus = input.providerStatus.trim();
+  if (!provider || !providerStatus) {
+    throw new UserFacingError("Provider and provider status are required for proof.");
+  }
 
-  const proof = await prisma.providerProof.create({
-    data: {
-      settlementId: input.settlementId,
-      provider: input.provider,
-      providerTransactionId: input.providerTransactionId ?? null,
-      utr: input.utr?.trim() || null,
-      providerStatus: input.providerStatus,
-      actualAmount: asDecimal(input.actualAmount),
-      currency: input.currency ?? null,
-      rawResponse: asJson(input.rawResponse),
-      receivedVia: input.receivedVia,
-    },
-  });
+  const dedupeKey = providerProofDedupeKey({ ...input, provider, providerStatus });
 
-  await writeAuditLog({
-    action: "provider.proof.recorded",
-    resourceType: "provider_proof",
-    resourceId: proof.id,
-    organizationId: input.organizationId,
-    userId: input.userId,
-    actorType: input.actorType ?? AuditActorType.SYSTEM,
-    after: {
-      settlementId: proof.settlementId,
-      provider: proof.provider,
-      providerTransactionId: proof.providerTransactionId,
-      utr: proof.utr,
-      providerStatus: proof.providerStatus,
-      actualAmount: proof.actualAmount?.toString() ?? null,
-      currency: proof.currency,
-      receivedVia: proof.receivedVia,
-    },
-  });
+  return prisma.$transaction(async (tx) => {
+    const settlement = await tx.settlement.findFirst({
+      where: { id: input.settlementId, organizationId: input.organizationId },
+      select: { id: true },
+    });
+    if (!settlement) throw new UserFacingError("Settlement was not found for this organization.");
 
-  return proof;
+    const duplicate = await tx.providerProof.findUnique({ where: { dedupeKey } });
+    if (duplicate) return duplicate;
+
+    const proof = await tx.providerProof.create({
+      data: {
+        settlementId: input.settlementId,
+        provider,
+        providerTransactionId: input.providerTransactionId?.trim() || null,
+        utr: input.utr?.trim() || null,
+        providerStatus,
+        actualAmount: asDecimal(input.actualAmount),
+        currency: input.currency ?? null,
+        rawResponse: asJson(input.rawResponse),
+        receivedVia: input.receivedVia,
+        dedupeKey,
+      },
+    });
+
+    await writeAuditLog({
+      action: "provider.proof.recorded",
+      resourceType: "provider_proof",
+      resourceId: proof.id,
+      organizationId: input.organizationId,
+      userId: input.userId,
+      actorType: input.actorType ?? AuditActorType.SYSTEM,
+      after: {
+        settlementId: proof.settlementId,
+        provider: proof.provider,
+        providerTransactionId: proof.providerTransactionId,
+        utr: proof.utr,
+        providerStatus: proof.providerStatus,
+        actualAmount: proof.actualAmount?.toString() ?? null,
+        currency: proof.currency,
+        receivedVia: proof.receivedVia,
+      },
+    }, tx);
+
+    return proof;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 /** Latest proof recorded for a settlement, or null when none exists yet. */

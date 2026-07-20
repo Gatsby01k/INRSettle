@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireApiContext } from "@/lib/api";
+import { writeAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
+import { canViewSensitiveFinancialData } from "@/lib/permissions";
+import { maskFinancialIdentifier } from "@/lib/utils";
 
 type ReportType = "settlement" | "reconciliation" | "audit";
 type ReportFormat = "csv" | "json";
@@ -19,7 +22,11 @@ function toCsv(rows: Record<string, unknown>[]) {
   return lines.join("\n");
 }
 
-async function buildRows(type: ReportType, organizationId: string): Promise<Record<string, unknown>[]> {
+async function buildRows(
+  type: ReportType,
+  organizationId: string,
+  canViewSensitive: boolean,
+): Promise<Record<string, unknown>[]> {
   if (type === "settlement") {
     const settlements = await prisma.settlement.findMany({
       where: { organizationId },
@@ -70,7 +77,9 @@ async function buildRows(type: ReportType, organizationId: string): Promise<Reco
   return logs.map((log) => ({
     createdAt: log.createdAt.toISOString(),
     action: log.action,
-    actor: log.user?.email ?? log.actorType,
+    actor: log.user?.email
+      ? (canViewSensitive ? log.user.email : maskFinancialIdentifier(log.user.email))
+      : log.actorType,
     resourceType: log.resourceType,
     resourceId: log.resourceId ?? "",
     requestId: log.requestId ?? "",
@@ -78,8 +87,8 @@ async function buildRows(type: ReportType, organizationId: string): Promise<Reco
 }
 
 export async function GET(request: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { context, error } = await requireApiContext();
+  if (error) return error;
 
   const { searchParams } = new URL(request.url);
   const type = (searchParams.get("type") ?? "settlement") as ReportType;
@@ -88,16 +97,38 @@ export async function GET(request: Request) {
   if (!["settlement", "reconciliation", "audit"].includes(type)) {
     return NextResponse.json({ error: "Unknown report type" }, { status: 400 });
   }
+  if (!["csv", "json"].includes(format)) {
+    return NextResponse.json({ error: "Unknown report format" }, { status: 400 });
+  }
 
-  const rows = await buildRows(type, session.organizationId);
+  const rows = await buildRows(
+    type,
+    context.organization.id,
+    canViewSensitiveFinancialData(context.membership.role),
+  );
   const stamp = new Date().toISOString().slice(0, 10);
   const filename = `inrsettle_${type}_report_${stamp}.${format}`;
+
+  await writeAuditLog({
+    action: "report.exported",
+    resourceType: "report",
+    resourceId: `${type}:${stamp}`,
+    organizationId: context.organization.id,
+    userId: context.user.id,
+    after: { type, format, rowCount: rows.length },
+  });
+
+  const downloadHeaders = {
+    "Content-Disposition": `attachment; filename="${filename}"`,
+    "Cache-Control": "private, no-store, max-age=0",
+    "X-Content-Type-Options": "nosniff",
+  };
 
   if (format === "json") {
     return new NextResponse(JSON.stringify({ type, generatedAt: new Date().toISOString(), rows }, null, 2), {
       headers: {
         "Content-Type": "application/json",
-        "Content-Disposition": `attachment; filename="${filename}"`,
+        ...downloadHeaders,
       },
     });
   }
@@ -105,7 +136,7 @@ export async function GET(request: Request) {
   return new NextResponse(toCsv(rows), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      ...downloadHeaders,
     },
   });
 }

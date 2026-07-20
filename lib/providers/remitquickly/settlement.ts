@@ -1,6 +1,6 @@
 import "server-only";
 
-import { AuditActorType, ProofReceivedVia, SettlementStatus, type Settlement } from "@prisma/client";
+import { AuditActorType, Prisma, ProofReceivedVia, SettlementStatus, type Settlement } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
 import { UserFacingError } from "@/lib/errors";
@@ -9,6 +9,7 @@ import { recordProviderProof } from "@/lib/provider-proof";
 import { classifyRemitQuicklyStatus, type ProviderOutcome } from "@/lib/providers/outcome";
 import {
   extractPayoutId,
+  getOrderStatus,
   simulatePayoutOutcome,
   submitImpsPayout,
   type ImpsPayoutRequest,
@@ -17,6 +18,17 @@ import {
 import type { BeneficiaryOverrides } from "./schema";
 
 export const PROVIDER = "remitquickly";
+
+function asJson(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
+}
+
+function firstProviderRecord(value: unknown): Record<string, unknown> | null {
+  const rows = (value as { data?: unknown[] } | null)?.data;
+  return Array.isArray(rows) && rows[0] && typeof rows[0] === "object"
+    ? (rows[0] as Record<string, unknown>)
+    : null;
+}
 
 /** The INR leg of a settlement (the IMPS payout is always denominated in INR). */
 function inrLeg(settlement: Settlement): { amount: number; currency: "INR" } {
@@ -99,6 +111,17 @@ export async function executeApprovedSettlement(
   }
 
   const payoutId = extractPayoutId(result.data);
+  const submitRecord = firstProviderRecord(result.data);
+
+  await prisma.settlement.update({
+    where: { id: settlement.id },
+    data: {
+      provider: PROVIDER,
+      providerTransactionId: payoutId != null ? String(payoutId) : null,
+      providerStatus: typeof submitRecord?.status === "string" ? submitRecord.status : "submitted",
+      providerResponse: asJson(result.data),
+    },
+  });
 
   await transitionSettlement(
     settlement.id,
@@ -129,6 +152,61 @@ export async function executeApprovedSettlement(
   }
 
   return { payoutId, submit: result.data, simulate: simulate?.data };
+}
+
+/** Polls RemitQuickly and applies a final status through the shared proof flow. */
+export async function checkPayoutStatus(
+  settlementId: string,
+  userId: string,
+  organizationId: string,
+) {
+  const settlement = await prisma.settlement.findFirst({ where: { id: settlementId, organizationId } });
+  if (!settlement) throw new UserFacingError("Settlement was not found.");
+
+  const result = await getOrderStatus(
+    settlement.providerTransactionId
+      ? { searchBy: "payout_id", searchValue: settlement.providerTransactionId }
+      : { searchBy: "merchantRecognitionId", searchValue: settlement.publicId },
+  );
+  if (!result.ok) {
+    throw new UserFacingError(`RemitQuickly could not return payout status (HTTP ${result.status}).`);
+  }
+
+  const record = firstProviderRecord(result.data);
+  if (!record) throw new UserFacingError("RemitQuickly returned no payout record.");
+  const providerStatus = typeof record.status === "string" ? record.status : "unknown";
+  const payoutId = record.payout_id != null ? String(record.payout_id) : settlement.providerTransactionId;
+  const outcome = mapPayoutStatus(providerStatus);
+
+  await prisma.settlement.update({
+    where: { id: settlement.id },
+    data: {
+      provider: PROVIDER,
+      providerTransactionId: payoutId,
+      providerStatus,
+      providerResponse: asJson(result.data),
+    },
+  });
+
+  let resolution = null;
+  if (outcome !== "pending") {
+    resolution = await applyPayoutResolution({
+      settlement,
+      outcome,
+      userId,
+      organizationId,
+      payoutId,
+      utr: (record.utr ?? record.reference) as string | undefined,
+      comment: record.comment as string | undefined,
+      providerStatus,
+      actualAmount: typeof record.amount === "number" ? record.amount : Number(record.amount) || null,
+      rawResponse: record,
+      receivedVia: ProofReceivedVia.POLL,
+      actorType: AuditActorType.API,
+    });
+  }
+
+  return { status: providerStatus, outcome, resolution };
 }
 
 type ResolutionInput = {

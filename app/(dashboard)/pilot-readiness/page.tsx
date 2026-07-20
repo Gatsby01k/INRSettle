@@ -37,12 +37,6 @@ const STATUS_CHIP: Record<ReadinessStatus, string> = {
   Blocked: "prs-chip--blocked",
 };
 
-const STATUS_VAL: Record<ReadinessStatus, string> = {
-  Pass: "prs-val--ok",
-  "Needs Review": "prs-val--pending",
-  Blocked: "prs-val--blocked",
-};
-
 export default async function PilotReadinessPage() {
   await requireSession();
 
@@ -54,8 +48,8 @@ export default async function PilotReadinessPage() {
     <div className="space-y-6">
       <AreaTabs area="providers" />
       <PageHeader
-        title="Pilot readiness"
-        description="Evidence pack for the controlled real-money shadow/live-test pilot — what is proven, what needs review, and what blocks go-live."
+        title="Pilot readiness · illustrative checklist"
+        description="Static sample from lib/pilot-readiness/mock.ts. Items are not derived from live provider checks, signed DD evidence or deployment state."
       />
 
       {/* Safety note */}

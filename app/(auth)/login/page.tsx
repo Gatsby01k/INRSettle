@@ -3,14 +3,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { createSession, getSession, verifyPassword } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import {
+  authenticateUser,
+  createSession,
+  getSession,
+  recordAuthenticationFailure,
+  recordAuthenticationSuccess,
+} from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { getDemoCredentials } from "@/lib/demo";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { AuthHero } from "@/components/auth/auth-hero";
 import { DemoAccessBlock } from "@/components/auth/demo-access-block";
 import { LoginForm, type LoginState } from "@/components/auth/login-form";
+import { verifyUserMfaChallenge } from "@/lib/mfa";
 
 export const metadata: Metadata = {
   title: "Sign in — INRSettle Console",
@@ -25,24 +31,43 @@ async function login(_prev: LoginState, formData: FormData): Promise<LoginState>
 
   const email = String(formData.get("email") ?? "").toLowerCase().trim();
   const password = String(formData.get("password") ?? "");
-  const user = await prisma.user.findUnique({
-    where: { email },
-    include: { memberships: { include: { organization: true }, take: 1 } },
-  });
+  const mfaCode = String(formData.get("mfaCode") ?? "").trim();
+  const authenticated = await authenticateUser(email, password);
 
-  if (!user || !(await verifyPassword(password, user.passwordHash)) || !user.memberships[0]) {
+  if (!authenticated) {
     return { error: "Invalid email or password. Please try again." };
   }
 
-  const membership = user.memberships[0];
-  await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-  await createSession(user.id, membership.organizationId);
+  const { user, membership } = authenticated;
+  let authVersion = user.authVersion;
+  let mfaVerifiedAt: number | null = null;
+  let usedRecoveryCode = false;
+  if (user.mfaEnabled) {
+    if (!mfaCode) {
+      return { error: null, mfaRequired: true };
+    }
+    try {
+      const challenge = await verifyUserMfaChallenge(user.id, mfaCode);
+      if (!challenge.verified) {
+        await recordAuthenticationFailure(user.id);
+        return { error: "Invalid authenticator or recovery code.", mfaRequired: true };
+      }
+      authVersion = challenge.authVersion;
+      usedRecoveryCode = challenge.usedRecoveryCode;
+      mfaVerifiedAt = Math.floor(Date.now() / 1000);
+    } catch {
+      return { error: "MFA verification is unavailable. Contact an administrator.", mfaRequired: true };
+    }
+  }
+  await recordAuthenticationSuccess(user.id);
+  await createSession(user.id, membership.organizationId, { authVersion, mfaVerifiedAt });
   await writeAuditLog({
     action: "auth.login",
     resourceType: "user",
     resourceId: user.id,
     organizationId: membership.organizationId,
     userId: user.id,
+    after: { mfaVerified: user.mfaEnabled, usedRecoveryCode },
   });
   redirect("/dashboard");
 }

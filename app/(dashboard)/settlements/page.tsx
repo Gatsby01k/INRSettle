@@ -4,7 +4,7 @@ import { Landmark } from "lucide-react";
 import { SettlementStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/auth";
+import { isMfaStepUpFresh, requireSession } from "@/lib/auth";
 import { AreaTabs } from "@/components/ops/area-tabs";
 import { PageHeader } from "@/components/ops/page-header";
 import {
@@ -23,10 +23,22 @@ import {
 } from "@/lib/reconciliation";
 import { lifecycleApprovalViolation } from "@/lib/settlement-actions";
 import { MODE_LABEL, getShadowConfig, safetyFor, type SettlementMode } from "@/lib/shadow-mode";
-import { canApproveSettlement, canCreateSettlement, roleErrorMessage } from "@/lib/permissions";
+import {
+  approvalMfaViolation,
+  canApproveSettlement,
+  canCreateSettlement,
+  canViewSensitiveFinancialData,
+  roleErrorMessage,
+} from "@/lib/permissions";
 import { counterpartyForCorridor } from "@/lib/treasury";
 import { prisma } from "@/lib/prisma";
-import { cn, formatCurrencyCompact, formatCurrencyFull, formatDateTime } from "@/lib/utils";
+import {
+  cn,
+  formatCurrencyCompact,
+  formatCurrencyFull,
+  formatDateTime,
+  maskFinancialIdentifier,
+} from "@/lib/utils";
 import { StatusBadge } from "@/components/ops/status-badge";
 import { FilterBar } from "@/components/ops/filter-bar";
 import { FormSelect } from "@/components/ops/form-select";
@@ -46,25 +58,11 @@ import {
   SettlementActionsProvider,
   SettlementAutoRefresh,
 } from "@/components/dashboard/settlement-auto-refresh";
-import { RemitQuicklyTestButton } from "@/components/providers/remitquickly-test-button";
-import { isRemitQuicklyConfigured } from "@/lib/providers/remitquickly/client";
-import { isSandboxTestEnabled } from "@/lib/providers/remitquickly/flags";
-import { executeApprovedSettlement } from "@/lib/providers/remitquickly/settlement";
-import { isPontisConfigured } from "@/lib/providers/pontis/client";
-import { isPontisGatewayConfigured } from "@/lib/providers/pontis/gateway";
+import { configuredProviderCatalog } from "@/lib/providers/registry";
 import {
-  executeApprovedSettlement as executePontisSettlement,
-  checkPayoutStatus as checkPontisPayoutStatus,
-} from "@/lib/providers/pontis/settlement";
-
-/**
- * PontisGlobe is "enabled" whenever either the VPS gateway is configured (the
- * production path on Vercel — Pontis keys live only on the gateway) or the
- * Pontis credentials are present directly (e.g. running on the VPS host itself).
- */
-function isPontisEnabled() {
-  return isPontisGatewayConfigured() || isPontisConfigured();
-}
+  checkSettlementProviderStatus,
+  executeSettlementWithProvider,
+} from "@/lib/providers/service";
 
 function revalidateSettlementsPage() {
   revalidatePath("/settlements");
@@ -260,7 +258,7 @@ function toFinalityReviewData(settlement: SettlementRow): SettlementDetail["fina
   };
 }
 
-function toSettlementDetail(settlement: SettlementRow): SettlementDetail {
+function toSettlementDetail(settlement: SettlementRow, canViewSensitive: boolean): SettlementDetail {
   const cp = counterpartyForCorridor(settlement.corridor);
   return {
     publicId: settlement.publicId,
@@ -269,6 +267,15 @@ function toSettlementDetail(settlement: SettlementRow): SettlementDetail {
     status: settlement.status,
     provider: settlement.provider ?? undefined,
     providerTransactionId: settlement.providerTransactionId ?? undefined,
+    fundingStatus: settlement.fundingStatus,
+    fundingRequired:
+      settlement.fundingRequired && settlement.fundingCurrency
+        ? formatCurrencyFull(String(settlement.fundingRequired), settlement.fundingCurrency)
+        : undefined,
+    fundedAmount:
+      settlement.fundedAmount && settlement.fundingCurrency
+        ? formatCurrencyFull(String(settlement.fundedAmount), settlement.fundingCurrency)
+        : undefined,
     sourceAmount: formatCurrencyFull(String(settlement.sourceAmount), settlement.sourceCurrency),
     targetAmount: formatCurrencyFull(String(settlement.targetAmount), settlement.targetCurrency),
     feeAmount: formatCurrencyFull(String(settlement.feeAmount), settlement.sourceCurrency),
@@ -276,8 +283,12 @@ function toSettlementDetail(settlement: SettlementRow): SettlementDetail {
     approvedAt: settlement.approvedAt ? formatDateTime(settlement.approvedAt) : undefined,
     settledAt: settlement.settledAt ? formatDateTime(settlement.settledAt) : undefined,
     reconciledAt: settlement.reconciledAt ? formatDateTime(settlement.reconciledAt) : undefined,
-    sourceAccount: settlement.sourceAccount,
-    targetAccount: settlement.targetAccount,
+    sourceAccount: canViewSensitive
+      ? settlement.sourceAccount
+      : maskFinancialIdentifier(settlement.sourceAccount),
+    targetAccount: canViewSensitive
+      ? settlement.targetAccount
+      : maskFinancialIdentifier(settlement.targetAccount),
     counterparty: { name: cp.name, type: cp.type, country: cp.country },
     events: settlement.events.map((event) => ({
       label: event.toStatus.replaceAll("_", " "),
@@ -334,15 +345,24 @@ async function submitSettlement(formData: FormData) {
 
 async function transition(formData: FormData) {
   "use server";
-  const { user, organization, membership } = await requireSession();
+  const { user, organization, membership, session } = await requireSession();
   if (!canApproveSettlement(membership.role)) redirect("/settlements");
   const status = String(formData.get("status")) as SettlementStatus;
   const settlementId = String(formData.get("settlementId"));
+  const providerCode = String(formData.get("providerCode") ?? "").trim();
 
   // P1 lifecycle dual-control: the creator may not approve their own
   // settlement (REQUESTED -> APPROVED). Finality dual-control is enforced
   // separately in the shadow console and is unchanged.
   if (status === SettlementStatus.APPROVED) {
+    const mfaViolation = approvalMfaViolation({
+      requireMfaForApproval: organization.settings?.requireMfaForApproval ?? true,
+      mfaEnabled: user.mfaEnabled,
+      mfaStepUpFresh: isMfaStepUpFresh(session),
+    });
+    if (mfaViolation) {
+      redirect(`/settlements?error=${encodeURIComponent(mfaViolation)}`);
+    }
     const target = await prisma.settlement.findFirst({
       where: { id: settlementId, organizationId: organization.id },
       select: { createdById: true },
@@ -359,17 +379,24 @@ async function transition(formData: FormData) {
 
   let finalStatus: string = status;
   try {
-    // When a payout provider is configured, executing a settlement creates a real
-    // sandbox payout and records the provider transaction id before moving to
-    // EXECUTING. PontisGlobe takes precedence, then RemitQuickly; otherwise we
-    // fall back to the plain lifecycle transition.
-    if (status === SettlementStatus.EXECUTING && isPontisEnabled()) {
-      const result = await executePontisSettlement(settlementId, user.id, organization.id);
-      // The provider may already report a final outcome on submit (e.g. the
-      // sandbox completed trigger), in which case the settlement is already SETTLED.
-      if (result.resolution?.status) finalStatus = result.resolution.status;
-    } else if (status === SettlementStatus.EXECUTING && isRemitQuicklyConfigured()) {
-      await executeApprovedSettlement(settlementId, user.id, organization.id);
+    if (status === SettlementStatus.EXECUTING && providerCode) {
+      const result = await executeSettlementWithProvider(providerCode, settlementId, user.id, organization.id);
+      finalStatus = result.settlementStatus;
+    } else if (status === SettlementStatus.EXECUTING) {
+      const target = await prisma.settlement.findFirst({
+        where: { id: settlementId, organizationId: organization.id },
+        select: { testMode: true },
+      });
+      if (target?.testMode === "LIVE_TEST") {
+        throw new Error("LIVE_TEST execution requires an explicitly selected, configured provider connector.");
+      }
+      await transitionSettlement(
+        settlementId,
+        status,
+        user.id,
+        organization.id,
+        "External execution started manually; no provider API connector was invoked.",
+      );
     } else {
       await transitionSettlement(settlementId, status, user.id, organization.id, "Updated from dashboard.");
     }
@@ -378,7 +405,7 @@ async function transition(formData: FormData) {
   }
   if (finalStatus === SettlementStatus.FAILED) {
     revalidateSettlementsPage();
-    redirect(`/settlements?error=${encodeURIComponent("PontisGlobe reported the payout failed.")}`);
+    redirect(`/settlements?error=${encodeURIComponent("The provider reported that execution failed.")}`);
   }
   revalidateSettlementsPage();
   redirect(`/settlements?success=${finalStatus.toLowerCase()}`);
@@ -448,19 +475,19 @@ async function checkStatus(formData: FormData) {
   const { user, organization, membership } = await requireSession();
   if (!canApproveSettlement(membership.role)) redirect("/settlements");
   const settlementId = String(formData.get("settlementId"));
-  let result: Awaited<ReturnType<typeof checkPontisPayoutStatus>>;
+  let result: Awaited<ReturnType<typeof checkSettlementProviderStatus>>;
   try {
-    result = await checkPontisPayoutStatus(settlementId, user.id, organization.id);
+    result = await checkSettlementProviderStatus(settlementId, user.id, organization.id);
   } catch (error) {
     redirect(`/settlements?error=${encodeURIComponent(friendlyErrorMessage(error))}`);
   }
-  if (result.outcome === "success") {
+  if (result.settlementStatus === SettlementStatus.SETTLED || result.settlementStatus === SettlementStatus.RECONCILED) {
     revalidateSettlementsPage();
     redirect("/settlements?success=settled");
   }
-  if (result.outcome === "failed") {
+  if (result.settlementStatus === SettlementStatus.FAILED) {
     revalidateSettlementsPage();
-    redirect(`/settlements?error=${encodeURIComponent(`PontisGlobe payout failed (${result.status ?? "failed"}).`)}`);
+    redirect(`/settlements?error=${encodeURIComponent(`Provider execution failed (${result.providerStatus ?? "failed"}).`)}`);
   }
   revalidateSettlementsPage();
   redirect("/settlements?success=checked");
@@ -494,7 +521,7 @@ export default async function SettlementsPage({
   // roles browse cases but never see the creation form.
   const canCreate = canCreateSettlement(membership.role);
 
-  const [quotes, settlements, openIndependentRecords] = await Promise.all([
+  const [quotes, settlements, openIndependentRecords, readyProviderConnections] = await Promise.all([
     prisma.quote.findMany({
       where: { organizationId: organization.id, status: "ACTIVE", expiresAt: { gt: new Date() } },
       orderBy: { createdAt: "desc" },
@@ -519,6 +546,13 @@ export default async function SettlementsPage({
         source: { in: [...INDEPENDENT_RECONCILIATION_SOURCES] },
       },
     }),
+    prisma.providerConnection.findMany({
+      where: {
+        organizationId: organization.id,
+        status: { in: ["SANDBOX_READY", "PILOT_READY"] },
+      },
+      select: { providerCode: true },
+    }),
   ]);
   const hasOpenRecords = openIndependentRecords > 0;
 
@@ -527,9 +561,10 @@ export default async function SettlementsPage({
 
   // Case files: settlement + its full deterministic finality detail, computed
   // once and reused for stats, cards, evidence strips and the detail sheet.
+  const canViewSensitive = canViewSensitiveFinancialData(membership.role);
   const caseFiles = settlements.map((settlement) => ({
     settlement,
-    detail: toSettlementDetail(settlement),
+    detail: toSettlementDetail(settlement, canViewSensitive),
   }));
 
   const filteredCases = caseFiles.filter(({ settlement }) => {
@@ -581,8 +616,8 @@ export default async function SettlementsPage({
         s.providerStatus &&
         !["completed", "failed", "settled", "reconciled"].includes(s.providerStatus.toLowerCase())),
   );
-  const showSandboxTest = isSandboxTestEnabled();
-  const pontisConfigured = isPontisEnabled();
+  const readyProviderCodes = new Set(readyProviderConnections.map((connection) => connection.providerCode));
+  const providers = configuredProviderCatalog().filter((provider) => readyProviderCodes.has(provider.code));
 
   return (
     <SettlementActionsProvider>
@@ -608,21 +643,6 @@ export default async function SettlementsPage({
         <SettlementPageFlash message={params.error} tone="error" />
       ) : null}
       {flashMessage ? <SettlementPageFlash message={flashMessage} /> : null}
-
-      {showSandboxTest ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>RemitQuickly sandbox</CardTitle>
-            <CardDescription>
-              Private-beta only. Runs a safe end-to-end sandbox payout (submit → simulate → status) without
-              touching any settlement.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RemitQuicklyTestButton />
-          </CardContent>
-        </Card>
-      ) : null}
 
       {/* Control bar: search + status + mode filters */}
       <div className="ov-reveal ov-reveal-1 space-y-2">
@@ -852,19 +872,37 @@ export default async function SettlementsPage({
                         </SubmitButton>
                       ) : null}
                       {settlement.status === SettlementStatus.APPROVED ? (
-                        <SubmitButton
-                          name="status"
-                          value="EXECUTING"
-                          variant="primary"
-                          size="sm"
-                          pendingText="Executing..."
-                          settlementId={settlement.id}
-                          action="execute"
-                        >
-                          {pontisConfigured ? "Execute via PontisGlobe" : "Execute"}
-                        </SubmitButton>
+                        <>
+                          <input type="hidden" name="status" value="EXECUTING" />
+                          {providers.length > 0 ? (
+                          providers.map((provider) => (
+                            <SubmitButton
+                              key={provider.code}
+                              name="providerCode"
+                              value={provider.code}
+                              variant="primary"
+                              size="sm"
+                              pendingText={`Sending to ${provider.displayName}...`}
+                              settlementId={settlement.id}
+                              action="execute"
+                            >
+                              Execute via {provider.displayName}
+                            </SubmitButton>
+                          ))
+                          ) : (
+                          <SubmitButton
+                            variant="primary"
+                            size="sm"
+                            pendingText="Starting..."
+                            settlementId={settlement.id}
+                            action="execute"
+                          >
+                            Start external execution
+                          </SubmitButton>
+                          )}
+                        </>
                       ) : null}
-                      {settlement.status === SettlementStatus.EXECUTING && !(pontisConfigured && settlement.provider) ? (
+                      {settlement.status === SettlementStatus.EXECUTING && !settlement.provider ? (
                         <SubmitButton
                           name="status"
                           value="SETTLED"
@@ -880,6 +918,13 @@ export default async function SettlementsPage({
                     </SettlementActionForm>
                   ) : !canApprove ? (
                     <span className="case-chip case-chip--demo">Read-only role</span>
+                  ) : null}
+                  {settlement.status === SettlementStatus.APPROVED || settlement.fundingStatus !== "NOT_REQUIRED" ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/settlements/${settlement.id}/funding`}>
+                        Funding · {settlement.fundingStatus.replaceAll("_", " ")}
+                      </Link>
+                    </Button>
                   ) : null}
                   {/* Reconciliation actions live in ONE place: the embedded console
                       panel below renders them whenever this settlement is SETTLED
@@ -910,8 +955,12 @@ export default async function SettlementsPage({
                   ) : null}
                   {canApprove &&
                   settlement.status === SettlementStatus.EXECUTING &&
-                  pontisConfigured &&
-                  settlement.provider ? (
+                  settlement.provider &&
+                  providers.some(
+                    (provider) =>
+                      provider.supportsStatusPoll &&
+                      provider.persistedName.toLowerCase() === settlement.provider?.toLowerCase(),
+                  ) ? (
                     <SettlementActionForm settlementId={settlement.id} action="check" serverAction={checkStatus}>
                       <input type="hidden" name="settlementId" value={settlement.id} />
                       <SubmitButton

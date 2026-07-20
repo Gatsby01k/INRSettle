@@ -27,7 +27,10 @@ const recordProviderProofMock = mocks.recordProviderProof;
 const transitionSettlementMock = mocks.transitionSettlement;
 
 import { verifyWebhookSignature as verifyPontisSignature } from "../providers/pontis/client";
-import { verifyGatewaySecret } from "../providers/pontis/gateway";
+import {
+  verifyGatewaySecret,
+  verifyGatewayWebhookSignature,
+} from "../providers/pontis/gateway";
 import {
   decodeWebhookPayload,
   verifyWebhookSignature as verifyRemitQuicklySignature,
@@ -61,13 +64,22 @@ const RQ_ENV = {
 };
 
 const GATEWAY_SECRET = "test-gateway-shared-secret";
+const GATEWAY_WEBHOOK_SECRET = "test-gateway-webhook-secret";
 
-const ENV_KEYS = [...Object.keys(PONTIS_ENV), ...Object.keys(RQ_ENV), "PONTIS_GATEWAY_SECRET"];
+const ENV_KEYS = [
+  ...Object.keys(PONTIS_ENV),
+  ...Object.keys(RQ_ENV),
+  "PONTIS_GATEWAY_SECRET",
+  "PONTIS_GATEWAY_WEBHOOK_SECRET",
+];
 const savedEnv: Record<string, string | undefined> = {};
 
 beforeEach(() => {
   for (const key of ENV_KEYS) savedEnv[key] = process.env[key];
-  Object.assign(process.env, PONTIS_ENV, RQ_ENV, { PONTIS_GATEWAY_SECRET: GATEWAY_SECRET });
+  Object.assign(process.env, PONTIS_ENV, RQ_ENV, {
+    PONTIS_GATEWAY_SECRET: GATEWAY_SECRET,
+    PONTIS_GATEWAY_WEBHOOK_SECRET: GATEWAY_WEBHOOK_SECRET,
+  });
   prismaMock.settlement.findFirst.mockReset();
   prismaMock.settlement.update.mockReset().mockResolvedValue({});
   writeAuditLogMock.mockClear();
@@ -166,6 +178,30 @@ describe("Pontis VPS gateway secret verification", () => {
   it("rejects everything when the secret is not configured", () => {
     delete process.env.PONTIS_GATEWAY_SECRET;
     expect(verifyGatewaySecret(GATEWAY_SECRET)).toBe(false);
+  });
+});
+
+describe("Pontis gateway-to-app webhook signature verification", () => {
+  const body = JSON.stringify({ transaction_id: "tx-1", status: "completed" });
+  const sign = (timestamp: string, payload = body) =>
+    "sha256=" + crypto
+      .createHmac("sha256", GATEWAY_WEBHOOK_SECRET)
+      .update(`${timestamp}.${payload}`)
+      .digest("hex");
+
+  it("accepts an exact, recent gateway callback", () => {
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    expect(verifyGatewayWebhookSignature(timestamp, sign(timestamp), body)).toBe(true);
+  });
+
+  it("rejects tampering, replay, malformed signatures, and missing configuration", () => {
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    expect(verifyGatewayWebhookSignature(timestamp, sign(timestamp), `${body} `)).toBe(false);
+    const stale = String(Math.floor(Date.now() / 1000) - 301);
+    expect(verifyGatewayWebhookSignature(stale, sign(stale), body)).toBe(false);
+    expect(verifyGatewayWebhookSignature(timestamp, "sha256=xyz", body)).toBe(false);
+    delete process.env.PONTIS_GATEWAY_WEBHOOK_SECRET;
+    expect(verifyGatewayWebhookSignature(timestamp, sign(timestamp), body)).toBe(false);
   });
 });
 

@@ -10,6 +10,10 @@ export type GatewayConfig = {
   port: number;
   /** Shared secret expected in the x-inrsettle-gateway-secret header. */
   gatewaySecret: string;
+  /** Internal INRSettle application callback URL for verified Pontis webhooks. */
+  appWebhookUrl: string;
+  /** Separate secret used to re-sign callbacks sent to the application. */
+  appWebhookSecret: string;
   pontis: PontisConfig;
 };
 
@@ -37,6 +41,8 @@ export function loadConfig(): GatewayConfig {
   return {
     port,
     gatewaySecret: required("INRSETTLE_GATEWAY_SECRET"),
+    appWebhookUrl: required("INRSETTLE_APP_WEBHOOK_URL"),
+    appWebhookSecret: required("INRSETTLE_APP_WEBHOOK_SECRET"),
     pontis: {
       baseUrl: required("PONTIS_BASE_URL").replace(/\/+$/, ""),
       apiKey: required("PONTIS_API_KEY"),

@@ -17,7 +17,8 @@ import {
 } from "@/lib/shadow-mode";
 import { buildLivePilotReadiness } from "@/lib/live-pilot";
 import { writeAuditLog } from "@/lib/audit";
-import { cn, formatCurrencyFull, formatDateTime } from "@/lib/utils";
+import { cn, formatCurrencyFull, formatDateTime, maskFinancialIdentifier } from "@/lib/utils";
+import { canViewSensitiveFinancialData } from "@/lib/permissions";
 import { StateIcon, StatusBadge } from "@/components/ops/status-badge";
 import { StatRow } from "@/components/ops/stat-row";
 import { PrintButton } from "@/components/ops/print-button";
@@ -116,7 +117,7 @@ export default async function SettlementReportPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { user, organization } = await requireSession();
+  const { user, organization, membership } = await requireSession();
   const { id } = await params;
 
   const settlement = await prisma.settlement.findFirst({
@@ -131,6 +132,14 @@ export default async function SettlementReportPage({
   });
 
   if (!settlement) notFound();
+
+  const canViewSensitive = canViewSensitiveFinancialData(membership.role);
+  const sourceAccount = canViewSensitive
+    ? settlement.sourceAccount
+    : maskFinancialIdentifier(settlement.sourceAccount);
+  const targetAccount = canViewSensitive
+    ? settlement.targetAccount
+    : maskFinancialIdentifier(settlement.targetAccount);
 
   const reconciliationRecords = [...settlement.reconciliation].sort(
     (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
@@ -458,11 +467,11 @@ export default async function SettlementReportPage({
           <SectionTitle>Settlement summary</SectionTitle>
           <StatRow
             label="Source"
-            value={`${formatCurrencyFull(String(settlement.sourceAmount), settlement.sourceCurrency)} · ${settlement.sourceAccount}`}
+            value={`${formatCurrencyFull(String(settlement.sourceAmount), settlement.sourceCurrency)} · ${sourceAccount}`}
           />
           <StatRow
             label="Destination"
-            value={`${formatCurrencyFull(String(settlement.targetAmount), settlement.targetCurrency)} · ${settlement.targetAccount}`}
+            value={`${formatCurrencyFull(String(settlement.targetAmount), settlement.targetCurrency)} · ${targetAccount}`}
           />
           <StatRow label="Fee" value={formatCurrencyFull(String(settlement.feeAmount), settlement.sourceCurrency)} />
           <StatRow label="Provider" value={settlement.provider ?? "—"} />

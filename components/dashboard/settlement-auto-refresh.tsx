@@ -183,7 +183,7 @@ export function SettlementActionsProvider({ children }: { children: ReactNode })
     }, 900);
 
     return () => window.clearInterval(timer);
-  }, [pendingAction?.settlementId, pendingAction?.action, pendingAction?.stepIndex]);
+  }, [pendingAction]);
 
   const value = useMemo(() => ({ pendingAction, setPendingAction }), [pendingAction, setPendingAction]);
 
@@ -273,7 +273,8 @@ export function SettlementRowStatusHint({
   );
 }
 
-export function SettlementRowActivityNote(_props: { settlementId: string }) {
+export function SettlementRowActivityNote({ settlementId }: { settlementId: string }) {
+  void settlementId;
   return null;
 }
 

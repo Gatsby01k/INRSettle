@@ -74,12 +74,23 @@ const mock = vi.hoisted(() => {
         Object.assign(quote, data);
         return quote;
       }),
+      updateMany: vi.fn(async ({ where, data }) => {
+        const quote = store.quotes.find((item) =>
+          item.id === where.id &&
+          item.organizationId === where.organizationId &&
+          (!where.status || item.status === where.status) &&
+          (!where.expiresAt?.gt || item.expiresAt > where.expiresAt.gt));
+        if (!quote) return { count: 0 };
+        Object.assign(quote, data);
+        return { count: 1 };
+      }),
     },
     settlement: {
       create: vi.fn(async ({ data }) => {
         const settlement = {
           id: nextId("settlement"),
           publicId: `SET-${id}`,
+          fundingStatus: "NOT_REQUIRED",
           createdAt: new Date(),
           updatedAt: new Date(),
           ...data,
@@ -102,6 +113,20 @@ const mock = vi.hoisted(() => {
         const settlement = store.settlements.find((item) => item.id === where.id);
         if (!settlement) throw new Error("Settlement not found");
         Object.assign(settlement, data);
+        return settlement;
+      }),
+      updateMany: vi.fn(async ({ where, data }) => {
+        const settlement = store.settlements.find((item) =>
+          item.id === where.id &&
+          item.organizationId === where.organizationId &&
+          (!where.status || item.status === where.status));
+        if (!settlement) return { count: 0 };
+        Object.assign(settlement, data);
+        return { count: 1 };
+      }),
+      findUniqueOrThrow: vi.fn(async ({ where }) => {
+        const settlement = store.settlements.find((item) => item.id === where.id);
+        if (!settlement) throw new Error("Settlement not found");
         return settlement;
       }),
     },
@@ -141,6 +166,17 @@ const mock = vi.hoisted(() => {
         if (!record) throw new Error("Reconciliation record not found");
         Object.assign(record, data);
         return record;
+      }),
+      updateMany: vi.fn(async ({ where, data }) => {
+        const statuses: string[] | undefined = where.status?.in;
+        const record = store.reconciliationRecords.find((item) =>
+          item.id === where.id &&
+          item.organizationId === where.organizationId &&
+          (where.settlementId === undefined || item.settlementId === where.settlementId) &&
+          (!statuses || statuses.includes(item.status as string)));
+        if (!record) return { count: 0 };
+        Object.assign(record, data);
+        return { count: 1 };
       }),
     },
     auditLog: {

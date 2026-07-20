@@ -8,6 +8,7 @@ import {
 } from "@/lib/providers/remitquickly/client";
 import { applyPayoutResolution, mapPayoutStatus } from "@/lib/providers/remitquickly/settlement";
 import { prisma } from "@/lib/prisma";
+import { beginVerifiedWebhook, finishWebhook } from "@/lib/providers/webhook-inbox";
 
 export const runtime = "nodejs";
 
@@ -49,10 +50,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Malformed webhook payload." }, { status: 400 });
   }
 
+  let inbox: Awaited<ReturnType<typeof beginVerifiedWebhook>>;
+  try {
+    inbox = await beginVerifiedWebhook({
+      providerCode: "remitquickly",
+      rawPayload: payloadHeader,
+      payload: record,
+    });
+  } catch {
+    return NextResponse.json({ error: "Webhook inbox unavailable." }, { status: 503 });
+  }
+  if (inbox.duplicate) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+
   const merchantRecognitionId = record.merchantRecognitionId as string | undefined;
   const outcome = mapPayoutStatus(record.status as string | undefined);
 
   if (!merchantRecognitionId) {
+    await finishWebhook(inbox.event.id, "IGNORED", { errorMessage: "no merchantRecognitionId" });
     return NextResponse.json({ received: true, handled: false, reason: "no merchantRecognitionId" });
   }
 
@@ -61,6 +77,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!settlement) {
+    await finishWebhook(inbox.event.id, "IGNORED", { errorMessage: "settlement not found" });
     await writeAuditLog({
       action: "remitquickly.webhook.unmatched",
       resourceType: "provider",
@@ -86,6 +103,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (outcome === "pending") {
+    await finishWebhook(inbox.event.id, "IGNORED", { organizationId: settlement.organizationId });
     return NextResponse.json({ received: true, handled: false, reason: "non-final status" });
   }
 
@@ -107,10 +125,16 @@ export async function POST(request: NextRequest) {
       actorType: AuditActorType.SYSTEM,
     });
 
+    await finishWebhook(inbox.event.id, "PROCESSED", { organizationId: settlement.organizationId });
+
     return NextResponse.json({ received: true, handled: true, resolution });
   } catch (error) {
     // Acknowledge receipt (we verified + recorded it) but surface the handling
     // problem so it is visible without forcing endless provider retries.
+    await finishWebhook(inbox.event.id, "FAILED", {
+      organizationId: settlement.organizationId,
+      errorMessage: error instanceof Error ? error.message : "resolution failed",
+    });
     return NextResponse.json({
       received: true,
       handled: false,

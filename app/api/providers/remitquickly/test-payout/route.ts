@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AuditActorType } from "@prisma/client";
 import { jsonError, requireApiContext } from "@/lib/api";
+import { canApproveSettlement, canManageSettings, roleErrorMessage } from "@/lib/permissions";
 import { writeAuditLog } from "@/lib/audit";
 import {
   extractPayoutId,
@@ -11,8 +12,8 @@ import {
   type ImpsPayoutRequest,
 } from "@/lib/providers/remitquickly/client";
 import { isPrivateBetaMode } from "@/lib/providers/remitquickly/flags";
-import { executeApprovedSettlement } from "@/lib/providers/remitquickly/settlement";
 import { testPayoutSchema } from "@/lib/providers/remitquickly/schema";
+import { executeSettlementWithProvider } from "@/lib/providers/service";
 
 export const runtime = "nodejs";
 
@@ -50,13 +51,20 @@ export async function POST(request: NextRequest) {
     const input = testPayoutSchema.parse(body ?? {});
 
     if (input.settlementId) {
-      const result = await executeApprovedSettlement(
+      if (!canApproveSettlement(context.membership.role)) {
+        return NextResponse.json({ error: roleErrorMessage(context.membership.role) }, { status: 403 });
+      }
+      const result = await executeSettlementWithProvider(
+        "remitquickly",
         input.settlementId,
         context.user.id,
         context.organization.id,
-        { overrides: input.overrides, simulateOutcome: input.outcome },
       );
       return NextResponse.json({ testMode: "settlement", data: result });
+    }
+
+    if (!canManageSettings(context.membership.role)) {
+      return NextResponse.json({ error: roleErrorMessage(context.membership.role) }, { status: 403 });
     }
 
     // Connectivity smoke test — no settlement is created or mutated.

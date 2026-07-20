@@ -3,14 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { useActionState } from "react";
-import { AlertCircle, LockKeyhole, Mail } from "lucide-react";
+import { AlertCircle, KeyRound, LockKeyhole, Mail } from "lucide-react";
 import { RailDots } from "@/components/ui/settlement-rail-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/auth/form-field";
 import { PasswordField } from "@/components/auth/password-field";
 
-export type LoginState = { error?: string | null };
+export type LoginState = { error?: string | null; mfaRequired?: boolean };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -32,16 +32,18 @@ export function LoginForm({
   action: (state: LoginState, formData: FormData) => Promise<LoginState>;
 }) {
   const [state, formAction, isPending] = useActionState<LoginState, FormData>(action, { error: null });
-  const [fieldErrors, setFieldErrors] = React.useState<{ email?: string; password?: string }>({});
+  const [fieldErrors, setFieldErrors] = React.useState<{ email?: string; password?: string; mfaCode?: string }>({});
 
   function handleSubmit(formData: FormData) {
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
-    const errors: { email?: string; password?: string } = {};
+    const mfaCode = String(formData.get("mfaCode") ?? "").trim();
+    const errors: { email?: string; password?: string; mfaCode?: string } = {};
 
     if (!email) errors.email = "Enter your work email.";
     else if (!EMAIL_PATTERN.test(email)) errors.email = "Enter a valid email address.";
     if (!password) errors.password = "Enter your password.";
+    if (state.mfaRequired && !mfaCode) errors.mfaCode = "Enter your authenticator or recovery code.";
 
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
@@ -94,6 +96,27 @@ export function LoginForm({
           </Link>
         }
       />
+
+      {state.mfaRequired ? (
+        <FormField id="mfaCode" label="Authenticator or recovery code" required error={fieldErrors.mfaCode}>
+          <div className="relative">
+            <KeyRound
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              aria-hidden="true"
+            />
+            <Input
+              id="mfaCode"
+              name="mfaCode"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="123456 or recovery code"
+              required
+              className="pl-10"
+              aria-invalid={fieldErrors.mfaCode ? true : undefined}
+            />
+          </div>
+        </FormField>
+      ) : null}
 
       <Button
         type="submit"

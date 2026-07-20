@@ -71,15 +71,6 @@ async function deleteOldDemoRecords() {
     where: { externalRef: { startsWith: "DEMO-" } },
   });
 
-  const deletedAuditLogs = await prisma.auditLog.deleteMany({
-    where: {
-      OR: [
-        { resourceId: { startsWith: "SET-DEMO" } },
-        { action: { startsWith: "DEMO." } },
-      ],
-    },
-  });
-
   const deletedSettlements = await prisma.settlement.deleteMany({
     where: {
       OR: [
@@ -92,7 +83,6 @@ async function deleteOldDemoRecords() {
   return {
     settlements: deletedSettlements.count,
     reconciliation: deletedReconciliation.count,
-    auditLogs: deletedAuditLogs.count,
   };
 }
 
@@ -909,7 +899,7 @@ async function main() {
 
   const deleted = await deleteOldDemoRecords();
   console.log(
-    `Deleted old demo records: settlements=${deleted.settlements} reconciliation=${deleted.reconciliation} auditLogs=${deleted.auditLogs}`,
+    `Deleted old demo records: settlements=${deleted.settlements} reconciliation=${deleted.reconciliation}; append-only audit rows retained`,
   );
 
   await createCompletedProofSettlement(organization.id, user.id, expiresAt);

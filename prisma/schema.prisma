@@ -67,6 +67,49 @@ enum ProofReceivedVia {
   MANUAL
 }
 
+enum ProviderConnectionStatus {
+  DISABLED
+  CONFIGURING
+  SANDBOX_READY
+  PILOT_READY
+  SUSPENDED
+}
+
+enum ProviderOperationType {
+  FUNDING_REQUEST
+  EXECUTION
+  STATUS_CHECK
+  REVERSAL
+  RECONCILIATION
+}
+
+enum ProviderOperationStatus {
+  PENDING
+  IN_FLIGHT
+  SUCCEEDED
+  FAILED
+  REVIEW_REQUIRED
+  RESOLVED_BY_STATUS
+  RESOLVED_NO_EFFECT
+}
+
+enum ProviderWebhookStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+enum FundingStatus {
+  NOT_REQUIRED
+  REQUESTED
+  ACKNOWLEDGED
+  PARTIALLY_FUNDED
+  FUNDED
+  FAILED
+  CANCELLED
+}
+
 // The operational mode of a settlement:
 //  - DEMO:      fake/demo data; no real-world money anywhere
 //  - SHADOW:    a real-world operation tracked by INRSettle while the money is
@@ -80,39 +123,49 @@ enum SettlementTestMode {
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  name         String
-  passwordHash String
-  mfaEnabled   Boolean      @default(false)
-  lastLoginAt  DateTime?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  memberships  Membership[]
-  auditLogs    AuditLog[]
-  quotes       Quote[]      @relation("QuoteCreator")
-  settlements  Settlement[] @relation("SettlementCreator")
+  id                         String       @id @default(cuid())
+  email                      String       @unique
+  name                       String
+  passwordHash               String
+  mfaEnabled                 Boolean      @default(false)
+  mfaSecretCiphertext        String?
+  mfaPendingSecretCiphertext String?
+  mfaRecoveryCodeHashes      String[]     @default([])
+  mfaEnrolledAt              DateTime?
+  authVersion                Int          @default(0)
+  failedLoginCount           Int          @default(0)
+  lockedUntil                DateTime?
+  lastLoginAt                DateTime?
+  createdAt                  DateTime     @default(now())
+  updatedAt                  DateTime     @updatedAt
+  memberships                Membership[]
+  auditLogs                  AuditLog[]
+  quotes                     Quote[]      @relation("QuoteCreator")
+  settlements                Settlement[] @relation("SettlementCreator")
 
   @@index([email])
 }
 
 model Organization {
-  id                 String                 @id @default(cuid())
-  legalName          String
-  displayName        String
-  country            String                 @default("IN")
-  status             OrganizationStatus     @default(PENDING)
-  baseCurrency       String                 @default("INR")
-  settlementLimit    Decimal?               @db.Decimal(20, 2)
-  dailyLimit         Decimal?               @db.Decimal(20, 2)
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
-  memberships        Membership[]
-  settings           OrganizationSettings?
-  quotes             Quote[]
-  settlements        Settlement[]
-  reconciliation     ReconciliationRecord[]
-  auditLogs          AuditLog[]
+  id                    String                 @id @default(cuid())
+  legalName             String
+  displayName           String
+  country               String                 @default("IN")
+  status                OrganizationStatus     @default(PENDING)
+  baseCurrency          String                 @default("INR")
+  settlementLimit       Decimal?               @db.Decimal(20, 2)
+  dailyLimit            Decimal?               @db.Decimal(20, 2)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  memberships           Membership[]
+  settings              OrganizationSettings?
+  quotes                Quote[]
+  settlements           Settlement[]
+  reconciliation        ReconciliationRecord[]
+  auditLogs             AuditLog[]
+  providerConnections   ProviderConnection[]
+  providerOperations    ProviderOperation[]
+  providerWebhookEvents ProviderWebhookEvent[]
 }
 
 model Membership {
@@ -142,78 +195,162 @@ model OrganizationSettings {
 }
 
 model Quote {
-  id              String        @id @default(cuid())
-  organizationId  String
-  createdById     String
-  corridor        Corridor
-  sourceCurrency  String
-  targetCurrency  String
-  sourceAmount    Decimal       @db.Decimal(20, 2)
-  targetAmount    Decimal       @db.Decimal(20, 6)
-  rate            Decimal       @db.Decimal(20, 8)
-  feeBps          Int           @default(45)
-  feeAmount       Decimal       @db.Decimal(20, 2)
+  id               String       @id @default(cuid())
+  organizationId   String
+  createdById      String
+  corridor         Corridor
+  sourceCurrency   String
+  targetCurrency   String
+  sourceAmount     Decimal      @db.Decimal(20, 2)
+  targetAmount     Decimal      @db.Decimal(20, 6)
+  rate             Decimal      @db.Decimal(20, 8)
+  feeBps           Int          @default(45)
+  feeAmount        Decimal      @db.Decimal(20, 2)
   settlementWindow String       @default("same_day")
-  status          QuoteStatus   @default(ACTIVE)
-  expiresAt       DateTime
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  createdBy       User          @relation("QuoteCreator", fields: [createdById], references: [id])
-  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  settlements     Settlement[]
+  status           QuoteStatus  @default(ACTIVE)
+  expiresAt        DateTime
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  createdBy        User         @relation("QuoteCreator", fields: [createdById], references: [id])
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  settlement       Settlement?
 
   @@index([organizationId, status, createdAt])
 }
 
 model Settlement {
-  id                String             @id @default(cuid())
-  publicId          String             @unique
-  organizationId    String
-  quoteId           String?
-  createdById       String
-  reference         String
-  corridor          Corridor
-  sourceCurrency    String
-  targetCurrency    String
-  sourceAmount      Decimal            @db.Decimal(20, 2)
-  targetAmount      Decimal            @db.Decimal(20, 6)
-  feeAmount         Decimal            @default(0) @db.Decimal(20, 2)
-  status            SettlementStatus   @default(REQUESTED)
-  testMode          SettlementTestMode @default(DEMO) @map("test_mode")
-  sourceAccount     String
-  targetAccount     String
-  provider          String?
+  id                    String                 @id @default(cuid())
+  publicId              String                 @unique
+  organizationId        String
+  quoteId               String?                @unique
+  createdById           String
+  reference             String
+  corridor              Corridor
+  sourceCurrency        String
+  targetCurrency        String
+  sourceAmount          Decimal                @db.Decimal(20, 2)
+  targetAmount          Decimal                @db.Decimal(20, 6)
+  feeAmount             Decimal                @default(0) @db.Decimal(20, 2)
+  status                SettlementStatus       @default(REQUESTED)
+  testMode              SettlementTestMode     @default(DEMO) @map("test_mode")
+  fundingStatus         FundingStatus          @default(NOT_REQUIRED)
+  fundingRequired       Decimal?               @db.Decimal(20, 6)
+  fundedAmount          Decimal?               @db.Decimal(20, 6)
+  fundingCurrency       String?
+  sourceAccount         String
+  targetAccount         String
+  provider              String?
+  providerConnectionId  String?
   providerTransactionId String?
-  providerStatus    String?
-  providerResponse  Json?
-  failureReason     String?
-  approvedAt        DateTime?
-  executedAt        DateTime?
-  settledAt         DateTime?
-  reconciledAt      DateTime?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  createdBy         User               @relation("SettlementCreator", fields: [createdById], references: [id])
-  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  quote             Quote?             @relation(fields: [quoteId], references: [id])
-  events            SettlementEvent[]
-  reconciliation    ReconciliationRecord[]
-  providerProofs    ProviderProof[]
+  providerStatus        String?
+  providerResponse      Json?
+  failureReason         String?
+  approvedAt            DateTime?
+  executedAt            DateTime?
+  settledAt             DateTime?
+  reconciledAt          DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  createdBy             User                   @relation("SettlementCreator", fields: [createdById], references: [id])
+  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  quote                 Quote?                 @relation(fields: [quoteId], references: [id])
+  events                SettlementEvent[]
+  reconciliation        ReconciliationRecord[]
+  providerProofs        ProviderProof[]
+  providerConnection    ProviderConnection?    @relation(fields: [providerConnectionId], references: [id], onDelete: SetNull)
+  providerOperations    ProviderOperation[]
 
   @@unique([organizationId, reference])
+  @@unique([provider, providerTransactionId])
   @@index([organizationId, status, createdAt])
   @@index([providerTransactionId])
+  @@index([providerConnectionId])
+}
+
+model ProviderConnection {
+  id             String                   @id @default(cuid())
+  organizationId String
+  providerCode   String
+  displayName    String
+  status         ProviderConnectionStatus @default(CONFIGURING)
+  credentialsRef String?
+  configuration  Json?
+  capabilities   Json?
+  lastHealthAt   DateTime?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  settlements    Settlement[]
+  operations     ProviderOperation[]
+  webhookEvents  ProviderWebhookEvent[]
+
+  @@unique([organizationId, providerCode])
+  @@index([organizationId, status])
+}
+
+model ProviderOperation {
+  id                   String                  @id @default(cuid())
+  organizationId       String
+  settlementId         String?
+  providerConnectionId String?
+  providerCode         String
+  operationType        ProviderOperationType
+  status               ProviderOperationStatus @default(PENDING)
+  idempotencyKey       String
+  providerReference    String?
+  requestSummary       Json?
+  responseSummary      Json?
+  errorCode            String?
+  errorMessage         String?
+  attemptCount         Int                     @default(0)
+  lastAttemptAt        DateTime?
+  nextRetryAt          DateTime?
+  resolutionNote       String?
+  resolvedByUserId     String?
+  resolvedAt           DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  organization         Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  settlement           Settlement?             @relation(fields: [settlementId], references: [id], onDelete: SetNull)
+  providerConnection   ProviderConnection?     @relation(fields: [providerConnectionId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, providerCode, idempotencyKey])
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, resolvedAt])
+  @@index([settlementId, createdAt])
+  @@index([providerCode, providerReference])
+}
+
+model ProviderWebhookEvent {
+  id                   String                @id @default(cuid())
+  organizationId       String?
+  providerConnectionId String?
+  providerCode         String
+  eventKey             String
+  signatureValid       Boolean
+  status               ProviderWebhookStatus @default(RECEIVED)
+  payloadHash          String
+  payload              Json?
+  errorMessage         String?
+  receivedAt           DateTime              @default(now())
+  processedAt          DateTime?
+  organization         Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  providerConnection   ProviderConnection?   @relation(fields: [providerConnectionId], references: [id], onDelete: SetNull)
+
+  @@unique([providerCode, eventKey])
+  @@index([organizationId, receivedAt])
+  @@index([providerCode, status, receivedAt])
 }
 
 model SettlementEvent {
-  id           String           @id @default(cuid())
+  id           String            @id @default(cuid())
   settlementId String
   fromStatus   SettlementStatus?
   toStatus     SettlementStatus
   note         String?
   actorId      String?
-  createdAt    DateTime         @default(now())
-  settlement   Settlement       @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  createdAt    DateTime          @default(now())
+  settlement   Settlement        @relation(fields: [settlementId], references: [id], onDelete: Cascade)
 
   @@index([settlementId, createdAt])
 }
@@ -235,8 +372,8 @@ model ReconciliationRecord {
   organization    Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   settlement      Settlement?          @relation(fields: [settlementId], references: [id])
 
-  @@index([organizationId, status, valueDate])
   @@unique([organizationId, source, externalRef])
+  @@index([organizationId, status, valueDate])
 }
 
 // Structured, append-only evidence of what a payout provider reported about a
@@ -255,6 +392,7 @@ model ProviderProof {
   actualAmount          Decimal?         @db.Decimal(20, 6)
   currency              String?
   rawResponse           Json?
+  dedupeKey             String?          @unique
   receivedVia           ProofReceivedVia
   receivedAt            DateTime         @default(now())
   createdAt             DateTime         @default(now())

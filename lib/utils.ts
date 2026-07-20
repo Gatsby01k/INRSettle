@@ -144,3 +144,22 @@ export function formatDateTime(date: Date | string) {
 export function publicSettlementId() {
   return `SET-${Math.random().toString(16).slice(2, 6).toUpperCase()}`;
 }
+
+export function maskFinancialIdentifier(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "Restricted";
+
+  const emailMatch = trimmed.match(/^([^@]+)@(.+)$/);
+  if (emailMatch) {
+    return `${emailMatch[1].slice(0, 1)}•••@${emailMatch[2]}`;
+  }
+
+  const compact = trimmed.replace(/[\s-]/g, "");
+  const digits = compact.replace(/\D/g, "");
+  if (digits.length >= 6) return `Restricted · ending ${digits.slice(-4)}`;
+  if (/^0x[0-9a-f]{12,}$/i.test(compact)) return `${compact.slice(0, 4)}••••${compact.slice(-4)}`;
+  if (!/\s/.test(trimmed) && compact.length >= 16) {
+    return `${compact.slice(0, 4)}••••${compact.slice(-4)}`;
+  }
+  return "Restricted account";
+}

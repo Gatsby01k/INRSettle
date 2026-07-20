@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api";
+import { requireApiContext } from "@/lib/api";
+import { canManageSettings, roleErrorMessage } from "@/lib/permissions";
 import { isPontisConfigured, login } from "@/lib/providers/pontis/client";
 
 export const runtime = "nodejs";
@@ -14,6 +16,12 @@ export const runtime = "nodejs";
 export async function POST() {
   const gate = devOnlyGuard();
   if (gate) return gate;
+
+  const { context, error } = await requireApiContext();
+  if (error) return error;
+  if (!canManageSettings(context.membership.role)) {
+    return NextResponse.json({ error: roleErrorMessage(context.membership.role) }, { status: 403 });
+  }
 
   if (!isPontisConfigured()) {
     return NextResponse.json({ error: "PontisGlobe is not configured." }, { status: 503 });

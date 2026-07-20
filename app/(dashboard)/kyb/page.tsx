@@ -159,8 +159,8 @@ export default async function KybPage() {
     <div className="space-y-6">
       <AreaTabs area="providers" />
       <PageHeader
-        title="KYB & counterparty readiness"
-        description="KYB checklists, risk ratings, and the pilot eligibility gate — evaluated before any counterparty joins a controlled real-money shadow or live test."
+        title="KYB & counterparty readiness · illustrative"
+        description="Static sample assessment from lib/kyb/mock.ts. It is not a KYB system of record, document vault, screening result or enforced settlement gate."
       />
 
       {/* Safety note */}

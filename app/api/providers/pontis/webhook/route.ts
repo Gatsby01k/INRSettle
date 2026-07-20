@@ -1,22 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AuditActorType } from "@prisma/client";
 import { writeAuditLog } from "@/lib/audit";
-import { isPontisConfigured, verifyWebhookSignature } from "@/lib/providers/pontis/client";
+import {
+  GATEWAY_WEBHOOK_SIGNATURE_HEADER,
+  GATEWAY_WEBHOOK_TIMESTAMP_HEADER,
+  verifyGatewayWebhookSignature,
+} from "@/lib/providers/pontis/gateway";
 import { webhookPayloadSchema } from "@/lib/providers/pontis/schema";
 import { resolvePayoutByTransaction } from "@/lib/providers/pontis/settlement";
+import { beginVerifiedWebhook, finishWebhook } from "@/lib/providers/webhook-inbox";
 
 export const runtime = "nodejs";
 
 /**
  * POST /api/providers/pontis/webhook
  *
- * Public endpoint PontisGlobe calls when a LIVE transaction reaches a final
- * state. (Sandbox transactions never call back — this is here for parity and
- * for the live cutover.)
+ * Internal endpoint called by the static-IP Pontis gateway after that gateway
+ * verifies the provider HMAC. PontisGlobe must call `/pontis/webhook` on the
+ * gateway, not this application route directly.
  *
- * Auth is an HMAC-SHA256 signature over `"${timestamp}.${rawBody}"`, delivered
- * as `x-pontis-signature: sha256=<hex>` with `x-pontis-timestamp`. The signature
- * MUST be verified against the EXACT raw bytes — never a re-serialised object.
+ * The gateway re-signs the exact raw bytes with a separate internal secret and
+ * sends x-inrsettle-gateway-timestamp / x-inrsettle-gateway-signature. Provider
+ * API/HMAC credentials therefore remain on the gateway host.
  *
  * Always responds 2xx for authentic, processed (and duplicate) deliveries; the
  * provider does not retry, so we acknowledge and fall back to polling on misses.
@@ -24,23 +29,12 @@ export const runtime = "nodejs";
  * Docs: https://docs.pontisglobe.com/callbacks
  */
 
-/**
- * In-memory de-dup of recently seen event ids. Best-effort only (per server
- * instance); pair with a durable store before relying on it in production.
- */
-const seenEventIds = new Set<string>();
-const SEEN_EVENT_LIMIT = 1000;
-
 export async function POST(request: NextRequest) {
-  if (!isPontisConfigured()) {
-    return NextResponse.json({ error: "PontisGlobe is not configured." }, { status: 503 });
-  }
-
-  // Read the raw body exactly as received — required for signature verification.
+  // Read the raw body exactly as received — required for gateway signature verification.
   const rawBody = await request.text().catch(() => "");
 
-  const timestamp = request.headers.get("x-pontis-timestamp") ?? "";
-  const signature = request.headers.get("x-pontis-signature") ?? "";
+  const timestamp = request.headers.get(GATEWAY_WEBHOOK_TIMESTAMP_HEADER) ?? "";
+  const signature = request.headers.get(GATEWAY_WEBHOOK_SIGNATURE_HEADER) ?? "";
   const eventId = request.headers.get("x-pontis-event-id") ?? "";
 
   if (!timestamp || !signature) {
@@ -48,14 +42,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing webhook signature headers." }, { status: 400 });
   }
 
-  if (!verifyWebhookSignature(timestamp, signature, rawBody)) {
+  if (!verifyGatewayWebhookSignature(timestamp, signature, rawBody)) {
     await auditVerificationFailure("invalid_signature");
     return NextResponse.json({ error: "Invalid webhook signature." }, { status: 401 });
-  }
-
-  // Duplicate delivery — acknowledge silently with 2xx.
-  if (eventId && seenEventIds.has(eventId)) {
-    return NextResponse.json({ received: true, duplicate: true });
   }
 
   let parsed: ReturnType<typeof webhookPayloadSchema.safeParse>;
@@ -69,9 +58,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unexpected webhook payload." }, { status: 400 });
   }
 
-  if (eventId) rememberEventId(eventId);
-
   const { transaction_id, status, status_message } = parsed.data;
+
+  let inbox: Awaited<ReturnType<typeof beginVerifiedWebhook>>;
+  try {
+    inbox = await beginVerifiedWebhook({
+      providerCode: "pontis",
+      eventKey: eventId,
+      rawPayload: rawBody,
+      payload: parsed.data,
+    });
+  } catch {
+    return NextResponse.json({ error: "Webhook inbox unavailable." }, { status: 503 });
+  }
+  if (inbox.duplicate) {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
 
   // Map the provider transaction back to its settlement and apply the outcome
   // (EXECUTING -> SETTLED / FAILED). Idempotent: re-deliveries / already-resolved
@@ -80,12 +82,18 @@ export async function POST(request: NextRequest) {
   let resolution = null;
   try {
     resolution = await resolvePayoutByTransaction(transaction_id, status, status_message ?? null);
+    await finishWebhook(inbox.event.id, resolution === null ? "IGNORED" : "PROCESSED", {
+      organizationId: resolution?.organizationId ?? null,
+    });
   } catch (error) {
     console.error("[pontis.webhook] failed to resolve settlement:", error);
     // Audit the miss so it is visible to operators (safe message only — no
     // credentials, no raw payload). Never throw: keep the 2xx ACK and rely on
     // the status-poll fallback to recover.
     try {
+      await finishWebhook(inbox.event.id, "FAILED", {
+        errorMessage: error instanceof Error ? error.message : "resolution failed",
+      });
       await writeAuditLog({
         action: "webhook.resolution_failed",
         resourceType: "provider",
@@ -125,17 +133,9 @@ async function auditVerificationFailure(reason: "missing_signature_headers" | "i
       resourceType: "provider",
       resourceId: "PontisGlobe",
       actorType: AuditActorType.SYSTEM,
-      after: { provider: "PontisGlobe", reason },
+      after: { provider: "PontisGlobe", channel: "gateway_callback", reason },
     });
   } catch (error) {
     console.error("[pontis.webhook] failed to audit verification failure:", error);
   }
-}
-
-function rememberEventId(eventId: string) {
-  if (seenEventIds.size >= SEEN_EVENT_LIMIT) {
-    const oldest = seenEventIds.values().next().value;
-    if (oldest !== undefined) seenEventIds.delete(oldest);
-  }
-  seenEventIds.add(eventId);
 }

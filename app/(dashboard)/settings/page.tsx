@@ -3,7 +3,8 @@ import { requireSession } from "@/lib/auth";
 import { AreaTabs } from "@/components/ops/area-tabs";
 import { updateSettings } from "@/lib/domain";
 import { friendlyErrorMessage } from "@/lib/errors";
-import { canManageSettings } from "@/lib/permissions";
+import { canManageSettings, canViewSensitiveFinancialData } from "@/lib/permissions";
+import { maskFinancialIdentifier } from "@/lib/utils";
 import { PageHeader } from "@/components/ops/page-header";
 import { FlashMessage } from "@/components/ops/flash-message";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +64,7 @@ export default async function SettingsPage({
   const params = await searchParams;
   const settings = organization.settings;
   const disabled = !canManageSettings(membership.role);
+  const canViewSensitive = canViewSensitiveFinancialData(membership.role);
 
   const reconChip: ChipState = settings?.reconciliationEmail ? "Configured" : "Not connected";
   const webhookChip: ChipState = settings?.webhookUrl ? "Active" : "Not connected";
@@ -143,7 +145,13 @@ export default async function SettingsPage({
                 name="reconciliationEmail"
                 type="email"
                 placeholder="finance@yourcompany.com"
-                defaultValue={settings?.reconciliationEmail ?? ""}
+                defaultValue={
+                  settings?.reconciliationEmail
+                    ? (canViewSensitive
+                        ? settings.reconciliationEmail
+                        : maskFinancialIdentifier(settings.reconciliationEmail))
+                    : ""
+                }
                 disabled={disabled}
               />
             </Field>
@@ -158,7 +166,18 @@ export default async function SettingsPage({
           <CardContent className="grid gap-3 md:max-w-xl">
             <div className="space-y-1.5">
               <Label htmlFor="webhookUrl">Webhook URL</Label>
-              <Input id="webhookUrl" name="webhookUrl" type="url" placeholder="https://api.yourcompany.com/webhooks/inrsettle" defaultValue={settings?.webhookUrl ?? ""} disabled={disabled} />
+              <Input
+                id="webhookUrl"
+                name="webhookUrl"
+                type={canViewSensitive ? "url" : "text"}
+                placeholder="https://api.yourcompany.com/webhooks/inrsettle"
+                defaultValue={
+                  settings?.webhookUrl
+                    ? (canViewSensitive ? settings.webhookUrl : "Configured endpoint · restricted")
+                    : ""
+                }
+                disabled={disabled}
+              />
               <HelperText>
                 Receives <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px]">settlement.*</code> and{" "}
                 <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px]">reconciliation.*</code> events.

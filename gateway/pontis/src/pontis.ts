@@ -78,6 +78,8 @@ const ENDPOINTS = {
   getPayoutStatus: "/api/v1/payouts/getPayoutStatus",
 } as const;
 
+const CALLBACK_MAX_AGE_SECONDS = 300;
+
 function decodeEncryptionKey(config: PontisConfig): Buffer {
   const key = Buffer.from(config.encryptionSecret, "base64url");
   if (key.length !== 32) {
@@ -123,6 +125,40 @@ export function signEncryptedPayload(
 ): string {
   const key = decodeHmacKey(config);
   return crypto.createHmac("sha256", key).update(`${timestamp}.${encryptedBody}`).digest("hex");
+}
+
+/** Verify the provider callback HMAC over the exact raw request body. */
+export function verifyWebhookSignature(
+  config: PontisConfig,
+  timestampHeader: string,
+  signatureHeader: string,
+  rawBody: string,
+): boolean {
+  if (!timestampHeader || !signatureHeader.startsWith("sha256=")) return false;
+  const age = Math.floor(Date.now() / 1000) - Number(timestampHeader);
+  if (
+    !Number.isFinite(age) ||
+    age > CALLBACK_MAX_AGE_SECONDS ||
+    age < -CALLBACK_MAX_AGE_SECONDS
+  ) {
+    return false;
+  }
+
+  let expected: string;
+  try {
+    expected = crypto
+      .createHmac("sha256", decodeHmacKey(config))
+      .update(`${timestampHeader}.${rawBody}`)
+      .digest("hex");
+  } catch {
+    return false;
+  }
+
+  const provided = signatureHeader.slice("sha256=".length);
+  if (!/^[0-9a-f]{64}$/i.test(provided)) return false;
+  const a = Buffer.from(provided, "hex");
+  const b = Buffer.from(expected, "hex");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 /**

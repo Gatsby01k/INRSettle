@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProofReceivedVia } from "@prisma/client";
 import { jsonError, requireApiContext } from "@/lib/api";
+import { canApproveSettlement, roleErrorMessage } from "@/lib/permissions";
 import { getOrderStatus, isRemitQuicklyConfigured } from "@/lib/providers/remitquickly/client";
 import { applyPayoutResolution, mapPayoutStatus } from "@/lib/providers/remitquickly/settlement";
 import { prisma } from "@/lib/prisma";
@@ -30,6 +31,10 @@ export async function GET(
     ? "merchantRecognitionId"
     : "payout_id";
   const sync = request.nextUrl.searchParams.get("sync") === "1";
+
+  if (sync && !canApproveSettlement(context.membership.role)) {
+    return NextResponse.json({ error: roleErrorMessage(context.membership.role) }, { status: 403 });
+  }
 
   try {
     const result = await getOrderStatus({ searchBy, searchValue: id });

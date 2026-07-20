@@ -144,9 +144,9 @@ function isDemoQuote(quote: {
   corridor: string;
   status: string;
   sourceAmount: unknown;
-  settlements: { publicId: string }[];
+  settlement: { publicId: string } | null;
 }) {
-  if (quote.settlements.some((s) => s.publicId.startsWith("SET-DEMO"))) return true;
+  if (quote.settlement?.publicId.startsWith("SET-DEMO")) return true;
   if (
     quote.status === "ACTIVE" &&
     quote.corridor === "USDT_INR" &&
@@ -320,9 +320,7 @@ export default async function QuotesPage({
     orderBy: { createdAt: "desc" },
     take: 100,
     include: {
-      settlements: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
+      settlement: {
         select: { id: true, publicId: true },
       },
     },
@@ -344,16 +342,6 @@ export default async function QuotesPage({
   const activeCount = quotes.filter((q) => quoteTab(q, "active")).length;
   const acceptedCount = quotes.filter((q) => quoteTab(q, "accepted")).length;
   const expiredCount = quotes.filter((q) => quoteTab(q, "expired")).length;
-
-  // Hero quick stats: average quote validity (TTL) and most recent quote time.
-  const avgValidityMin = quotes.length
-    ? Math.round(
-        quotes.reduce((sum, q) => sum + (q.expiresAt.getTime() - q.createdAt.getTime()), 0) /
-          quotes.length /
-          60000,
-      )
-    : null;
-  const lastQuoteAt = quotes[0]?.createdAt ?? null;
 
   const highlightNewQuote = params.success === "created" || params.success === "refreshed";
   const newestQuoteId =
@@ -582,7 +570,7 @@ export default async function QuotesPage({
                   const isActive = displayStatus === "ACTIVE";
                   const isAccepted = displayStatus === "ACCEPTED";
                   const isExpired = displayStatus === "EXPIRED";
-                  const linkedSettlement = quote.settlements[0];
+                  const linkedSettlement = quote.settlement;
                   const publicId = quotePublicId(quote.id);
                   const isNewlyGenerated = quote.id === newestQuoteId;
 

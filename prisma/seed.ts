@@ -12,7 +12,9 @@ async function main() {
       email: "ops@inrsettle.com",
       name: "INRSettle Operator",
       passwordHash,
-      mfaEnabled: true,
+      // Real MFA is enrolled interactively from /security; a boolean without a
+      // TOTP secret is no longer treated as enrollment.
+      mfaEnabled: false,
     },
   });
 

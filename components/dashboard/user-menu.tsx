@@ -1,10 +1,10 @@
 "use client";
 
-import { ChevronDown, LogOut } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, LogOut, ShieldCheck } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -41,6 +41,13 @@ export function UserMenu({
           <p className="truncate text-[13px] font-medium text-slate-900">{userName}</p>
           <p className="truncate text-[11px] text-slate-500">{organizationName}</p>
         </div>
+        <Link
+          href="/settings/security"
+          className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950"
+        >
+          <ShieldCheck className="h-4 w-4" />
+          Security settings
+        </Link>
         <form action={logoutAction}>
           <button
             type="submit"

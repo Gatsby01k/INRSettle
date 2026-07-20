@@ -32,6 +32,19 @@ export function lifecycleApprovalViolation(input: {
   return null;
 }
 
+/** Funding confirmation is a second approval boundary, not an operator edit. */
+export function fundingConfirmationViolation(input: {
+  targetStatus: string;
+  creatorId: string | null | undefined;
+  approverId: string;
+}): string | null {
+  if (input.targetStatus !== "FUNDED") return null;
+  if (input.creatorId && input.creatorId === input.approverId) {
+    return "Dual control: the settlement creator cannot confirm funding for their own settlement.";
+  }
+  return null;
+}
+
 export type ReconciliationPendingAction = "open_reconciliation" | "run_auto_match";
 
 export function reconciliationPendingActions(input: {

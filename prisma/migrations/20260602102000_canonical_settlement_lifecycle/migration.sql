@@ -20,6 +20,15 @@ BEGIN
   END IF;
 END $$;
 
+-- Cast away from the old enum BEFORE writing CREATED. The original ordering
+-- attempted to assign CREATED while the column still used the old enum (which
+-- did not contain CREATED), making every clean migration fail with PostgreSQL
+-- 22P02.
+ALTER TABLE "Settlement" ALTER COLUMN "status" DROP DEFAULT;
+ALTER TABLE "Settlement" ALTER COLUMN "status" TYPE TEXT USING "status"::TEXT;
+ALTER TABLE "SettlementEvent" ALTER COLUMN "fromStatus" TYPE TEXT USING "fromStatus"::TEXT;
+ALTER TABLE "SettlementEvent" ALTER COLUMN "toStatus" TYPE TEXT USING "toStatus"::TEXT;
+
 UPDATE "Settlement"
 SET "status" = 'CREATED'
 WHERE "status" IN ('REQUESTED', 'QUOTED', 'PENDING_APPROVAL', 'ON_HOLD');
@@ -31,11 +40,6 @@ WHERE "fromStatus" IN ('REQUESTED', 'QUOTED', 'PENDING_APPROVAL', 'ON_HOLD');
 UPDATE "SettlementEvent"
 SET "toStatus" = 'CREATED'
 WHERE "toStatus" IN ('REQUESTED', 'QUOTED', 'PENDING_APPROVAL', 'ON_HOLD');
-
-ALTER TABLE "Settlement" ALTER COLUMN "status" DROP DEFAULT;
-ALTER TABLE "Settlement" ALTER COLUMN "status" TYPE TEXT USING "status"::TEXT;
-ALTER TABLE "SettlementEvent" ALTER COLUMN "fromStatus" TYPE TEXT USING "fromStatus"::TEXT;
-ALTER TABLE "SettlementEvent" ALTER COLUMN "toStatus" TYPE TEXT USING "toStatus"::TEXT;
 
 DROP TYPE "SettlementStatus";
 CREATE TYPE "SettlementStatus" AS ENUM ('CREATED', 'APPROVED', 'EXECUTING', 'SETTLED', 'RECONCILED');

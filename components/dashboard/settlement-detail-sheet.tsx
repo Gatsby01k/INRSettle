@@ -17,6 +17,9 @@ export type SettlementDetail = {
   status: string;
   provider?: string;
   providerTransactionId?: string;
+  fundingStatus: string;
+  fundingRequired?: string;
+  fundedAmount?: string;
   sourceAmount: string;
   targetAmount: string;
   feeAmount: string;
@@ -110,6 +113,9 @@ export function SettlementDetailSheet({
               {settlement.providerTransactionId ? (
                 <StatRow label="Provider transaction" value={settlement.providerTransactionId} />
               ) : null}
+              <StatRow label="Funding status" value={settlement.fundingStatus.replaceAll("_", " ")} />
+              {settlement.fundingRequired ? <StatRow label="Funding required" value={settlement.fundingRequired} /> : null}
+              {settlement.fundedAmount ? <StatRow label="Funded amount" value={settlement.fundedAmount} /> : null}
             </div>
             <div className="mt-3 rounded-xl border border-[var(--ops-line)] p-3">
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Counterparty</p>

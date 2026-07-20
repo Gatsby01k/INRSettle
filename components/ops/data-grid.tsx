@@ -36,13 +36,15 @@ export function DataGridTd({
   children,
   className,
   title,
+  colSpan,
 }: {
   children: React.ReactNode;
   className?: string;
   title?: string;
+  colSpan?: number;
 }) {
   return (
-    <td title={title} className={cn("px-4 py-3.5 align-middle first:pl-5 last:pr-5", className)}>
+    <td colSpan={colSpan} title={title} className={cn("px-4 py-3.5 align-middle first:pl-5 last:pr-5", className)}>
       {children}
     </td>
   );

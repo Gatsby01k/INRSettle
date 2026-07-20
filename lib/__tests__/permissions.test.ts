@@ -1,17 +1,58 @@
 import { describe, expect, it } from "vitest";
 import { Role } from "@prisma/client";
 import {
+  approvalMfaViolation,
   canApproveSettlement,
   canCreateQuote,
   canCreateSettlement,
   canManageCompliance,
   canManageSettings,
+  canViewSensitiveFinancialData,
   canRunReconciliationMatch,
   canWriteReconciliation,
   canWriteSettlement,
   isReadOnly,
   roleErrorMessage,
 } from "../permissions";
+import { fundingConfirmationViolation } from "../settlement-actions";
+
+describe("approval MFA policy", () => {
+  it("fails closed when enrollment is required and absent", () => {
+    expect(approvalMfaViolation({ requireMfaForApproval: true, mfaEnabled: false, mfaStepUpFresh: false })).toMatch(/MFA/);
+    expect(approvalMfaViolation({ requireMfaForApproval: true, mfaEnabled: true, mfaStepUpFresh: true })).toBeNull();
+    expect(approvalMfaViolation({ requireMfaForApproval: true, mfaEnabled: true, mfaStepUpFresh: false })).toMatch(/step-up/);
+    expect(approvalMfaViolation({ requireMfaForApproval: false, mfaEnabled: false, mfaStepUpFresh: false })).toBeNull();
+  });
+});
+
+describe("funding dual control", () => {
+  it("blocks the settlement creator from confirming FUNDED", () => {
+    expect(
+      fundingConfirmationViolation({
+        targetStatus: "FUNDED",
+        creatorId: "user_1",
+        approverId: "user_1",
+      }),
+    ).toMatch(/creator cannot confirm funding/i);
+  });
+
+  it("allows a different approver and non-confirmation transitions", () => {
+    expect(
+      fundingConfirmationViolation({
+        targetStatus: "FUNDED",
+        creatorId: "user_1",
+        approverId: "user_2",
+      }),
+    ).toBeNull();
+    expect(
+      fundingConfirmationViolation({
+        targetStatus: "ACKNOWLEDGED",
+        creatorId: "user_1",
+        approverId: "user_1",
+      }),
+    ).toBeNull();
+  });
+});
 
 // Full role × capability matrix. P0 RBAC: read-only and compliance roles
 // must be blocked from every mutation; the write set is exactly
@@ -49,6 +90,14 @@ describe("role × capability matrix", () => {
     expect(canApproveSettlement(Role.SETTLEMENT_OPERATOR)).toBe(false);
     expect(canApproveSettlement(Role.COMPLIANCE_OFFICER)).toBe(false);
     expect(canApproveSettlement(Role.FINANCE_VIEWER)).toBe(false);
+  });
+});
+
+describe("sensitive financial data access", () => {
+  it("masks the auditor-style finance role and preserves operational/compliance access", () => {
+    for (const role of ALL_ROLES) {
+      expect(canViewSensitiveFinancialData(role)).toBe(role !== Role.FINANCE_VIEWER);
+    }
   });
 });
 

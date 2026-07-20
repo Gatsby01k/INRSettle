@@ -3,14 +3,14 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { AuditActorType, ProofReceivedVia } from "@prisma/client";
-import { requireSession } from "@/lib/auth";
+import { isMfaStepUpFresh, requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
 import { friendlyErrorMessage } from "@/lib/errors";
 import { assessFinality } from "@/lib/finality";
 import { buildFinalityInput } from "@/lib/finality-input";
 import { recordProviderProof } from "@/lib/provider-proof";
-import { canApproveSettlement, canWriteSettlement } from "@/lib/permissions";
+import { approvalMfaViolation, canApproveSettlement, canWriteSettlement } from "@/lib/permissions";
 import {
   MODE_DESCRIPTION,
   MODE_LABEL,
@@ -171,7 +171,7 @@ async function recordManualProof(formData: FormData) {
       providerStatus,
       actualAmount: amount,
       currency: amount != null ? "INR" : null,
-      rawResponse: { enteredBy: user.email, note, manualEntry: true },
+      rawResponse: { enteredByUserId: user.id, note, manualEntry: true },
       receivedVia: ProofReceivedVia.MANUAL,
       actorType: AuditActorType.USER,
     });
@@ -193,11 +193,20 @@ async function recordManualProof(formData: FormData) {
  */
 async function approveFinality(formData: FormData) {
   "use server";
-  const { user, organization, membership } = await requireSession();
+  const { user, organization, membership, session } = await requireSession();
   const settlementId = String(formData.get("settlementId") ?? "");
 
   if (!canApproveSettlement(membership.role)) {
     redirect(`/settlements/${settlementId}/shadow?error=${encodeURIComponent("Only approvers can approve finality.")}`);
+  }
+
+  const mfaViolation = approvalMfaViolation({
+    requireMfaForApproval: organization.settings?.requireMfaForApproval ?? true,
+    mfaEnabled: user.mfaEnabled,
+    mfaStepUpFresh: isMfaStepUpFresh(session),
+  });
+  if (mfaViolation) {
+    redirect(`/settlements/${settlementId}/shadow?error=${encodeURIComponent(mfaViolation)}`);
   }
 
   const settlement = await prisma.settlement.findFirst({
@@ -236,7 +245,7 @@ async function approveFinality(formData: FormData) {
     actorType: AuditActorType.USER,
     after: {
       publicId: settlement.publicId,
-      approvedBy: user.email,
+      approvedByUserId: user.id,
       createdById: settlement.createdById,
       dualControl: true,
     },

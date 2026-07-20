@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError, requireApiContext } from "@/lib/api";
+import { canApproveSettlement, canManageSettings, roleErrorMessage } from "@/lib/permissions";
 import {
   getPayoutStatus,
   isPontisConfigured,
@@ -8,8 +9,8 @@ import {
   sendPayoutRequest,
   type PontisPayoutRequest,
 } from "@/lib/providers/pontis/client";
-import { executeApprovedSettlement } from "@/lib/providers/pontis/settlement";
 import { testPayoutOverridesSchema } from "@/lib/providers/pontis/schema";
+import { executeSettlementWithProvider } from "@/lib/providers/service";
 
 export const runtime = "nodejs";
 
@@ -29,6 +30,9 @@ export async function POST(request: NextRequest) {
   const gate = devOnlyGuard();
   if (gate) return gate;
 
+  const { context, error } = await requireApiContext();
+  if (error) return error;
+
   if (!isPontisConfigured()) {
     return NextResponse.json({ error: "PontisGlobe is not configured." }, { status: 503 });
   }
@@ -46,24 +50,20 @@ export async function POST(request: NextRequest) {
     // With a settlementId: drive the real lifecycle (execute an APPROVED
     // settlement through PontisGlobe). Requires an authenticated session.
     if (overrides.settlementId) {
-      const { context, error } = await requireApiContext();
-      if (error) return error;
-      const result = await executeApprovedSettlement(
+      if (!canApproveSettlement(context.membership.role)) {
+        return NextResponse.json({ error: roleErrorMessage(context.membership.role) }, { status: 403 });
+      }
+      const result = await executeSettlementWithProvider(
+        "pontis",
         overrides.settlementId,
         context.user.id,
         context.organization.id,
-        {
-          overrides: {
-            country_code: overrides.country_code,
-            currency_code: overrides.currency_code,
-            payment_method: overrides.payment_method,
-            source_amount: overrides.source_amount,
-            source_currency: overrides.source_currency,
-            recipient_details: overrides.recipient_details,
-          },
-        },
       );
       return NextResponse.json({ testMode: "settlement", data: result });
+    }
+
+    if (!canManageSettings(context.membership.role)) {
+      return NextResponse.json({ error: roleErrorMessage(context.membership.role) }, { status: 403 });
     }
 
     const payout: PontisPayoutRequest = {

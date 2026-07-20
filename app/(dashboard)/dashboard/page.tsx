@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { assessFinality } from "@/lib/finality";
 import { buildFinalityInput, hasAuditApproval } from "@/lib/finality-input";
 import { getShadowConfig, inrLegOf, safetyFor } from "@/lib/shadow-mode";
-import { cn, formatCurrencyCompact } from "@/lib/utils";
+import { cn, formatCurrencyCompact, maskFinancialIdentifier } from "@/lib/utils";
+import { canViewSensitiveFinancialData } from "@/lib/permissions";
 import { PageHeader } from "@/components/ops/page-header";
 import { Sparkline, TrendCard } from "@/components/ops/sparkline";
 import { StateIcon, type StateKind } from "@/components/ops/status-badge";
@@ -86,7 +87,8 @@ type StepState = "ok" | "pending" | "blocked";
 const STEP_LABEL: Record<StepState, string> = { ok: "Verified", pending: "Pending", blocked: "Blocked" };
 
 export default async function DashboardPage() {
-  const { organization } = await requireSession();
+  const { organization, membership } = await requireSession();
+  const canViewSensitive = canViewSensitiveFinancialData(membership.role);
   const shadowConfig = getShadowConfig();
   const since = windowStart();
   const compareSince = windowStart(2);
@@ -598,7 +600,11 @@ export default async function DashboardPage() {
                 <>
                   <p className="min-w-0 flex-1 truncate text-sm text-slate-800">
                     {STREAM_ACTIONS[log.action]}
-                    <span className="ml-2 text-xs text-slate-400">{log.user?.email ?? log.actorType.toLowerCase()}</span>
+                    <span className="ml-2 text-xs text-slate-400">
+                      {log.user?.email
+                        ? (canViewSensitive ? log.user.email : maskFinancialIdentifier(log.user.email))
+                        : log.actorType.toLowerCase()}
+                    </span>
                   </p>
                   <Time value={log.createdAt} className="shrink-0 text-xs tabular-nums text-slate-400" />
                 </>
