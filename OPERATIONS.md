@@ -41,7 +41,11 @@ operator decisions.
   are redacted before persistence.
 
 Configure the scheduler with a random `CRON_SECRET` of at least 32 characters.
-The included `vercel.json` invokes the retry worker every two minutes.
+The included Hobby-compatible Vercel schedule runs a daily recovery sweep.
+Production-volume operations should invoke the same authenticated endpoint
+every two minutes from Vercel Pro or an external scheduler; operators can run an
+immediate status sync from Provider Operations while the daily schedule is in
+use.
 
 ## Deployment
 

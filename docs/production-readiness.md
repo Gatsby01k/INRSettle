@@ -18,7 +18,9 @@
 - PostgreSQL certificate verification is enabled.
 - Provider credentials, callback URLs, and signing secrets are verified in the
   target environment.
-- The retry scheduler can reach the authenticated internal endpoint.
+- The retry scheduler can reach the authenticated internal endpoint. The
+  repository schedule is a daily Hobby-compatible recovery sweep; production
+  volume requires a two-minute Vercel Pro or external schedule.
 - Storage uses tenant-authorized, short-lived signed document URLs.
 - Monitoring and incident contacts are active.
 
