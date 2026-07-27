@@ -61,7 +61,7 @@ export function ContactMailForm({ mode }: { mode: "access" | "sales" }) {
           </select>
           <textarea
             name="use_case"
-            placeholder="Your payout flow and what you need to prove"
+            placeholder="Your settlement workflow, providers and control requirements"
             aria-label="Use case"
             className="min-h-28 w-full resize-y rounded-lg border border-[var(--ops-line)] bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[var(--status-ok)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,199,157,0.15)]"
           />

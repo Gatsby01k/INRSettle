@@ -14,10 +14,7 @@ export const PONTIS_CALLBACK_STATUSES = [
   "canceled",
 ] as const;
 
-/**
- * `source_amount` is a decimal string. In sandbox the trailing cents act as a
- * deterministic trigger code (.00 -> completed, .01 -> insufficient funds, etc).
- */
+/** `source_amount` is a decimal string with two fractional digits. */
 const amountSchema = z
   .string()
   .regex(/^\d+\.\d{2}$/, "source_amount must be a decimal string with two trailing digits, e.g. \"10.00\".");
@@ -44,27 +41,6 @@ export const payoutStatusRequestSchema = z.object({
   transaction_id: z.string().min(1),
 });
 
-/**
- * Optional overrides accepted by the dev-only test-payout route. Everything is
- * optional — the route fills in the documented INR sandbox defaults.
- */
-export const testPayoutOverridesSchema = z.object({
-  /**
-   * When provided, drives the real settlement lifecycle (execute an APPROVED
-   * settlement) instead of running the self-contained connectivity smoke test.
-   */
-  settlementId: z.string().min(1).optional(),
-  idempotency_key: z.string().min(1).optional(),
-  country_code: z.string().min(2).max(3).optional(),
-  currency_code: z.string().min(3).max(3).optional(),
-  payment_method: z.string().min(1).optional(),
-  source_amount: amountSchema.optional(),
-  source_currency: z.string().min(1).max(10).optional(),
-  recipient_details: recipientDetailsSchema.partial().optional(),
-  /** When true, immediately poll getPayoutStatus after submitting. */
-  pollStatus: z.boolean().optional(),
-});
-
 export const webhookPayloadSchema = z.object({
   transaction_id: z.string().min(1),
   status: z.enum(PONTIS_CALLBACK_STATUSES),
@@ -73,5 +49,4 @@ export const webhookPayloadSchema = z.object({
 
 export type PayoutRequestInput = z.infer<typeof payoutRequestSchema>;
 export type PayoutStatusRequestInput = z.infer<typeof payoutStatusRequestSchema>;
-export type TestPayoutOverrides = z.infer<typeof testPayoutOverridesSchema>;
 export type WebhookPayload = z.infer<typeof webhookPayloadSchema>;

@@ -3,10 +3,10 @@
 // The platform has no live FX integration. The executable quote rate comes
 // from ONE explicit source: the QUOTE_RATE_USDT_INR environment variable — a
 // manually maintained treasury desk rate. A hardcoded fallback exists ONLY for
-// local development / demo mode; production without demo mode fails closed
+// local development; production always fails closed when the rate is absent
 // rather than pricing real quotes with fictional numbers.
 
-export type QuoteRateSource = "env" | "demo_fallback";
+export type QuoteRateSource = "env" | "development_fallback";
 
 export type QuoteRates = {
   /** INR per USDT applied to the INR -> USDT corridor. */
@@ -18,13 +18,12 @@ export type QuoteRates = {
   label: string;
 };
 
-/** Local/demo fallback only — never used in production unless demo mode is on. */
-export const DEMO_FALLBACK_RATES = { INR_USDT: 83.5, USDT_INR: 83.15 } as const;
+/** Local development fallback only — never available in production. */
+export const DEVELOPMENT_FALLBACK_RATES = { INR_USDT: 83.5, USDT_INR: 83.15 } as const;
 
 export type QuoteRateEnv = {
   QUOTE_RATE_USDT_INR?: string;
   NODE_ENV?: string;
-  NEXT_PUBLIC_DEMO_MODE?: string;
 };
 
 /**
@@ -35,8 +34,7 @@ export type QuoteRateEnv = {
  *    corridors (single manual desk rate; no synthetic spread), source "env".
  *  - QUOTE_RATE_USDT_INR set but invalid -> throws, in every environment.
  *    A misconfigured rate must never silently price a quote.
- *  - Unset -> demo fallback ONLY outside production, or in production with
- *    NEXT_PUBLIC_DEMO_MODE="true". Production without demo mode throws.
+ *  - Unset -> development fallback outside production. Production throws.
  */
 export function resolveQuoteRates(env: QuoteRateEnv = process.env): QuoteRates {
   const raw = env.QUOTE_RATE_USDT_INR?.trim();
@@ -56,17 +54,16 @@ export function resolveQuoteRates(env: QuoteRateEnv = process.env): QuoteRates {
     };
   }
 
-  const demoAllowed = env.NODE_ENV !== "production" || env.NEXT_PUBLIC_DEMO_MODE === "true";
-  if (!demoAllowed) {
+  if (env.NODE_ENV === "production") {
     throw new Error(
       "QUOTE_RATE_USDT_INR is not set. A manual desk rate is required to generate quotes in production.",
     );
   }
 
   return {
-    INR_USDT: DEMO_FALLBACK_RATES.INR_USDT,
-    USDT_INR: DEMO_FALLBACK_RATES.USDT_INR,
-    source: "demo_fallback",
-    label: "Demo rate — local/demo only, no live FX feed",
+    INR_USDT: DEVELOPMENT_FALLBACK_RATES.INR_USDT,
+    USDT_INR: DEVELOPMENT_FALLBACK_RATES.USDT_INR,
+    source: "development_fallback",
+    label: "Local development rate — unavailable in production",
   };
 }

@@ -8,15 +8,31 @@ export type ProviderCapability =
   | "signed_webhook"
   | "reconciliation_reference";
 
+export type ProviderAuthentication =
+  | "api_key_hmac"
+  | "jwt"
+  | "oauth2"
+  | "mtls"
+  | "provider_gateway";
+
+export type ProviderCredentialStrategy =
+  | "deployment_secret"
+  | "tenant_secret_reference";
+
+export type ProviderWebhookVerification =
+  | "hmac_raw_body"
+  | "gateway_verified"
+  | "provider_signature";
+
 export type ProviderExecutionContext = {
   settlementId: string;
   userId: string;
   organizationId: string;
   /**
    * Tenant-specific connection metadata. `credentialsRef` is an opaque secret
-   * manager reference, never the credential value. Existing sandbox adapters
-   * still use deployment-scoped environment credentials; a future connector
-   * resolves this reference in its server-side adapter.
+   * manager reference, never the credential value. Connector metadata declares
+   * whether the active adapter uses this tenant reference or a deployment-level
+   * secret binding.
    */
   connection: {
     id: string;
@@ -39,15 +55,19 @@ export type ProviderExecutionResult = {
  * response schemas stay in each connector directory. The orchestrator only
  * sees normalized identity, capabilities and lifecycle operations.
  *
- * InvoiceMate/PayMate can implement this interface after its authoritative API
- * contract, webhook signing scheme and sandbox credentials are supplied; no
- * payload or status mapping is guessed in this repository.
+ * A new provider implements this interface only after its authoritative API
+ * contract, authentication scheme and webhook verification rules are known.
+ * Provider payloads and statuses are never guessed in the orchestrator.
  */
 export type ProviderConnector = {
   code: string;
   displayName: string;
   persistedName: string;
+  supportedCorridors: readonly ("INR_USDT" | "USDT_INR")[];
   capabilities: readonly ProviderCapability[];
+  authentication: readonly ProviderAuthentication[];
+  credentialStrategy: ProviderCredentialStrategy;
+  webhookVerification: ProviderWebhookVerification | null;
   isConfigured(): boolean;
   execute(context: ProviderExecutionContext): Promise<unknown>;
   checkStatus?(context: ProviderExecutionContext): Promise<unknown>;

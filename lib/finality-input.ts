@@ -38,7 +38,7 @@ export type EventLike = {
 export type SettlementLike = {
   publicId: string;
   status: string;
-  /** DEMO (default) | SHADOW | LIVE_TEST. */
+  /** EVIDENCE_ONLY (default) | PROVIDER_OBSERVED | CONTROLLED_PILOT. */
   testMode?: string | null;
   sourceCurrency: string;
   targetCurrency: string;
@@ -98,7 +98,7 @@ export function hasAuditApproval(settlement: SettlementLike, events: EventLike[]
 
 /**
  * Assembles the full deterministic finality input for a settlement. For
- * SHADOW/LIVE_TEST settlements pass `safety` (from lib/shadow-mode.ts
+ * PROVIDER_OBSERVED/CONTROLLED_PILOT settlements pass `safety` (from lib/shadow-mode.ts
  * `safetyFor`) — when omitted on a shadow settlement, finality blocks with
  * "safety not evaluated" rather than assuming the caps hold.
  */
@@ -113,7 +113,7 @@ export function buildFinalityInput(
   const reconciliation = relevantReconciliationOf(reconciliationRecords);
 
   return {
-    testMode: settlement.testMode ?? "DEMO",
+    testMode: settlement.testMode ?? "EVIDENCE_ONLY",
     safety: safety ?? null,
     settlement: {
       publicId: settlement.publicId,

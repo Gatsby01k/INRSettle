@@ -1,20 +1,17 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { ChevronDown, FlaskConical, Plus, Zap } from "lucide-react";
+import { ChevronDown, Plus, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ReconciliationCommandBarProps = {
   addRecordForm: ReactNode;
   autoMatchForm: ReactNode;
-  /** Demo data utilities — rendered in a subtle, clearly-labelled dropdown. */
-  demoForms?: ReactNode;
 };
 
 export function ReconciliationCommandBar({
   addRecordForm,
   autoMatchForm,
-  demoForms,
 }: ReconciliationCommandBarProps) {
   const [composerOpen, setComposerOpen] = useState(false);
 
@@ -44,21 +41,6 @@ export function ReconciliationCommandBar({
             Matching
           </span>
           {autoMatchForm}
-          {demoForms ? (
-            <details className="reconciliation-demo-utils relative">
-              <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-lg border border-dashed border-slate-200 bg-white px-2.5 text-[11px] font-medium text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600">
-                <FlaskConical className="h-3 w-3" aria-hidden="true" />
-                Demo utilities
-                <ChevronDown className="h-3 w-3" aria-hidden="true" />
-              </summary>
-              <div className="absolute right-0 top-[calc(100%+6px)] z-20 w-max max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--ops-line)] bg-white p-2.5 shadow-ops-md">
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.07em] text-amber-700">
-                  Demo data only — not production actions
-                </p>
-                {demoForms}
-              </div>
-            </details>
-          ) : null}
         </div>
       </div>
 

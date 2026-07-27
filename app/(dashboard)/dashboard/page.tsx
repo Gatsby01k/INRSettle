@@ -328,14 +328,6 @@ export default async function DashboardPage() {
 
   /* ── Action queue ───────────────────────────────────────────────────── */
   const queue = [
-    shadowConfig.livePayoutsEnabled && {
-      state: "blocked" as StateKind,
-      label: "Live payout guardrail disarmed",
-      detail: "Finality is blocked for all shadow and live-test settlements until live payouts are disabled again.",
-      count: 1,
-      age: null as string | null,
-      href: "/settlements",
-    },
     reconExceptions > 0 && {
       state: "blocked" as StateKind,
       label: `Reconciliation exception${reconExceptions === 1 ? "" : "s"}`,
@@ -545,7 +537,7 @@ export default async function DashboardPage() {
               <span
                 className={cn(
                   "case-chip",
-                  latestReportLog ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "case-chip--demo",
+                  latestReportLog ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "case-chip--muted",
                 )}
               >
                 {latestReportLog ? "Report generated" : "Report pending"}

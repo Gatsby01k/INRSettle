@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import { UserFacingError } from "@/lib/errors";
 
 /**
- * Thin server-only client for the PontisGlobe sandbox API.
+ * Thin server-only client for the PontisGlobe API.
  *
  * Credentials are read exclusively from environment variables and never leave
  * the server. Every request is encrypted + signed exactly as documented:

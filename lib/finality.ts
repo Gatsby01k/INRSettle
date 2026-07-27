@@ -45,20 +45,20 @@ export type FinalityReconciliationInput = {
   currency: string;
 };
 
-/** Safety status for SHADOW / LIVE_TEST settlements (computed by lib/shadow-mode.ts). */
+/** Safety status for PROVIDER_OBSERVED / CONTROLLED_PILOT settlements (computed by lib/shadow-mode.ts). */
 export type FinalitySafetyInput = {
   /** INR leg within the cap for the settlement's mode. */
   withinCap: boolean;
   /** Human-readable cap (e.g. "INR 10,000") for messages. */
   capLabel: string;
-  /** True unless someone explicitly enabled live payouts (tripwire). */
-  livePayoutsDisabled: boolean;
+  /** Confirms that execution remains the responsibility of an integrated provider. */
+  executionBoundaryConfirmed: boolean;
   /**
-   * LIVE_TEST only: today's cumulative LIVE_TEST INR volume (including this
+   * CONTROLLED_PILOT only: today's cumulative CONTROLLED_PILOT INR volume (including this
    * settlement) stays within the daily pilot cap. Omitted for other modes.
    */
   withinDailyCap?: boolean;
-  /** Human-readable daily cap for messages (LIVE_TEST only). */
+  /** Human-readable daily cap for messages (CONTROLLED_PILOT only). */
   dailyCapLabel?: string;
 };
 
@@ -70,9 +70,9 @@ export type FinalityInput = {
   reconciliation: FinalityReconciliationInput | null;
   /** True when the audit trail records an approval for this settlement. */
   auditApprovalPresent: boolean;
-  /** Settlement test mode: DEMO (default) | SHADOW | LIVE_TEST. */
+  /** Settlement test mode: EVIDENCE_ONLY (default) | PROVIDER_OBSERVED | CONTROLLED_PILOT. */
   testMode?: string | null;
-  /** Required when testMode is SHADOW/LIVE_TEST; ignored for DEMO. */
+  /** Required when testMode is PROVIDER_OBSERVED/CONTROLLED_PILOT; ignored for EVIDENCE_ONLY. */
   safety?: FinalitySafetyInput | null;
 };
 
@@ -142,7 +142,7 @@ function maxRisk(a: FinalityRiskLevel, b: FinalityRiskLevel): FinalityRiskLevel 
  *  - reconciliation unmatched / exception     -> needs_review (high risk)
  *  - expected vs reported amount differs      -> needs_review (high risk)
  *  - audit approval missing                   -> needs_review (high risk)
- *  - SHADOW/LIVE_TEST over the safety cap, or
+ *  - PROVIDER_OBSERVED/CONTROLLED_PILOT over the safety cap, or
  *    live payouts enabled, or safety not
  *    evaluated                                -> needs_review (high risk;
  *      shadow settlements can never bypass caps)
@@ -151,7 +151,7 @@ function maxRisk(a: FinalityRiskLevel, b: FinalityRiskLevel): FinalityRiskLevel 
  */
 export function assessFinality(input: FinalityInput): FinalityAssessment {
   const { settlement, proof, reconciliation, auditApprovalPresent } = input;
-  const isShadowMode = input.testMode === "SHADOW" || input.testMode === "LIVE_TEST";
+  const isShadowMode = input.testMode === "PROVIDER_OBSERVED" || input.testMode === "CONTROLLED_PILOT";
 
   const blockingIssues: string[] = [];
   const warnings: string[] = [];
@@ -296,41 +296,43 @@ export function assessFinality(input: FinalityInput): FinalityAssessment {
     evidence.push("Audit trail records an approval for this settlement.");
   }
 
-  // --- 5. Shadow/live-test safety gate -------------------------------------------
-  // In SHADOW/LIVE_TEST the money is moved externally by the partner/provider.
-  // The safety caps and the live-payout tripwire can never be bypassed: any
+  // --- 5. Operating-posture guardrails -------------------------------------------
+  // In PROVIDER_OBSERVED/CONTROLLED_PILOT the money is moved externally by the partner/provider.
+  // The safety caps and execution boundary can never be bypassed: any
   // violation blocks ready_to_finalize regardless of how good the evidence is.
   if (isShadowMode) {
+    const postureLabel =
+      input.testMode === "CONTROLLED_PILOT" ? "Controlled pilot" : "Provider-observed";
     evidence.push(
-      `${input.testMode} testMode: INRSettle did not move funds directly — the external partner/provider moved the money.`,
+      `${postureLabel}: the integrated provider performed execution; INRSettle recorded the workflow and evidence.`,
     );
 
     if (!input.safety) {
-      blockingIssues.push(`Safety status was not evaluated for this ${input.testMode} settlement.`);
-      recommendedActions.push("Evaluate the shadow-test safety caps before finality review.");
+      blockingIssues.push(`Operating guardrails were not evaluated for this ${postureLabel.toLowerCase()} settlement.`);
+      recommendedActions.push("Evaluate the operating-posture guardrails before finality review.");
       riskLevel = "high";
     } else {
-      if (!input.safety.livePayoutsDisabled) {
-        blockingIssues.push("LIVE_PAYOUTS_ENABLED is set — live payouts must stay disabled during shadow testing.");
-        recommendedActions.push("Unset LIVE_PAYOUTS_ENABLED before continuing the shadow test.");
+      if (!input.safety.executionBoundaryConfirmed) {
+        blockingIssues.push("The external provider execution boundary is not confirmed.");
+        recommendedActions.push("Confirm that execution is performed by the selected integrated provider.");
         riskLevel = "high";
       }
       if (!input.safety.withinCap) {
         blockingIssues.push(
-          `Settlement exceeds the ${input.testMode} safety cap (${input.safety.capLabel}).`,
+          `Settlement exceeds the ${postureLabel.toLowerCase()} cap (${input.safety.capLabel}).`,
         );
-        recommendedActions.push("Reduce the test amount below the cap; caps cannot be bypassed.");
+        recommendedActions.push("Reduce the settlement amount below the controlled cap.");
         riskLevel = "high";
       }
       if (input.safety.withinDailyCap === false) {
         blockingIssues.push(
-          `Today's cumulative LIVE_TEST volume exceeds the daily pilot cap${input.safety.dailyCapLabel ? ` (${input.safety.dailyCapLabel})` : ""}.`,
+          `Today's cumulative controlled-pilot volume exceeds the daily cap${input.safety.dailyCapLabel ? ` (${input.safety.dailyCapLabel})` : ""}.`,
         );
         recommendedActions.push("Wait for the next day or reduce pilot volume; the daily cap cannot be bypassed.");
         riskLevel = "high";
       }
-      if (input.safety.withinCap && input.safety.livePayoutsDisabled && input.safety.withinDailyCap !== false) {
-        evidence.push(`Safety caps hold: amount within the ${input.testMode} cap (${input.safety.capLabel}); live payouts disabled.`);
+      if (input.safety.withinCap && input.safety.executionBoundaryConfirmed && input.safety.withinDailyCap !== false) {
+        evidence.push(`Operational guardrails hold (${input.safety.capLabel}); external provider execution boundary confirmed.`);
       }
     }
   }

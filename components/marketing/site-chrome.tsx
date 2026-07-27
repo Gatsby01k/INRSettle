@@ -1,42 +1,37 @@
 import Link from "next/link";
 import Image from "next/image";
+import { ArrowRight, Menu } from "lucide-react";
 import { NO_FUNDS_DISCLAIMER } from "@/lib/copy";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-/**
- * Shared chrome for EVERY public page — the landing, request access, security,
- * compliance, docs, legal, status, sample report. One header, one footer,
- * one design language. A visitor moving between public pages must never feel
- * they changed websites.
- */
+const PLATFORM_LINKS = [
+  { href: "/#lifecycle", label: "Lifecycle" },
+  { href: "/#providers", label: "Provider network" },
+  { href: "/#reconciliation", label: "Reconciliation" },
+  { href: "/#finality", label: "Finality" },
+] as const;
 
 export function SiteHeader() {
   return (
-    <header className="lp-glass sticky top-0 z-40">
-      <span className="lp-brandline" aria-hidden="true" />
+    <header className="site-header sticky top-0 z-40">
       <nav
-        className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6"
+        className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-5 sm:px-8"
         aria-label="Primary"
       >
         <Link href="/" className="flex items-center gap-2.5" aria-label="INRSettle home">
-          <Image src="/assets/mark.png" alt="" width={32} height={32} className="rounded-lg" />
-          <span className="text-[15px] font-semibold tracking-tight text-slate-950">INRSettle</span>
+          <Image src="/assets/mark.png" alt="" width={31} height={31} className="rounded-lg" />
+          <span className="text-[15px] font-semibold tracking-[-0.02em] text-slate-950">INRSettle</span>
         </Link>
-        <div className="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">
-          <Link href="/#how-it-works" className="transition-colors hover:text-slate-950">
-            How it works
-          </Link>
-          <Link href="/#platform" className="transition-colors hover:text-slate-950">
-            Platform
-          </Link>
-          <Link href="/security" className="transition-colors hover:text-slate-950">
-            Security
-          </Link>
-          <Link href="/docs" className="transition-colors hover:text-slate-950">
-            Docs
-          </Link>
+
+        <div className="hidden items-center gap-7 text-[13px] font-medium text-slate-600 lg:flex">
+          <Link href="/#lifecycle" className="transition-colors hover:text-slate-950">Platform</Link>
+          <Link href="/#providers" className="transition-colors hover:text-slate-950">Providers</Link>
+          <Link href="/#security" className="transition-colors hover:text-slate-950">Security</Link>
+          <Link href="/developers" className="transition-colors hover:text-slate-950">API</Link>
+          <Link href="/docs" className="transition-colors hover:text-slate-950">Documentation</Link>
         </div>
+
         <div className="flex items-center gap-2">
           <Link
             href="/login"
@@ -44,9 +39,28 @@ export function SiteHeader() {
           >
             Sign in
           </Link>
-          <Link href="/contact?intent=access" className={cn(buttonVariants({ variant: "primary", size: "sm" }))}>
-            Request access
+          <Link
+            href="/contact?intent=sales"
+            className={cn(buttonVariants({ variant: "primary", size: "sm" }), "hidden sm:inline-flex")}
+          >
+            Talk to our team
           </Link>
+          <details className="site-mobile-menu lg:hidden">
+            <summary aria-label="Open navigation">
+              <Menu className="h-[18px] w-[18px]" aria-hidden="true" />
+            </summary>
+            <div>
+              <p>Platform</p>
+              {PLATFORM_LINKS.map((link) => (
+                <Link key={link.href} href={link.href}>{link.label}</Link>
+              ))}
+              <p>Resources</p>
+              <Link href="/security">Security</Link>
+              <Link href="/developers">API</Link>
+              <Link href="/docs">Documentation</Link>
+              <Link href="/contact?intent=sales">Contact</Link>
+            </div>
+          </details>
         </div>
       </nav>
     </header>
@@ -55,69 +69,79 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="lp-footer-line bg-slate-50/60">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
-        <div className="lg:col-span-2">
+    <footer className="site-footer">
+      <div className="platform-container grid gap-12 py-14 sm:grid-cols-2 lg:grid-cols-[1.5fr_0.8fr_0.8fr_0.8fr]">
+        <div>
           <Link href="/" className="flex items-center gap-2.5">
-            <Image src="/assets/mark.png" alt="" width={28} height={28} className="rounded-lg" />
-            <span className="text-sm font-semibold tracking-tight text-slate-950">INRSettle</span>
+            <Image src="/assets/mark.png" alt="" width={29} height={29} className="rounded-lg" />
+            <span className="text-sm font-semibold tracking-tight text-white">INRSettle</span>
           </Link>
-          <p className="mt-3 max-w-sm text-sm leading-relaxed text-slate-500">
-            Settlement proof and finality review for teams that move money through providers.
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-400">
+            Settlement operations from request to finality, across integrated
+            providers and independent evidence sources.
           </p>
-          <p className="mt-3 max-w-sm text-xs leading-relaxed text-slate-400">{NO_FUNDS_DISCLAIMER}</p>
-          <p className="mt-4 text-xs text-slate-400">
-            © 2026 INRSettle · Private beta ·{" "}
-            <a href="mailto:info@inrsettle.com" className="hover:text-slate-600">
-              info@inrsettle.com
-            </a>
-          </p>
+          <p className="mt-3 max-w-sm text-xs leading-relaxed text-slate-500">{NO_FUNDS_DISCLAIMER}</p>
         </div>
+
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Product</p>
-          <ul className="mt-3 space-y-2 text-sm text-slate-600">
-            <li><Link href="/#how-it-works" className="hover:text-slate-950">How it works</Link></li>
-            <li><Link href="/sample-report" className="hover:text-slate-950">Sample report</Link></li>
-            <li><Link href="/security" className="hover:text-slate-950">Security</Link></li>
-            <li><Link href="/compliance" className="hover:text-slate-950">Compliance</Link></li>
-            <li><Link href="/status" className="hover:text-slate-950">Status</Link></li>
+          <p className="site-footer__label">Platform</p>
+          <ul>
+            {PLATFORM_LINKS.map((link) => (
+              <li key={link.href}><Link href={link.href}>{link.label}</Link></li>
+            ))}
           </ul>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Company</p>
-          <ul className="mt-3 space-y-2 text-sm text-slate-600">
-            <li><Link href="/docs" className="hover:text-slate-950">Documentation</Link></li>
-            <li><Link href="/contact?intent=sales" className="hover:text-slate-950">Contact</Link></li>
-            <li><Link href="/legal/privacy" className="hover:text-slate-950">Privacy</Link></li>
-            <li><Link href="/legal/terms" className="hover:text-slate-950">Terms</Link></li>
+          <p className="site-footer__label">Resources</p>
+          <ul>
+            <li><Link href="/developers">API</Link></li>
+            <li><Link href="/docs">Documentation</Link></li>
+            <li><Link href="/security">Security</Link></li>
+            <li><Link href="/compliance">Compliance</Link></li>
+            <li><Link href="/status">System status</Link></li>
           </ul>
         </div>
+        <div>
+          <p className="site-footer__label">Company</p>
+          <ul>
+            <li><Link href="/contact?intent=sales">Contact</Link></li>
+            <li><Link href="/legal/privacy">Privacy</Link></li>
+            <li><Link href="/legal/terms">Terms</Link></li>
+            <li><a href="mailto:info@inrsettle.com">info@inrsettle.com</a></li>
+          </ul>
+        </div>
+      </div>
+      <div className="platform-container flex flex-col gap-2 border-t border-white/10 py-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+        <span>© 2026 INRSettle</span>
+        <span>Settlement Operations Platform</span>
       </div>
     </footer>
   );
 }
 
-/** Closing CTA rendered natively on legacy content pages (never on /contact). */
 export function SiteCta() {
   return (
-    <section className="border-t border-[var(--ops-line)]">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="lp-cert mx-auto max-w-3xl px-6 py-12 text-center sm:px-12">
-        <div className="lp-cert-rule" aria-hidden="true" />
-        <h2 className="mx-auto mt-5 max-w-2xl text-2xl font-semibold leading-tight tracking-tight text-slate-950 sm:text-3xl">
-          Prove your settlements are actually final.
-        </h2>
-        <p className="mx-auto mt-3 max-w-xl text-slate-600">
-          Run a pilot on the payouts you already process — your providers keep moving the money.
-        </p>
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
-          <Link href="/contact?intent=access" className={cn(buttonVariants({ variant: "primary", size: "default" }))}>
-            Start a pilot
-          </Link>
-          <Link href="/sample-report" className={cn(buttonVariants({ variant: "outline", size: "default" }))}>
-            View a sample report
-          </Link>
+    <section className="enterprise-cta">
+      <div className="platform-container">
+        <div>
+          <p className="platform-kicker">Settlement operations</p>
+          <h2>Bring the workflow under control.</h2>
+          <p>
+            Map approvals, funding, provider execution, evidence and finality
+            into one operating record.
+          </p>
         </div>
+        <div>
+          <Link
+            href="/contact?intent=sales"
+            className={cn(buttonVariants({ variant: "primary", size: "lg" }), "group")}
+          >
+            Discuss your settlement flow
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+          </Link>
+          <Link href="/docs" className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+            Read documentation
+          </Link>
         </div>
       </div>
     </section>

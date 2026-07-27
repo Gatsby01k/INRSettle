@@ -18,7 +18,7 @@ export function AreaTabs({ area }: { area: keyof typeof AREA_TABS }) {
   return (
     <nav
       aria-label={`${area} sections`}
-      className="inline-flex h-9 items-center gap-1 rounded-lg border border-[var(--ops-line)] bg-slate-100/80 p-1"
+      className="area-tabs flex h-10 max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-[var(--ops-line)] bg-slate-100/80 p-1"
     >
       {tabs.map((tab) => {
         const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
@@ -28,7 +28,7 @@ export function AreaTabs({ area }: { area: keyof typeof AREA_TABS }) {
             href={tab.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "inline-flex items-center rounded-md px-3 py-1 text-sm font-medium transition-colors",
+              "inline-flex shrink-0 items-center rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors",
               active ? "bg-white text-slate-950 shadow-sm" : "text-slate-600 hover:text-slate-950",
             )}
           >

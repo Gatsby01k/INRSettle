@@ -43,11 +43,11 @@ import {
 } from "../providers/remitquickly/settlement";
 
 // ---------------------------------------------------------------------------
-// Test credentials (fake, test-only — never real secrets).
+// Inert test credentials. These values are never accepted outside this test.
 // ---------------------------------------------------------------------------
 const HMAC_KEY = Buffer.from("test-hmac-key-32-bytes-padding!!", "utf8");
 const PONTIS_ENV = {
-  PONTIS_BASE_URL: "https://sandbox.example.test",
+  PONTIS_BASE_URL: "https://pontis.example.test",
   PONTIS_API_KEY: "test-api-key",
   PONTIS_ENCRYPTION_SECRET: Buffer.alloc(32, 7).toString("base64url"),
   PONTIS_HMAC_SECRET: HMAC_KEY.toString("base64url"),
@@ -57,10 +57,11 @@ const PONTIS_ENV = {
 
 const RQ_SECRET = "test-remitquickly-webhook-secret";
 const RQ_ENV = {
-  REMITQUICKLY_BASE_URL: "https://sandbox.example.test",
+  REMITQUICKLY_BASE_URL: "https://remitquickly.example.test",
   REMITQUICKLY_API_KEY: "test-key",
   REMITQUICKLY_API_SECRET: "test-api-secret",
   REMITQUICKLY_WEBHOOK_SECRET: RQ_SECRET,
+  REMITQUICKLY_DEFAULT_QUOTE_ID: "41",
 };
 
 const GATEWAY_SECRET = "test-gateway-shared-secret";
@@ -370,12 +371,23 @@ describe("RemitQuickly payout resolution idempotency", () => {
     expect(mapRemitQuicklyStatus("transaction reversed by bank")).toBe("reversed");
   });
 
-  it("merchantRecognitionId is the settlement public id and stays STABLE across retries; isTest defaults true", () => {
-    const first = buildPayoutRequest(baseSettlement, undefined);
-    const second = buildPayoutRequest(baseSettlement, undefined);
+  it("builds a stable provider request only from explicit beneficiary instructions", () => {
+    const instruction = {
+      beneficiaryName: "Meridian Components Private Limited",
+      bankName: "HDFC Bank",
+      bankCode: "HDFC0001234",
+      accountNumber: "50100040199211",
+      accountType: "current" as const,
+      mobile: "+919810001234",
+      email: "treasury@meridian.example",
+      purpose: "Invoice settlement INV-78421",
+    };
+    const first = buildPayoutRequest(baseSettlement, instruction);
+    const second = buildPayoutRequest(baseSettlement, instruction);
     expect(first.merchantRecognitionId).toBe("SET-RQ-1");
     expect(second.merchantRecognitionId).toBe(first.merchantRecognitionId);
-    expect(first.isTest).toBe(true); // sandbox-only: never silently live
-    expect(buildPayoutRequest(baseSettlement, undefined, {}).isTest).toBe(true);
+    expect(first.name).toBe(instruction.beneficiaryName);
+    expect(first.acc_id).toBe(instruction.accountNumber);
+    expect(first.isTest).toBeUndefined();
   });
 });

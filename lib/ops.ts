@@ -16,21 +16,30 @@ export function settlementStepIndex(status: string) {
 export type NavItem = { href: string; label: string };
 export type NavGroup = { label: string; items: NavItem[] };
 
-/**
- * Phase 1 IA — the single source of truth for primary navigation.
- * Seven destinations that mirror the product's data model. Former pages
- * live on as tabs inside their areas (see AREA_TABS below); their routes
- * remain valid so links and bookmarks keep working.
- */
 export const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Console",
+    label: "Operations",
     items: [
-      { href: "/dashboard", label: "Home" },
+      { href: "/dashboard", label: "Operations overview" },
       { href: "/settlements", label: "Settlements" },
+      { href: "/funding", label: "Funding" },
       { href: "/reconciliation", label: "Reconciliation" },
+      { href: "/finality", label: "Finality" },
+      { href: "/exceptions", label: "Exceptions" },
+    ],
+  },
+  {
+    label: "Provider infrastructure",
+    items: [
       { href: "/providers", label: "Providers" },
-      { href: "/audit-logs", label: "Audit trail" },
+      { href: "/providers/operations", label: "Provider operations" },
+      { href: "/audit-logs", label: "Audit explorer" },
+    ],
+  },
+  {
+    label: "Governance",
+    items: [
+      { href: "/risk-review", label: "Risk & due diligence" },
       { href: "/reports", label: "Reports" },
       { href: "/settings", label: "Settings" },
     ],
@@ -44,18 +53,24 @@ export const AREA_TABS: Record<string, NavItem[]> = {
   settlements: [
     { href: "/settlements", label: "Settlements" },
     { href: "/quotes", label: "Quotes" },
+    { href: "/funding", label: "Funding" },
+    { href: "/finality", label: "Finality" },
+    { href: "/exceptions", label: "Exceptions" },
   ],
   providers: [
-    { href: "/providers", label: "Readiness" },
-    { href: "/counterparties", label: "Counterparties" },
-    { href: "/kyb", label: "KYB" },
-    { href: "/monitoring", label: "Runbook" },
-    { href: "/pilot-readiness", label: "Go-live" },
+    { href: "/providers", label: "Connections" },
+    { href: "/providers/operations", label: "Operations" },
+    { href: "/providers/health", label: "Health" },
+    { href: "/providers/routing", label: "Routing" },
+    { href: "/providers/capabilities", label: "Capabilities" },
+    { href: "/providers/webhooks", label: "Webhooks" },
+    { href: "/providers/logs", label: "Logs" },
+    { href: "/providers/credentials", label: "Credentials" },
+    { href: "/providers/performance", label: "Performance" },
   ],
   settings: [
     { href: "/settings", label: "Organization" },
     { href: "/team", label: "Team" },
-    { href: "/accounts", label: "Treasury references" },
     { href: "/api-reference", label: "API" },
   ],
 };

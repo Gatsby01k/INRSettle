@@ -509,72 +509,20 @@ describe("settlement and reconciliation workflow", () => {
     expect(second.externalRef).toBe("BANK-AUTO-002");
   });
 
-  it("creates a quick matching bank record as OPEN and lets auto-match reconcile it", async () => {
-    const { createMatchingDemoRecord, autoMatchReconciliation } = await import("@/lib/domain");
-    const settlement = seedSettledSettlement({ settledAt: new Date("2026-06-02T00:00:00Z") });
-
-    const record = await createMatchingDemoRecord("bank_statement", "user_1", "org_1");
-
-    // Saved OPEN and unlinked — never auto-reconciled on create.
-    expect(record.status).toBe(ReconciliationStatus.OPEN);
-    expect(record.settlementId).toBeNull();
-    expect(record.source).toBe("bank_statement");
-    expect(record.externalRef).toMatch(/^BANK-AUTO-\d{3}$/);
-    expect(settlement.status).toBe(SettlementStatus.SETTLED);
-
-    // Running auto-match reconciles the quick matching record (settlement -> RECONCILED).
-    const result = await autoMatchReconciliation("user_1", "org_1");
-    expect(result.matched).toBe(1);
-    expect(record.status).toBe(ReconciliationStatus.MATCHED);
-    expect(record.settlementId).toBe(settlement.id);
-    expect(settlement.status).toBe(SettlementStatus.RECONCILED);
-    expect((record.rawPayload as { _matchOrigin?: string })._matchOrigin).toBe("AUTO");
-    expect(mock.store.auditLogs.some((log) => log.action === "reconciliation.auto_match")).toBe(true);
-  });
-
-  it("creates a quick matching chain record with source chain_tx", async () => {
-    const { createMatchingDemoRecord } = await import("@/lib/domain");
-    seedSettledSettlement({ settledAt: new Date("2026-06-02T00:00:00Z") });
-
-    const record = await createMatchingDemoRecord("chain_tx", "user_1", "org_1");
-
-    expect(record.source).toBe("chain_tx");
-    expect(record.status).toBe(ReconciliationStatus.OPEN);
-    expect(record.settlementId).toBeNull();
-  });
-
-  it("requires a SETTLED settlement before a quick matching record can be created", async () => {
-    const { createMatchingDemoRecord } = await import("@/lib/domain");
-
-    await expect(createMatchingDemoRecord("bank_statement", "user_1", "org_1")).rejects.toThrow(
-      "No SETTLED settlement is waiting to be reconciled.",
-    );
-  });
-
-  it("creates a quick exception record that stays an EXCEPTION for manual review", async () => {
-    const { createExceptionDemoRecord, autoMatchReconciliation } = await import("@/lib/domain");
-    // A perfectly matching settlement exists, but the exception record must never match it.
-    const settlement = seedSettledSettlement({ settledAt: new Date("2026-06-02T00:00:00Z") });
-
-    const record = await createExceptionDemoRecord("user_1", "org_1");
-
-    expect(record.status).toBe(ReconciliationStatus.EXCEPTION);
-    expect(record.settlementId).toBeNull();
-    expect(record.exceptionReason).toBeTruthy();
-
-    // Auto-match never touches exception records, and the settlement stays SETTLED.
-    const result = await autoMatchReconciliation("user_1", "org_1");
-    expect(result.matched).toBe(0);
-    expect(record.status).toBe(ReconciliationStatus.EXCEPTION);
-    expect(settlement.status).toBe(SettlementStatus.SETTLED);
-  });
-
   it("resolves an EXCEPTION record without linking or reconciling a settlement", async () => {
-    const { createExceptionDemoRecord, resolveReconciliationException } = await import("@/lib/domain");
+    const { createReconciliationRecord, resolveReconciliationException } = await import("@/lib/domain");
     // A settlement that would otherwise match exists but must stay SETTLED.
     const settlement = seedSettledSettlement({ settledAt: new Date("2026-06-02T00:00:00Z") });
 
-    const record = await createExceptionDemoRecord("user_1", "org_1");
+    const record = await createReconciliationRecord({
+      externalRef: "bank_exception_1",
+      source: "bank_statement",
+      amount: 7123.45,
+      currency: "INR",
+      valueDate: "2026-06-02",
+      status: "EXCEPTION",
+      exceptionReason: "Unidentified bank credit with no matching settlement reference.",
+    }, "user_1", "org_1");
     expect(record.status).toBe(ReconciliationStatus.EXCEPTION);
 
     const resolved = await resolveReconciliationException(record.id, "user_1", "org_1");

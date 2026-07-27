@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://inrsettle.com"),
   title: "INRSettle Console",
-  description: "Stablecoin settlement operations platform for treasury and payment teams.",
+  description: "Provider-executed settlement operations from request to finality.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -98,7 +98,7 @@ export function AuthHero() {
           <div className="flex items-center justify-between gap-2 pb-3">
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/45">Trust stack</p>
             <span className="rounded-full border border-[rgba(0,199,157,0.28)] bg-[rgba(0,199,157,0.08)] px-2 py-0.5 text-[10px] font-semibold text-[#5ff0cf]">
-              Demo workspace protected
+              Controlled workspace
             </span>
           </div>
 

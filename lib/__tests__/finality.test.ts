@@ -175,30 +175,30 @@ describe("ready_to_finalize", () => {
   });
 });
 
-describe("shadow / live-test mode", () => {
-  const safeShadow = { withinCap: true, capLabel: "INR 10,000", livePayoutsDisabled: true };
+describe("provider-observed / controlled-pilot mode", () => {
+  const safeShadow = { withinCap: true, capLabel: "uncapped", executionBoundaryConfirmed: true };
 
-  it("SHADOW without proof -> not_ready", () => {
-    const result = assessFinality(input({ proof: null, testMode: "SHADOW", safety: safeShadow }));
+  it("PROVIDER_OBSERVED without proof -> not_ready", () => {
+    const result = assessFinality(input({ proof: null, testMode: "PROVIDER_OBSERVED", safety: safeShadow }));
     expect(result.decision).toBe("not_ready");
     expect(result.evidence.join(" ")).toMatch(/did not move funds directly/);
   });
 
-  it("SHADOW without independent reconciliation -> needs_review", () => {
-    const result = assessFinality(input({ reconciliation: null, testMode: "SHADOW", safety: safeShadow }));
+  it("PROVIDER_OBSERVED without independent reconciliation -> needs_review", () => {
+    const result = assessFinality(input({ reconciliation: null, testMode: "PROVIDER_OBSERVED", safety: safeShadow }));
     expect(result.decision).toBe("needs_review");
   });
 
-  it("SHADOW with proof + independent reconciliation + audit -> ready_to_finalize", () => {
-    const result = assessFinality(input({ testMode: "SHADOW", safety: safeShadow }));
+  it("PROVIDER_OBSERVED with proof + independent reconciliation + audit -> ready_to_finalize", () => {
+    const result = assessFinality(input({ testMode: "PROVIDER_OBSERVED", safety: safeShadow }));
     expect(result.decision).toBe("ready_to_finalize");
     expect(result.riskLevel).toBe("low");
-    expect(result.evidence.join(" ")).toMatch(/INRSettle did not move funds directly/);
+    expect(result.evidence.join(" ")).toMatch(/integrated provider performed execution/);
   });
 
-  it("provider completed alone never finalizes a SHADOW settlement", () => {
+  it("provider completed alone never finalizes a PROVIDER_OBSERVED settlement", () => {
     const result = assessFinality(
-      input({ testMode: "SHADOW", safety: safeShadow, reconciliation: null, auditApprovalPresent: false }),
+      input({ testMode: "PROVIDER_OBSERVED", safety: safeShadow, reconciliation: null, auditApprovalPresent: false }),
     );
     expect(result.decision).toBe("needs_review");
     expect(result.decision).not.toBe("ready_to_finalize");
@@ -206,50 +206,50 @@ describe("shadow / live-test mode", () => {
 
   it("a cap violation blocks ready_to_finalize even with perfect evidence (no bypass)", () => {
     const result = assessFinality(
-      input({ testMode: "LIVE_TEST", safety: { ...safeShadow, withinCap: false, capLabel: "INR 1,000" } }),
+      input({ testMode: "CONTROLLED_PILOT", safety: { ...safeShadow, withinCap: false, capLabel: "INR 1,000" } }),
     );
     expect(result.decision).toBe("needs_review");
     expect(result.riskLevel).toBe("high");
-    expect(result.blockingIssues.join(" ")).toMatch(/safety cap/);
+    expect(result.blockingIssues.join(" ")).toMatch(/controlled pilot cap/);
   });
 
-  it("live payouts enabled blocks ready_to_finalize (tripwire)", () => {
+  it("an unconfirmed provider execution boundary blocks finality", () => {
     const result = assessFinality(
-      input({ testMode: "SHADOW", safety: { ...safeShadow, livePayoutsDisabled: false } }),
+      input({ testMode: "PROVIDER_OBSERVED", safety: { ...safeShadow, executionBoundaryConfirmed: false } }),
     );
     expect(result.decision).toBe("needs_review");
     expect(result.riskLevel).toBe("high");
-    expect(result.blockingIssues.join(" ")).toMatch(/LIVE_PAYOUTS_ENABLED/);
+    expect(result.blockingIssues.join(" ")).toMatch(/execution boundary/);
   });
 
-  it("LIVE_TEST over the DAILY cap blocks ready_to_finalize even with perfect evidence", () => {
+  it("CONTROLLED_PILOT over the DAILY cap blocks ready_to_finalize even with perfect evidence", () => {
     const result = assessFinality(
       input({
-        testMode: "LIVE_TEST",
+        testMode: "CONTROLLED_PILOT",
         safety: { ...safeShadow, withinDailyCap: false, dailyCapLabel: "INR 2,000" },
       }),
     );
     expect(result.decision).toBe("needs_review");
     expect(result.riskLevel).toBe("high");
-    expect(result.blockingIssues.join(" ")).toMatch(/daily pilot cap/);
+    expect(result.blockingIssues.join(" ")).toMatch(/daily cap/);
   });
 
   it("uncertain provider outcome (reversed) is never treated as safe to finalize", () => {
     const result = assessFinality(
-      input({ testMode: "LIVE_TEST", safety: safeShadow, proof: { ...completedProof, providerStatus: "reversed" } }),
+      input({ testMode: "CONTROLLED_PILOT", safety: safeShadow, proof: { ...completedProof, providerStatus: "reversed" } }),
     );
     expect(result.decision).toBe("not_ready");
     expect(result.decision).not.toBe("ready_to_finalize");
   });
 
-  it("missing safety evaluation blocks a SHADOW settlement", () => {
-    const result = assessFinality(input({ testMode: "SHADOW", safety: null }));
+  it("missing safety evaluation blocks a PROVIDER_OBSERVED settlement", () => {
+    const result = assessFinality(input({ testMode: "PROVIDER_OBSERVED", safety: null }));
     expect(result.decision).toBe("needs_review");
-    expect(result.blockingIssues.join(" ")).toMatch(/Safety status was not evaluated/);
+    expect(result.blockingIssues.join(" ")).toMatch(/Operating guardrails were not evaluated/);
   });
 
-  it("DEMO mode is unaffected by safety inputs", () => {
-    const result = assessFinality(input({ testMode: "DEMO" }));
+  it("EVIDENCE_ONLY mode is unaffected by safety inputs", () => {
+    const result = assessFinality(input({ testMode: "EVIDENCE_ONLY" }));
     expect(result.decision).toBe("ready_to_finalize");
     expect(result.confidence).toBe(100);
   });

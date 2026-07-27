@@ -33,7 +33,7 @@ export const STATUS_LANGUAGE = {
   approvalRequired: "Approval required before execution",
   finalityPending: "Finality review pending",
   finalized: "Settlement finalized",
-  sandboxVerified: "Sandbox verified",
+  integrationVerified: "Integration verified",
   commercialReview: "Commercial review pending",
   kybPending: "KYB pending",
   productionOnboarding: "Production onboarding required",

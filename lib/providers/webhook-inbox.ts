@@ -3,6 +3,7 @@ import "server-only";
 import crypto from "node:crypto";
 import { Prisma, ProviderWebhookStatus, type ProviderWebhookEvent } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { redactProviderPayload } from "@/lib/providers/redaction";
 
 type BeginWebhookInput = {
   providerCode: string;
@@ -15,7 +16,7 @@ type BeginWebhookInput = {
 
 function asJson(value: unknown): Prisma.InputJsonValue | undefined {
   if (value === undefined) return undefined;
-  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+  return JSON.parse(JSON.stringify(redactProviderPayload(value))) as Prisma.InputJsonValue;
 }
 
 export function webhookPayloadHash(rawPayload: string): string {

@@ -7,7 +7,6 @@ import { assessFinality, type FinalityAssessment } from "@/lib/finality";
 import { buildFinalityInput, hasAuditApproval, latestProofOf, relevantReconciliationOf } from "@/lib/finality-input";
 import { RECONCILIATION_SOURCE_LABEL, isIndependentReconciliationSource } from "@/lib/reconciliation";
 import {
-  MODE_DESCRIPTION,
   MODE_LABEL,
   buildShadowChecklist,
   getShadowConfig,
@@ -25,7 +24,7 @@ import { PrintButton } from "@/components/ops/print-button";
 import { Button } from "@/components/ui/button";
 
 /**
- * Settlement Report — the demo-ready "Proof-to-Settlement" package for one
+ * Settlement Report — the evidence and finality package for one
  * settlement. Read-only, server-rendered, screenshot-friendly. Everything on
  * this page derives from persisted evidence plus the deterministic finality
  * engine; nothing is recomputed differently from the API or the Finality tab.
@@ -146,7 +145,7 @@ export default async function SettlementReportPage({
   );
 
   const shadowConfig = getShadowConfig();
-  const isLiveTest = settlement.testMode === "LIVE_TEST";
+  const isLiveTest = settlement.testMode === "CONTROLLED_PILOT";
 
   // Report identity (Phase 5.2): the FIRST "settlement.report_generated" audit
   // row is the report's stable generation record — its timestamp and ID never
@@ -205,7 +204,7 @@ export default async function SettlementReportPage({
       ? prisma.settlement.findMany({
           where: {
             organizationId: organization.id,
-            testMode: "LIVE_TEST",
+            testMode: "CONTROLLED_PILOT",
             id: { not: settlement.id },
             createdAt: { gte: startOfToday },
             status: { notIn: ["FAILED", "CANCELLED"] },
@@ -228,8 +227,8 @@ export default async function SettlementReportPage({
     ...(isLiveTest
       ? {
           withinDailyCap:
-            dailyUsedInrExcludingThis + inrLegOf(settlement) <= shadowConfig.liveTestDailyMaxInr,
-          dailyCapLabel: `INR ${shadowConfig.liveTestDailyMaxInr.toLocaleString("en-IN")}`,
+            dailyUsedInrExcludingThis + inrLegOf(settlement) <= shadowConfig.controlledPilotDailyMaxInr,
+          dailyCapLabel: `INR ${shadowConfig.controlledPilotDailyMaxInr.toLocaleString("en-IN")}`,
         }
       : {}),
   };
@@ -240,8 +239,8 @@ export default async function SettlementReportPage({
     settlement.events,
     shadowConfig,
   );
-  const mode = (settlement.testMode in MODE_LABEL ? settlement.testMode : "DEMO") as SettlementMode;
-  const isShadowMode = mode === "SHADOW" || mode === "LIVE_TEST";
+  const mode = (settlement.testMode in MODE_LABEL ? settlement.testMode : "PROVIDER_OBSERVED") as SettlementMode;
+  const isShadowMode = mode === "PROVIDER_OBSERVED" || mode === "CONTROLLED_PILOT";
 
   const assessment = assessFinality(
     buildFinalityInput(
@@ -304,16 +303,6 @@ export default async function SettlementReportPage({
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge status={settlement.status} />
-            <span
-              className={cn(
-                "case-chip",
-                mode === "DEMO" && "case-chip--demo",
-                mode === "SHADOW" && "case-chip--shadow",
-                mode === "LIVE_TEST" && "case-chip--live",
-              )}
-            >
-              {MODE_LABEL[mode]} mode
-            </span>
             <span className="text-xs text-slate-500">{settlement.corridor.replace("_", " → ")}</span>
           </div>
         </div>
@@ -356,10 +345,10 @@ export default async function SettlementReportPage({
               },
               {
                 label: "Guardrails",
-                ok: !isShadowMode || (safety.withinCap && safety.livePayoutsDisabled),
-                detail: isShadowMode
-                  ? `${safety.withinCap ? "Within cap" : "Cap exceeded"} · live payouts ${safety.livePayoutsDisabled ? "disabled" : "ENABLED"}`
-                  : "Not applicable in demo mode.",
+                ok: safety.withinCap,
+                detail: `${safety.withinCap ? "Within operating limit" : "Operating limit exceeded"} · provider submission ${
+                  safety.executionBoundaryConfirmed ? "provider-executed" : "not confirmed"
+                }`,
               },
             ].map((input) => (
               <div key={input.label} className="flex items-start gap-2.5 rounded-lg border border-[var(--ops-line)] bg-white p-2.5">
@@ -377,13 +366,12 @@ export default async function SettlementReportPage({
           </p>
         </div>
 
-        {/* Mode + money movement + safety checklist */}
+        {/* Execution boundary + safety checklist */}
         <div className="report-section p-4">
-          <SectionTitle>Test mode &amp; safety</SectionTitle>
-          <StatRow label="Mode" value={`${MODE_LABEL[mode]} — ${MODE_DESCRIPTION[mode]}`} />
+          <SectionTitle>Execution boundary &amp; controls</SectionTitle>
           <StatRow
             label="Funds moved by INRSettle"
-            value={mode === "DEMO" ? "No — demo data only" : "No — external provider moved money"}
+            value="No — an integrated provider executes externally"
           />
           {isShadowMode ? (
             <>
@@ -393,7 +381,7 @@ export default async function SettlementReportPage({
               />
               <StatRow
                 label="Live payouts"
-                value={safety.livePayoutsDisabled ? "Disabled" : "ENABLED — must be turned off"}
+                value={safety.executionBoundaryConfirmed ? "Provider executed" : "Not confirmed"}
               />
             </>
           ) : null}
@@ -421,11 +409,11 @@ export default async function SettlementReportPage({
           ) : null}
         </div>
 
-        {/* Live pilot readiness (LIVE_TEST only) */}
+        {/* Controlled pilot readiness */}
         {pilot ? (
           <div className="report-section p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <SectionTitle>Live pilot readiness</SectionTitle>
+              <SectionTitle>Controlled pilot readiness</SectionTitle>
               <span
                 className={cn(
                   "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em]",

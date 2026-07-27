@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import { UserFacingError } from "@/lib/errors";
 
 /**
- * Thin server-only client for the RemitQuickly sandbox payout API.
+ * Thin server-only client for the RemitQuickly payout API.
  *
  * Credentials are read exclusively from environment variables and never leave the
  * server. Every request is signed exactly as documented:
@@ -49,18 +49,10 @@ export type OrderStatusQuery = {
   searchValue: string;
 };
 
-export type SimulateOutcome =
-  | "SUCCESS"
-  | "BANK_OFFLINE"
-  | "INVALID_ACCOUNT"
-  | "INSUFFICIENT_BALANCE"
-  | "TIMEOUT";
-
 const ENDPOINTS = {
   impsPayout: "/payouts/global/impsPayout",
   impsPayoutStatus: "/payouts/global/impsPayout/status",
   setWebhookUrl: "/payouts/global/setPayoutWebhookUrl",
-  simulate: "/payouts/global/payout/simulate",
 } as const;
 
 /**
@@ -149,11 +141,6 @@ export function getOrderStatus(query: OrderStatusQuery) {
 
 export function setWebhookUrl(payoutWebhookUrl: string) {
   return postSigned(ENDPOINTS.setWebhookUrl, { payoutWebhookUrl });
-}
-
-/** Sandbox-only: forces a specific outcome for a pending/processing payout. */
-export function simulatePayoutOutcome(payoutId: number | string, outcome: SimulateOutcome) {
-  return postSigned(ENDPOINTS.simulate, { payout_id: payoutId, outcome });
 }
 
 /**

@@ -25,7 +25,7 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { context, error } = await requireApiContext();
+  const { context, error } = await requireApiContext({ serviceScope: "finality:read" });
   if (error) return error;
 
   const { id } = await params;
@@ -124,9 +124,9 @@ export async function GET(
           testMode: settlement.testMode,
           movedFundsDirectly: false,
           moneyMovement:
-            settlement.testMode === "DEMO"
-              ? "Demo data — no real-world money anywhere."
-              : "INRSettle did not move funds directly — the external partner/provider moved the money.",
+            settlement.testMode === "EVIDENCE_ONLY"
+              ? "No provider execution instruction exists for this evidence-only record."
+              : "INRSettle did not move funds; the integrated provider executed externally.",
           safety,
           checklist,
         },

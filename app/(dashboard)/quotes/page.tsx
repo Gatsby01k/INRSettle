@@ -5,10 +5,9 @@ import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { AreaTabs } from "@/components/ops/area-tabs";
 import { PageHeader } from "@/components/ops/page-header";
-import { createQuote, createSettlement } from "@/lib/domain";
+import { createQuote } from "@/lib/domain";
 import { friendlyErrorMessage } from "@/lib/errors";
-import { canCreateQuote, canCreateSettlement, roleErrorMessage } from "@/lib/permissions";
-import { defaultAccountsForCorridor } from "@/lib/treasury";
+import { canCreateQuote, roleErrorMessage } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { displayQuoteStatus } from "@/lib/quotes";
 import { cn, formatCurrencyFull, formatDateTime } from "@/lib/utils";
@@ -52,32 +51,6 @@ async function submitQuote(formData: FormData) {
     redirect(`/quotes?error=${encodeURIComponent(friendlyErrorMessage(error))}`);
   }
   redirect("/quotes?success=created&tab=active");
-}
-
-async function acceptQuote(formData: FormData) {
-  "use server";
-  const { user, organization, membership } = await requireSession();
-  if (!canCreateSettlement(membership.role)) {
-    redirect(`/quotes?error=${encodeURIComponent(roleErrorMessage(membership.role))}&tab=active`);
-  }
-  const quoteId = String(formData.get("quoteId") ?? "");
-  const corridor = String(formData.get("corridor") ?? "INR_USDT") as "INR_USDT" | "USDT_INR";
-  const accounts = defaultAccountsForCorridor(corridor);
-  try {
-    await createSettlement(
-      {
-        quoteId,
-        reference: `auto_${quoteId.slice(-6)}_${Date.now().toString(36)}`,
-        sourceAccount: accounts.sourceAccount,
-        targetAccount: accounts.targetAccount,
-      },
-      user.id,
-      organization.id,
-    );
-  } catch (error) {
-    redirect(`/quotes?error=${encodeURIComponent(friendlyErrorMessage(error))}&tab=active`);
-  }
-  redirect("/settlements?success=created");
 }
 
 async function refreshQuote(formData: FormData) {
@@ -138,31 +111,6 @@ function settlementWindowLabel(window: string) {
   if (window === "same_day") return "Same day";
   if (window === "next_day") return "Next day";
   return window;
-}
-
-function isDemoQuote(quote: {
-  corridor: string;
-  status: string;
-  sourceAmount: unknown;
-  settlement: { publicId: string } | null;
-}) {
-  if (quote.settlement?.publicId.startsWith("SET-DEMO")) return true;
-  if (
-    quote.status === "ACTIVE" &&
-    quote.corridor === "USDT_INR" &&
-    Number(quote.sourceAmount) === 5000
-  ) {
-    return true;
-  }
-  return false;
-}
-
-function DemoFocusBadge() {
-  return (
-    <span className="inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-amber-800">
-      Demo focus mode
-    </span>
-  );
 }
 
 const EXECUTION_PATH = [
@@ -306,16 +254,15 @@ function QuotePreviewPanel({ quote }: { quote?: PreviewQuote | null }) {
 export default async function QuotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; success?: string; q?: string; tab?: string; demo?: string }>;
+  searchParams: Promise<{ error?: string; success?: string; q?: string; tab?: string }>;
 }) {
   const { organization, membership } = await requireSession();
   const params = await searchParams;
-  const demoFocus = params.demo === "1";
   const tab = params.tab ?? "active";
   // UI mirror of the server-action gates above: read-only / compliance roles
   // browse quotes but see no creation or settlement-creation surfaces.
   const canWrite = canCreateQuote(membership.role);
-  const allQuotes = await prisma.quote.findMany({
+  const quotes = await prisma.quote.findMany({
     where: { organizationId: organization.id },
     orderBy: { createdAt: "desc" },
     take: 100,
@@ -325,8 +272,6 @@ export default async function QuotesPage({
       },
     },
   });
-
-  const quotes = demoFocus ? allQuotes.filter(isDemoQuote) : allQuotes;
 
   const query = params.q?.toLowerCase().trim() ?? "";
   const filtered = quotes.filter((quote) => quoteTab(quote, tab)).filter((quote) => {
@@ -365,9 +310,8 @@ export default async function QuotesPage({
     <div className="space-y-4">
       <AreaTabs area="settlements" />
       <PageHeader
-        title="Quotes"
-        description="Locked, time-boxed settlement terms. A settlement can only be created from an active, unexpired quote."
-        actions={demoFocus ? <DemoFocusBadge /> : undefined}
+        title="Quote workspace"
+        description="Lock corridor, amount and validity before a settlement request enters approval."
         stats={[
           { label: "Active", value: activeCount, tone: "ok" as const },
           { label: "Accepted", value: acceptedCount, tone: "info" as const },
@@ -414,12 +358,12 @@ export default async function QuotesPage({
             <div className="mb-2.5 flex items-center gap-2 rounded-lg border border-brand-emerald/15 bg-brand-emerald/[0.06] px-2.5 py-1.5">
               <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-brand-emerald-ink">Quote builder</span>
               <span className="text-xs font-semibold text-slate-700">USDT → INR draft</span>
-              <span className="ml-auto case-chip case-chip--demo">sandbox</span>
+              <span className="ml-auto case-chip case-chip--shadow">Controlled terms</span>
             </div>
 
             {!canWrite ? (
               <div className="flex items-center gap-2 rounded-lg border border-[var(--ops-line)] bg-slate-50/60 px-3 py-2.5">
-                <span className="case-chip case-chip--demo">Read-only role</span>
+                <span className="case-chip case-chip--shadow">Read-only role</span>
                 <p className="text-xs text-slate-500">
                   You can review quotes, but generating quotes and creating settlements requires an operational
                   role.
@@ -470,7 +414,7 @@ export default async function QuotesPage({
                 <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-slate-400">Provider rail</p>
                 <p className="mt-1.5 text-xs font-semibold text-slate-700">External provider rail</p>
                 <p className="mt-0.5 text-[10px] leading-snug text-slate-400">
-                  RemitQuickly / PontisGlobe sandbox · INRSettle does not move funds
+                  Routing is selected after approval and funding checks. The integrated provider executes externally.
                 </p>
               </div>
               <div className="ticket-param">
@@ -534,7 +478,6 @@ export default async function QuotesPage({
             active={tab}
             preserve={{
               ...(params.q ? { q: params.q } : {}),
-              ...(demoFocus ? { demo: "1" } : {}),
             }}
             tabs={[
               { id: "active", label: "Active", count: activeCount },
@@ -686,20 +629,14 @@ export default async function QuotesPage({
                         <div className="flex flex-wrap items-center justify-end gap-1.5">
                           {isActive && canWrite ? (
                             <div className="quote-active-actions flex w-full min-w-[168px] flex-col items-end gap-1">
-                              <form action={acceptQuote} className="w-full">
-                                <input type="hidden" name="quoteId" value={quote.id} />
-                                <input type="hidden" name="corridor" value={quote.corridor} />
-                                <SubmitButton
-                                  variant="primary"
-                                  size="sm"
-                                  pendingText="Creating..."
-                                  className="quote-cta-primary w-full"
-                                >
-                                  Create settlement
-                                </SubmitButton>
-                              </form>
+                              <Link
+                                href={`/settlements?quoteId=${encodeURIComponent(quote.id)}#create-settlement`}
+                                className="quote-cta-primary inline-flex h-8 w-full items-center justify-center rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition-colors hover:bg-slate-800"
+                              >
+                                Continue to request
+                              </Link>
                               <p className="quote-cta-hint max-w-[196px] text-right text-[10px] leading-snug text-slate-400">
-                                Creates a settlement from this quote.
+                                Add accounts and your internal reference before creation.
                               </p>
                               <div className="quote-cta-secondary-row mt-0.5 flex flex-wrap items-center justify-end gap-1">
                                 <form action={refreshQuote}>
@@ -762,7 +699,7 @@ export default async function QuotesPage({
                                 </span>
                               </div>
                               <Link
-                                href={`/settlements?q=${encodeURIComponent(linkedSettlement.publicId)}${demoFocus ? "&demo=1" : ""}`}
+                                href={`/settlements?q=${encodeURIComponent(linkedSettlement.publicId)}`}
                                 className="quote-settlement-link inline-flex h-8 items-center rounded-lg border px-3 text-xs font-semibold text-[#0a7d86]"
                               >
                                 Open settlement
@@ -848,7 +785,7 @@ export default async function QuotesPage({
                   <span className="case-chip case-chip--gold">{expiredCount} expired — refresh to re-arm</span>
                 ) : null}
                 {acceptedCount === 0 && expiredCount === 0 ? (
-                  <span className="case-chip case-chip--demo">No quotes generated yet</span>
+                  <span className="case-chip case-chip--shadow">No quotes generated yet</span>
                 ) : null}
               </div>
             </div>

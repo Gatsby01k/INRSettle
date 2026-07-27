@@ -10,17 +10,16 @@ import { classifyRemitQuicklyStatus, type ProviderOutcome } from "@/lib/provider
 import {
   extractPayoutId,
   getOrderStatus,
-  simulatePayoutOutcome,
   submitImpsPayout,
   type ImpsPayoutRequest,
-  type SimulateOutcome,
 } from "./client";
-import type { BeneficiaryOverrides } from "./schema";
+import type { SettlementExecutionInstruction } from "@/lib/settlement-instructions";
+import { redactProviderPayload } from "@/lib/providers/redaction";
 
 export const PROVIDER = "remitquickly";
 
 function asJson(value: unknown): Prisma.InputJsonValue {
-  return JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
+  return JSON.parse(JSON.stringify(redactProviderPayload(value ?? null))) as Prisma.InputJsonValue;
 }
 
 function firstProviderRecord(value: unknown): Record<string, unknown> | null {
@@ -38,35 +37,36 @@ function inrLeg(settlement: Settlement): { amount: number; currency: "INR" } {
 }
 
 /**
- * Builds an IMPS payout request from a settlement plus optional overrides.
- *
- * The settlement model does not persist granular beneficiary banking details, so
- * sandbox-safe defaults are used and any field can be overridden by the caller.
+ * Builds an IMPS request from the encrypted, operator-reviewed execution
+ * instruction. No beneficiary value is invented by the connector.
  * `merchantRecognitionId` is set to the settlement's public id so inbound webhooks
  * and status lookups can be mapped back to the correct settlement.
  */
 export function buildPayoutRequest(
   settlement: Settlement,
-  overrides: BeneficiaryOverrides | undefined,
-  options: { isTest?: boolean } = {},
+  instruction: SettlementExecutionInstruction,
 ): ImpsPayoutRequest {
   const { amount } = inrLeg(settlement);
-  const defaultQuoteId = Number(process.env.REMITQUICKLY_DEFAULT_QUOTE_ID ?? 1);
+  const quoteId = Number(process.env.REMITQUICKLY_DEFAULT_QUOTE_ID);
+  if (!Number.isInteger(quoteId) || quoteId <= 0) {
+    throw new UserFacingError(
+      "RemitQuickly execution requires a configured REMITQUICKLY_DEFAULT_QUOTE_ID.",
+    );
+  }
 
   return {
     merchantRecognitionId: settlement.publicId,
-    acc_id: overrides?.acc_id ?? settlement.targetAccount,
-    name: overrides?.name ?? "Test Beneficiary",
-    bank_name: overrides?.bank_name ?? "HDFC Bank",
-    ifsc: overrides?.ifsc ?? "HDFC0001234",
-    acc_type: overrides?.acc_type ?? "savings",
-    amount: overrides?.amount ?? amount,
-    mobile: overrides?.mobile ?? "9999999999",
-    quote_id: overrides?.quote_id ?? defaultQuoteId,
-    email: overrides?.email,
+    acc_id: instruction.accountNumber,
+    name: instruction.beneficiaryName,
+    bank_name: instruction.bankName,
+    ifsc: instruction.bankCode,
+    acc_type: instruction.accountType,
+    amount,
+    mobile: instruction.mobile,
+    quote_id: quoteId,
+    email: instruction.email || undefined,
     mobile_code: "+91",
-    remarks: settlement.reference,
-    isTest: options.isTest ?? true,
+    remarks: instruction.purpose,
   };
 }
 
@@ -75,13 +75,12 @@ export function buildPayoutRequest(
  *  - submits the IMPS payout
  *  - records the provider payout id (audit log + lifecycle event note)
  *  - moves the settlement APPROVED -> EXECUTING
- *  - optionally simulates an outcome (sandbox only)
  */
 export async function executeApprovedSettlement(
   settlementId: string,
   userId: string,
   organizationId: string,
-  options: { overrides?: BeneficiaryOverrides; simulateOutcome?: SimulateOutcome } = {},
+  instruction: SettlementExecutionInstruction,
 ) {
   const settlement = await prisma.settlement.findFirst({
     where: { id: settlementId, organizationId },
@@ -91,7 +90,7 @@ export async function executeApprovedSettlement(
     throw new UserFacingError("Only APPROVED settlements can be executed through RemitQuickly.");
   }
 
-  const request = buildPayoutRequest(settlement, options.overrides);
+  const request = buildPayoutRequest(settlement, instruction);
   const result = await submitImpsPayout(request);
 
   if (!result.ok) {
@@ -146,12 +145,7 @@ export async function executeApprovedSettlement(
     },
   });
 
-  let simulate;
-  if (options.simulateOutcome && payoutId != null) {
-    simulate = await simulatePayoutOutcome(payoutId, options.simulateOutcome);
-  }
-
-  return { payoutId, submit: result.data, simulate: simulate?.data };
+  return { payoutId, submit: result.data };
 }
 
 /** Polls RemitQuickly and applies a final status through the shared proof flow. */

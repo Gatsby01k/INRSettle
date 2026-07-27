@@ -177,7 +177,7 @@ export function SettlementRowStatusSubtext({
 
   let hint: string | null = null;
   if (status === "APPROVED") hint = "Ready to execute";
-  else if (status === "EXECUTING") hint = "Tracking via PontisGlobe";
+  else if (status === "EXECUTING") hint = "Tracking provider execution";
   else if (status === "SETTLED") hint = "Awaiting independent reconciliation";
   else if (status === "RECONCILED") hint = "Reconciled automatically";
 
@@ -220,10 +220,6 @@ export function SettlementPageFlash({
   );
 }
 
-function providerLabel(mode: "sandbox" | "live") {
-  return mode === "sandbox" ? "PontisGlobe sandbox" : "PontisGlobe";
-}
-
 function ReconciliationProofGrid({
   settlement,
   providerStatus,
@@ -232,7 +228,7 @@ function ReconciliationProofGrid({
   providerStatus: string;
 }) {
   const items = [
-    { label: "Provider", value: settlement.provider ?? providerLabel("live") },
+    { label: "Provider", value: settlement.provider ?? "Integrated provider" },
     { label: "Provider status", value: providerStatus },
     ...(settlement.providerTransactionId
       ? [{ label: "Provider transaction id", value: settlement.providerTransactionId, mono: true }]
@@ -264,7 +260,7 @@ function ReconciledProofGrid({
   providerStatus: string;
 }) {
   const items = [
-    { label: "Provider", value: settlement.provider ?? providerLabel("live") },
+    { label: "Provider", value: settlement.provider ?? "Integrated provider" },
     { label: "Provider status", value: providerStatus },
     ...(settlement.providerTransactionId
       ? [{ label: "Provider transaction id", value: settlement.providerTransactionId, mono: true }]
@@ -357,13 +353,13 @@ export function SettlementOperationConsoleRow({
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-slate-900">Ready for provider execution</p>
                 <p className="mt-0.5 text-[11px] text-slate-600">
-                  Settlement approved. Execute payout via PontisGlobe to start provider tracking.
+                  Settlement approved. Select an eligible provider connection to begin external execution.
                 </p>
               </div>
               <MetadataChip label="Next step" value="Execute payout" />
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              <MetadataChip label="Provider" value={providerLabel("sandbox")} />
+              <MetadataChip label="Provider" value={settlement.provider ?? "Selected at execution"} />
               <MetadataChip label="Amount" value={settlement.amount} />
               {settlement.corridor ? <MetadataChip label="Route" value={settlement.corridor} /> : null}
             </div>
@@ -376,7 +372,7 @@ export function SettlementOperationConsoleRow({
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-slate-900">Provider tracking</p>
                 <p className="mt-0.5 text-[11px] text-slate-600">
-                  Payout submitted via PontisGlobe. Waiting for provider confirmation.
+                  Request submitted to {settlement.provider ?? "the integrated provider"}. Waiting for provider confirmation.
                 </p>
               </div>
               {autoRefresh ? (

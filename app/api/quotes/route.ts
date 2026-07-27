@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createQuote } from "@/lib/domain";
 import { prisma } from "@/lib/prisma";
-import { jsonError, requireApiContext } from "@/lib/api";
+import { requireApiContext } from "@/lib/api";
+import { beginApiIdempotency, completeApiIdempotency } from "@/lib/api-idempotency";
+import { friendlyErrorMessage } from "@/lib/errors";
 import { canCreateQuote, roleErrorMessage } from "@/lib/permissions";
 
 export async function GET() {
-  const { context, error } = await requireApiContext();
+  const { context, error } = await requireApiContext({ serviceScope: "quotes:read" });
   if (error) return error;
 
   const quotes = await prisma.quote.findMany({
@@ -18,16 +20,23 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { context, error } = await requireApiContext();
+  const { context, error } = await requireApiContext({ serviceScope: "quotes:write" });
   if (error) return error;
   if (!canCreateQuote(context.membership.role)) {
     return NextResponse.json({ error: roleErrorMessage(context.membership.role) }, { status: 403 });
   }
 
+  const input = await request.json();
+  const idempotency = await beginApiIdempotency(context, "POST /api/quotes", input);
+  if (idempotency.mode === "replay") return idempotency.response;
   try {
-    const quote = await createQuote(await request.json(), context.user.id, context.organization.id);
-    return NextResponse.json({ data: quote }, { status: 201 });
+    const quote = await createQuote(input, context.user.id, context.organization.id);
+    const body = JSON.parse(JSON.stringify({ data: quote }));
+    await completeApiIdempotency(idempotency, 201, body);
+    return NextResponse.json(body, { status: 201 });
   } catch (err) {
-    return jsonError(err);
+    const body = { error: friendlyErrorMessage(err) };
+    await completeApiIdempotency(idempotency, 400, body);
+    return NextResponse.json(body, { status: 400 });
   }
 }

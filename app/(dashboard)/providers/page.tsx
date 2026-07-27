@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, Database, KeyRound, Link2, Webhook } from "lucide-react";
+import { CheckCircle2, Database, KeyRound, Link2, Webhook } from "lucide-react";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { AreaTabs } from "@/components/ops/area-tabs";
@@ -16,6 +16,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { isMfaStepUpFresh, requireSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { providerCatalog } from "@/lib/providers/registry";
+import {
+  providerConnectionStatusLabel,
+  providerConnectionStatusTone,
+} from "@/lib/providers/presentation";
 import { approvalMfaViolation, canApproveSettlement } from "@/lib/permissions";
 import {
   confirmProviderOperationNoEffect,
@@ -27,7 +31,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
 import { FlashMessage } from "@/components/ops/flash-message";
 
-export const metadata = { title: "Provider integrations" };
+export const metadata = { title: "Provider connections" };
 
 function timestamp(value: Date | null) {
   return value ? value.toISOString().replace("T", " ").slice(0, 19) + " UTC" : "Never";
@@ -102,8 +106,8 @@ export default async function ProvidersPage({
     <div className="space-y-6">
       <AreaTabs area="providers" />
       <PageHeader
-        title="Provider integrations"
-        description="Tenant connections, connector capabilities, durable outbound operations and verified webhook receipts. This is integration telemetry — not provider due diligence, liquidity availability or a claim that a partner is production-ready."
+        title="Provider connections"
+        description="Manage tenant connections and review the durable operations and verified events behind settlement execution."
         stats={[
           { label: "Registered connectors", value: catalog.length, tone: "neutral" },
           { label: "Tenant connections", value: connections.length, tone: connections.length ? "info" : "pending" },
@@ -117,18 +121,10 @@ export default async function ProvidersPage({
       {params.success === "inconclusive" ? <FlashMessage message="Status remains non-final; operation stays in review." tone="error" /> : null}
       {params.success === "no_effect" ? <FlashMessage message="No-effect resolution recorded; settlement moved to FAILED." /> : null}
 
-      <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        <p>
-          <span className="font-semibold">Prospective InvoiceMate / PayMate connector is not registered.</span>{" "}
-          No authoritative API schema, sandbox credentials, webhook signing contract or status mapping exists in this repository, so none has been invented. It should implement the same connector contract after those artifacts are supplied.
-        </p>
-      </div>
-
       <section>
         <SectionHeader
           title="Connector catalog"
-          description="Runtime availability comes from server configuration. Tenant readiness comes from ProviderConnection and is required before execution."
+          description="Connector deployment, tenant activation and commercial due diligence are evaluated as separate controls."
         />
         <div className="grid gap-4 lg:grid-cols-2">
           {catalog.map((provider) => {
@@ -139,7 +135,9 @@ export default async function ProvidersPage({
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <CardTitle>{provider.displayName}</CardTitle>
-                      <CardDescription>Connector code: {provider.code} · stored name: {provider.persistedName}</CardDescription>
+                      <CardDescription>
+                        Connector code: {provider.code} · authentication: {provider.authentication.join(" + ").replaceAll("_", " ")}
+                      </CardDescription>
                     </div>
                     <StatusChip tone={provider.configured ? "success" : "neutral"} dot>
                       {provider.configured ? "Runtime configured" : "Runtime not configured"}
@@ -155,18 +153,28 @@ export default async function ProvidersPage({
                   <dl className="grid gap-3 text-sm sm:grid-cols-2">
                     <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
                       <dt className="text-xs font-medium text-slate-500">Tenant connection</dt>
-                      <dd className="mt-1 font-semibold text-slate-900">{connection?.status ?? "NOT REGISTERED"}</dd>
+                      <dd className="mt-1">
+                        {connection ? (
+                          <StatusChip tone={providerConnectionStatusTone(connection.status)}>
+                            {providerConnectionStatusLabel(connection.status)}
+                          </StatusChip>
+                        ) : <span className="font-semibold text-slate-500">Not registered</span>}
+                      </dd>
                     </div>
                     <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-                      <dt className="text-xs font-medium text-slate-500">Credential reference</dt>
+                      <dt className="text-xs font-medium text-slate-500">Credential binding</dt>
                       <dd className="mt-1 flex items-center gap-1.5 font-semibold text-slate-900">
                         <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
-                        {connection?.credentialsRef ? "Recorded (value hidden)" : "Not recorded"}
+                        {provider.credentialStrategy === "deployment_secret"
+                          ? "Deployment secret"
+                          : connection?.credentialsRef
+                            ? "Tenant reference recorded"
+                            : "Tenant reference required"}
                       </dd>
                     </div>
                   </dl>
                   <p className="text-xs leading-relaxed text-slate-500">
-                    Status polling: {provider.supportsStatusPoll ? "adapter registered" : "not implemented"}. Last recorded health check: {timestamp(connection?.lastHealthAt ?? null)}.
+                    Status polling: {provider.supportsStatusPoll ? "supported" : "not supported by this connector"}. Last recorded health check: {timestamp(connection?.lastHealthAt ?? null)}.
                   </p>
                 </CardContent>
               </Card>

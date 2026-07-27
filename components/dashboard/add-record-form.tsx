@@ -74,7 +74,7 @@ export function AddRecordForm({
       <div className={cn("grid gap-2", compact ? "sm:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-2")}>
         <div className="grid gap-1.5">
           <Label htmlFor="externalRef">External reference</Label>
-          <Input id="externalRef" name="externalRef" placeholder="BANK-AUTO-001" />
+          <Input id="externalRef" name="externalRef" placeholder="Bank statement reference" />
           {!compact ? <HelperText>Leave blank to auto-generate.</HelperText> : null}
         </div>
         <div className="grid gap-1.5">

@@ -2,6 +2,7 @@ import "server-only";
 
 import crypto from "node:crypto";
 import {
+  AuditActorType,
   Prisma,
   ProviderConnectionStatus,
   ProviderOperationStatus,
@@ -14,6 +15,8 @@ import { fundingAllowsExecution } from "@/lib/funding";
 import { prisma } from "@/lib/prisma";
 import type { ProviderExecutionResult } from "@/lib/providers/contracts";
 import { providerConnector, providerConnectorForPersistedName } from "@/lib/providers/registry";
+import { getSettlementInstruction } from "@/lib/settlement-instructions";
+import { deriveProviderCircuit } from "@/lib/providers/routing";
 
 /**
  * Executes a settlement through an explicitly selected connector and records a
@@ -35,6 +38,11 @@ export async function executeSettlementWithProvider(
   if (settlement.status !== SettlementStatus.APPROVED) {
     throw new UserFacingError("Only APPROVED settlements can be sent to a provider.");
   }
+  if (!connector.supportedCorridors.includes(settlement.corridor)) {
+    throw new UserFacingError(
+      `${connector.displayName} does not support the ${settlement.corridor.replace("_", " → ")} corridor.`,
+    );
+  }
   // This check must happen before the connector is called. Relying on the
   // later APPROVED -> EXECUTING transition is unsafe because the provider may
   // already have accepted the payout by the time that transition rejects it.
@@ -48,6 +56,10 @@ export async function executeSettlementWithProvider(
       `Settlement is already assigned to ${settlement.provider}; provider reassignment requires an explicit review workflow.`,
     );
   }
+  // Validate and decrypt the instruction before creating an operation record.
+  // A missing or corrupt instruction means no external request has started and
+  // therefore must not be classified as an uncertain provider outcome.
+  await getSettlementInstruction(settlement.id, organizationId);
 
   const idempotencyKey = `${settlement.publicId}:execution:v1`;
   const existing = await prisma.providerOperation.findUnique({
@@ -82,11 +94,29 @@ export async function executeSettlementWithProvider(
     );
   }
   if (
-    connection.status !== ProviderConnectionStatus.SANDBOX_READY &&
-    connection.status !== ProviderConnectionStatus.PILOT_READY
+    connection.status !== ProviderConnectionStatus.INTEGRATION_VERIFIED &&
+    connection.status !== ProviderConnectionStatus.COMMERCIAL_READY
   ) {
     throw new UserFacingError(
-      `${connector.displayName} connection is ${connection.status}; execution requires SANDBOX_READY or PILOT_READY.`,
+      `${connector.displayName} is not enabled for execution. Complete integration verification and commercial activation first.`,
+    );
+  }
+  const recentExecutionSignals = await prisma.providerOperation.findMany({
+    where: {
+      organizationId,
+      providerCode,
+      operationType: ProviderOperationType.EXECUTION,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: { status: true, createdAt: true },
+  });
+  const circuit = deriveProviderCircuit(recentExecutionSignals, new Date());
+  if (circuit !== "CLOSED") {
+    throw new UserFacingError(
+      circuit === "OPEN"
+        ? `${connector.displayName} execution is temporarily blocked after repeated uncertain or failed outcomes.`
+        : `${connector.displayName} requires an operator-controlled health check before execution resumes.`,
     );
   }
 
@@ -162,6 +192,10 @@ export async function executeSettlementWithProvider(
           errorMessage: null,
         },
       });
+      await tx.providerConnection.update({
+        where: { id: connection.id },
+        data: { lastHealthAt: new Date() },
+      });
       await writeAuditLog({
         action: "provider.operation.completed",
         resourceType: "provider_operation",
@@ -197,6 +231,12 @@ export async function executeSettlementWithProvider(
           nextRetryAt: null,
         },
       });
+      if (connection) {
+        await tx.providerConnection.update({
+          where: { id: connection.id },
+          data: { lastHealthAt: new Date() },
+        });
+      }
       await writeAuditLog({
         action: "provider.operation.review_required",
         resourceType: "provider_operation",
@@ -312,6 +352,7 @@ export async function checkSettlementProviderStatus(
           status: ProviderOperationStatus.FAILED,
           errorCode: "STATUS_CHECK_FAILED",
           errorMessage: message,
+          nextRetryAt: new Date(Date.now() + 60_000),
         },
       });
       await writeAuditLog({
@@ -324,6 +365,132 @@ export async function checkSettlementProviderStatus(
       }, tx);
     });
     throw error;
+  }
+}
+
+/**
+ * Retries a failed status observation in place. Execution operations are never
+ * retried here: only idempotent provider status reads may enter this queue.
+ */
+export async function retryProviderStatusOperation(operationId: string) {
+  const operation = await prisma.providerOperation.findFirst({
+    where: {
+      id: operationId,
+      operationType: ProviderOperationType.STATUS_CHECK,
+      status: ProviderOperationStatus.FAILED,
+      nextRetryAt: { lte: new Date() },
+      resolvedAt: null,
+    },
+    include: {
+      settlement: true,
+      providerConnection: true,
+    },
+  });
+  if (!operation?.settlement) return { processed: false, reason: "not_due" as const };
+
+  const connector = providerConnector(operation.providerCode);
+  if (!connector.checkStatus) {
+    await prisma.providerOperation.update({
+      where: { id: operation.id },
+      data: {
+        status: ProviderOperationStatus.REVIEW_REQUIRED,
+        nextRetryAt: null,
+        errorCode: "STATUS_POLL_UNSUPPORTED",
+      },
+    });
+    return { processed: true, succeeded: false, manualReview: true };
+  }
+
+  const attempt = operation.attemptCount + 1;
+  const claimed = await prisma.providerOperation.updateMany({
+    where: {
+      id: operation.id,
+      status: ProviderOperationStatus.FAILED,
+      nextRetryAt: { lte: new Date() },
+    },
+    data: {
+      status: ProviderOperationStatus.IN_FLIGHT,
+      attemptCount: { increment: 1 },
+      lastAttemptAt: new Date(),
+      nextRetryAt: null,
+    },
+  });
+  if (claimed.count !== 1) return { processed: false, reason: "claimed" as const };
+
+  try {
+    await connector.checkStatus({
+      settlementId: operation.settlement.id,
+      userId: operation.settlement.createdById,
+      organizationId: operation.organizationId,
+      connection: operation.providerConnection
+        ? {
+            id: operation.providerConnection.id,
+            credentialsRef: operation.providerConnection.credentialsRef,
+            configuration: operation.providerConnection.configuration,
+          }
+        : null,
+    });
+    const fresh = await prisma.settlement.findUniqueOrThrow({
+      where: { id: operation.settlement.id },
+    });
+    await prisma.$transaction(async (tx) => {
+      await tx.providerOperation.update({
+        where: { id: operation.id },
+        data: {
+          status: ProviderOperationStatus.SUCCEEDED,
+          providerReference: fresh.providerTransactionId,
+          responseSummary: {
+            settlementStatus: fresh.status,
+            providerStatus: fresh.providerStatus,
+          },
+          errorCode: null,
+          errorMessage: null,
+          resolvedAt: new Date(),
+        },
+      });
+      await writeAuditLog({
+        action: "provider.status_check.retry_succeeded",
+        resourceType: "provider_operation",
+        resourceId: operation.id,
+        organizationId: operation.organizationId,
+        actorType: AuditActorType.SYSTEM,
+        after: { providerCode: operation.providerCode, attempt },
+      }, tx);
+    });
+    return { processed: true, succeeded: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Provider status check failed.";
+    const exhausted = attempt >= 5;
+    const delaySeconds = Math.min(60 * 2 ** Math.max(0, attempt - 1), 15 * 60);
+    await prisma.$transaction(async (tx) => {
+      await tx.providerOperation.update({
+        where: { id: operation.id },
+        data: {
+          status: exhausted
+            ? ProviderOperationStatus.REVIEW_REQUIRED
+            : ProviderOperationStatus.FAILED,
+          errorCode: exhausted ? "STATUS_RETRY_EXHAUSTED" : "STATUS_CHECK_FAILED",
+          errorMessage: message,
+          nextRetryAt: exhausted ? null : new Date(Date.now() + delaySeconds * 1000),
+        },
+      });
+      await writeAuditLog({
+        action: exhausted
+          ? "provider.status_check.retry_exhausted"
+          : "provider.status_check.retry_failed",
+        resourceType: "provider_operation",
+        resourceId: operation.id,
+        organizationId: operation.organizationId,
+        actorType: AuditActorType.SYSTEM,
+        after: {
+          providerCode: operation.providerCode,
+          attempt,
+          nextRetrySeconds: exhausted ? null : delaySeconds,
+          message,
+        },
+      }, tx);
+    });
+    return { processed: true, succeeded: false, manualReview: exhausted };
   }
 }
 

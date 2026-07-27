@@ -19,8 +19,8 @@ const TONE_BY_STATUS: Record<string, Tone> = {
   COMPLETED: "success",
   SUCCEEDED: "success",
   FUNDED: "success",
-  SANDBOX_READY: "success",
-  PILOT_READY: "success",
+  INTEGRATION_VERIFIED: "success",
+  COMMERCIAL_READY: "success",
   // In-flight / needs attention soon
   EXECUTING: "warning",
   REQUESTED: "warning",

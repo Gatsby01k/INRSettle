@@ -18,7 +18,7 @@ import { ContactMailForm } from "@/components/marketing/contact-mail-form";
 const META: Record<ContactIntent, { title: string; description: string }> = {
   access: {
     title: "Request access — INRSettle",
-    description: "Access to the INRSettle console for payout, treasury and settlement teams.",
+    description: "Access to the INRSettle console for settlement operations teams.",
   },
   sales: {
     title: "Talk to us — INRSettle",
@@ -94,7 +94,7 @@ const ACCESS_POINTS = [
   "Settlement operations console — approval gates, lifecycle, finality queue",
   "Provider proof and independent bank/PSP reconciliation",
   "Append-only audit trail and per-settlement evidence reports",
-  "Runs alongside your existing payout flow — no rail migration",
+  "Runs above existing provider and banking relationships",
 ] as const;
 
 const SALES_POINTS = [
@@ -130,7 +130,8 @@ export default async function ContactPage({
               <h1 className="lp-reveal lp-d2 text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">
                 {isAccess ? (
                   <>
-                    <span className="lp-ink">Start proving</span> <span className="lp-ink">your settlements.</span>
+                    <span className="lp-ink">Bring settlement operations</span>{" "}
+                    <span className="lp-ink">under control.</span>
                   </>
                 ) : (
                   <>
@@ -140,8 +141,8 @@ export default async function ContactPage({
               </h1>
               <p className="lp-reveal lp-d3 mt-5 max-w-lg text-lg leading-relaxed text-slate-600">
                 {isAccess
-                  ? "Access to the INRSettle console for payout, treasury and settlement teams — currently in private beta with selected partners."
-                  : "Corridors, integration scope, settlement volume, and commercial terms — with the team that built the product."}
+                  ? "Review the operating workflow with your settlement, finance, technology and compliance stakeholders."
+                  : "Define provider responsibilities, integration scope, settlement volume, controls and commercial terms."}
               </p>
 
               <ul className="lp-reveal lp-d4 mt-8 space-y-3">
@@ -161,11 +162,11 @@ export default async function ContactPage({
                   INRSettle does not move funds
                 </span>
                 <Link
-                  href="/sample-report"
+                  href="/docs/reconciliation"
                   className="lp-arrow-link inline-flex items-center gap-1 font-medium text-[var(--status-ok)] hover:underline"
                 >
                   <FileCheck2 className="h-4 w-4" aria-hidden="true" />
-                  See the evidence first
+                  Review the evidence model
                   <ArrowRight className="h-3 w-3" aria-hidden="true" />
                 </Link>
               </div>
@@ -176,10 +177,10 @@ export default async function ContactPage({
             {/* ── The form, as an instrument ── */}
             <div className="lp-cert relative p-6 sm:p-8">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                {isAccess ? "Pilot review" : "Partnership review"}
+                {isAccess ? "Workspace review" : "Partnership review"}
               </p>
               <p className="mt-1 text-sm text-slate-500">
-                A few details about your {isAccess ? "payout flow" : "corridor"}. We reply from a named
+                A few details about your {isAccess ? "settlement workflow" : "corridor"}. We reply from a named
                 address, not a queue.
               </p>
               <div className="mt-5"><ContactMailForm mode={mode} /></div>

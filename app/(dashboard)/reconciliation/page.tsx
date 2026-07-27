@@ -5,8 +5,6 @@ import {
   autoMatchReconciliation,
   bestSettlementMatch,
   confirmReconciliationMatch,
-  createExceptionDemoRecord,
-  createMatchingDemoRecord,
   createReconciliationRecord,
   matchOriginOf,
   rejectReconciliationSuggestion,
@@ -102,39 +100,6 @@ async function runAutoMatch() {
   redirect(`/reconciliation?success=automatch&matched=${result.matched}&scanned=${result.scanned}`);
 }
 
-async function createMatchingBankRecord() {
-  "use server";
-  const { user, organization } = await requireReconciliationWriter();
-  try {
-    await createMatchingDemoRecord("bank_statement", user.id, organization.id);
-  } catch (error) {
-    redirect(`/reconciliation?error=${encodeURIComponent(friendlyErrorMessage(error))}`);
-  }
-  redirect("/reconciliation?success=demo_match");
-}
-
-async function createMatchingChainRecord() {
-  "use server";
-  const { user, organization } = await requireReconciliationWriter();
-  try {
-    await createMatchingDemoRecord("chain_tx", user.id, organization.id);
-  } catch (error) {
-    redirect(`/reconciliation?error=${encodeURIComponent(friendlyErrorMessage(error))}`);
-  }
-  redirect("/reconciliation?success=demo_match");
-}
-
-async function createExceptionRecord() {
-  "use server";
-  const { user, organization } = await requireReconciliationWriter();
-  try {
-    await createExceptionDemoRecord(user.id, organization.id);
-  } catch (error) {
-    redirect(`/reconciliation?error=${encodeURIComponent(friendlyErrorMessage(error))}`);
-  }
-  redirect("/reconciliation?success=demo_exception");
-}
-
 async function confirmMatch(formData: FormData) {
   "use server";
   const { user, organization } = await requireReconciliationWriter();
@@ -173,45 +138,17 @@ async function resolveException(formData: FormData) {
   redirect("/reconciliation?success=resolved");
 }
 
-function demoSettlementWhere(organizationId: string) {
-  return {
-    organizationId,
-    OR: [{ publicId: { startsWith: "SET-DEMO" } }, { reference: { startsWith: "DEMO-" } }],
-  };
-}
-
-function demoReconciliationWhere(organizationId: string) {
-  return {
-    organizationId,
-    OR: [
-      { externalRef: { startsWith: "DEMO-" } },
-      { settlement: { publicId: { startsWith: "SET-DEMO" } } },
-    ],
-  };
-}
-
-function DemoFocusBadge() {
-  return (
-    <span className="inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-amber-800">
-      Demo focus mode
-    </span>
-  );
-}
-
 export default async function ReconciliationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; success?: string; q?: string; status?: string; matched?: string; scanned?: string; demo?: string }>;
+  searchParams: Promise<{ error?: string; success?: string; q?: string; status?: string; matched?: string; scanned?: string }>;
 }) {
   const { organization, membership } = await requireSession();
   const params = await searchParams;
-  const demoFocus = params.demo === "1";
   // UI mirror of the server-action gates: read-only / compliance roles see
   // the queue but no mutation surfaces (forms are also blocked server-side).
   const canWrite = canWriteReconciliation(membership.role);
-  const settlementWhere = demoFocus
-    ? demoSettlementWhere(organization.id)
-    : { organizationId: organization.id };
+  const settlementWhere = { organizationId: organization.id };
 
   // Auto-match is an explicit operator action (the "Run auto-match" button), never a
   // side effect of opening the page or saving a record. Saving an external record
@@ -219,7 +156,7 @@ export default async function ReconciliationPage({
 
   const [records, settlements, settledCandidates] = await Promise.all([
     prisma.reconciliationRecord.findMany({
-      where: demoFocus ? demoReconciliationWhere(organization.id) : { organizationId: organization.id },
+      where: { organizationId: organization.id },
       orderBy: { createdAt: "desc" },
       take: 100,
       include: { settlement: true },
@@ -329,9 +266,8 @@ export default async function ReconciliationPage({
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Reconciliation"
-        description="Provider proof is not enough — every settlement must match an independent bank or PSP record before finality. Provider claims never count."
-        actions={demoFocus ? <DemoFocusBadge /> : undefined}
+        title="Reconciliation workspace"
+        description="Match provider-executed settlements against independent bank or PSP records before finality. Provider claims remain separate evidence."
         stats={[
           { label: "Matched", value: matchedCount, tone: "ok" as const },
           { label: "Manual review", value: manualReview, tone: manualReview ? ("pending" as const) : ("neutral" as const) },
@@ -361,16 +297,9 @@ export default async function ReconciliationPage({
           message={`Auto-match complete — ${params.matched ?? 0} of ${params.scanned ?? 0} open records matched and reconciled.`}
         />
       ) : null}
-      {params.success === "demo_match" ? (
-        <FlashMessage message="Matching external record created. Run auto-match to reconcile." />
-      ) : null}
-      {params.success === "demo_exception" ? (
-        <FlashMessage message="Exception record created — sent to the operations queue for manual review." />
-      ) : null}
-
       {!canWrite ? (
         <div className="flex items-center gap-2 rounded-xl border border-[var(--ops-line)] bg-white px-3 py-2">
-          <span className="case-chip case-chip--demo">Read-only role</span>
+          <span className="case-chip">Read-only role</span>
           <p className="text-xs text-slate-500">
             You can review the reconciliation queue, but adding, matching, and resolving records requires an
             operational role.
@@ -393,25 +322,6 @@ export default async function ReconciliationPage({
               Run auto-match
             </SubmitButton>
           </form>
-        }
-        demoForms={
-          <div className="flex flex-wrap items-center gap-1.5">
-            <form action={createMatchingBankRecord}>
-              <SubmitButton variant="outline" size="sm" pendingText="Creating...">
-                Bank demo
-              </SubmitButton>
-            </form>
-            <form action={createMatchingChainRecord}>
-              <SubmitButton variant="outline" size="sm" pendingText="Creating...">
-                Chain demo
-              </SubmitButton>
-            </form>
-            <form action={createExceptionRecord}>
-              <SubmitButton variant="outline" size="sm" pendingText="Creating...">
-                Exception demo
-              </SubmitButton>
-            </form>
-          </div>
         }
       />
       ) : null}

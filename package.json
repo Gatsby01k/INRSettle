@@ -15,9 +15,6 @@
     "prisma:migrate:status": "prisma migrate status",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
-    "demo:user": "tsx prisma/create-demo-user.ts",
-    "demo:approver": "tsx scripts/create-demo-approver.ts",
-    "demo:reset": "tsx prisma/seed-demo.ts",
     "gateway:pontis:dev": "npm --prefix gateway/pontis run dev",
     "gateway:pontis:start": "npm --prefix gateway/pontis run start"
   },

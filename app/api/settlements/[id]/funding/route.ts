@@ -21,7 +21,7 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { context, error } = await requireApiContext();
+  const { context, error } = await requireApiContext({ serviceScope: "funding:read" });
   if (error) return error;
   const { id } = await params;
   const settlement = await prisma.settlement.findFirst({

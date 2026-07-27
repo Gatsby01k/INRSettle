@@ -87,7 +87,7 @@ async function buildRows(
 }
 
 export async function GET(request: Request) {
-  const { context, error } = await requireApiContext();
+  const { context, error } = await requireApiContext({ serviceScope: "reports:read" });
   if (error) return error;
 
   const { searchParams } = new URL(request.url);

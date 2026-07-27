@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSettlement } from "@/lib/domain";
 import { prisma } from "@/lib/prisma";
-import { jsonError, requireApiContext } from "@/lib/api";
+import { requireApiContext } from "@/lib/api";
+import { beginApiIdempotency, completeApiIdempotency } from "@/lib/api-idempotency";
+import { friendlyErrorMessage } from "@/lib/errors";
 import {
   canCreateSettlement,
   canViewSensitiveFinancialData,
@@ -10,7 +12,7 @@ import {
 import { maskFinancialIdentifier } from "@/lib/utils";
 
 export async function GET() {
-  const { context, error } = await requireApiContext();
+  const { context, error } = await requireApiContext({ serviceScope: "settlements:read" });
   if (error) return error;
 
   const settlements = await prisma.settlement.findMany({
@@ -35,16 +37,23 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { context, error } = await requireApiContext();
+  const { context, error } = await requireApiContext({ serviceScope: "settlements:write" });
   if (error) return error;
   if (!canCreateSettlement(context.membership.role)) {
     return NextResponse.json({ error: roleErrorMessage(context.membership.role) }, { status: 403 });
   }
 
+  const input = await request.json();
+  const idempotency = await beginApiIdempotency(context, "POST /api/settlements", input);
+  if (idempotency.mode === "replay") return idempotency.response;
   try {
-    const settlement = await createSettlement(await request.json(), context.user.id, context.organization.id);
-    return NextResponse.json({ data: settlement }, { status: 201 });
+    const settlement = await createSettlement(input, context.user.id, context.organization.id);
+    const body = JSON.parse(JSON.stringify({ data: settlement }));
+    await completeApiIdempotency(idempotency, 201, body);
+    return NextResponse.json(body, { status: 201 });
   } catch (err) {
-    return jsonError(err);
+    const body = { error: friendlyErrorMessage(err) };
+    await completeApiIdempotency(idempotency, 400, body);
+    return NextResponse.json(body, { status: 400 });
   }
 }

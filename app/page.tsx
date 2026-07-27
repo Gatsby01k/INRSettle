@@ -1,307 +1,540 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Check, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronRight,
+  ClipboardCheck,
+  Code2,
+  Database,
+  Fingerprint,
+  KeyRound,
+  Layers3,
+  LockKeyhole,
+  Network,
+  RefreshCcw,
+  Route,
+  Scale,
+  ScrollText,
+  Webhook,
+} from "lucide-react";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
 import { SettlementProofScene } from "@/components/marketing/hero/SettlementProofScene";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "INRSettle — Payment completed ≠ settlement finalized",
+  title: "INRSettle — Settlement operations, from request to finality",
   description:
-    "INRSettle verifies settlement of INR payouts made through third-party providers — recorded approval, provider proof, independent bank reconciliation and an audit trail for every payment — without moving funds.",
+    "The settlement operations platform for provider-executed settlement: workflow, approvals, funding visibility, provider orchestration, proof, reconciliation, audit and finality review.",
   alternates: { canonical: "https://inrsettle.com/" },
   openGraph: {
-    title: "INRSettle — Payment completed ≠ settlement finalized",
+    title: "INRSettle — Settlement operations, from request to finality",
     description:
-      "Recorded approval, provider proof, independent reconciliation and an audit trail for every payment. Providers move money; INRSettle proves what happened.",
+      "One operating record for every provider-executed settlement, from request and approval through reconciliation and finality.",
     url: "https://inrsettle.com/",
     type: "website",
   },
 };
 
-/**
- * THE EVIDENCE ENGINE — landing rebuilt from zero.
- *
- * Concept: the page assembles a settlement evidence package in front of the
- * visitor. A gold spine runs the length of the site; five acts add the five
- * evidence layers along it — approval, provider proof, reconciliation, audit
- * trail, finality — and the story closes with the sealed verdict. The form
- * of the page IS the product truth. All data shown is labeled demonstration
- * data; every sentence is verifiable against the product as built.
- */
-
-/* ── The five acts of evidence ──────────────────────────────────────── */
-const AUDIENCES = [
-  { who: "Payout operators", need: "Approval gates, provider proof and a finality queue instead of spreadsheets." },
-  { who: "PSPs & payout providers", need: "Independent settlement evidence for your customers, and documented go-live readiness." },
-  { who: "Treasury & OTC desks", need: "INR ↔ USDT settlement legs reconciled against bank records before they count as final." },
-  { who: "Compliance & risk", need: "Every approval, match and finality decision in an exportable, append-only record." },
+const LIFECYCLE_STAGES = [
+  {
+    number: "01",
+    name: "Request",
+    detail: "Commercial terms, corridor, accounts and client reference enter one controlled record.",
+  },
+  {
+    number: "02",
+    name: "Quote",
+    detail: "Rate, fee, amount and settlement window remain bound to the request.",
+  },
+  {
+    number: "03",
+    name: "Approval",
+    detail: "Role policy, limits, MFA step-up and dual control determine whether work may proceed.",
+  },
+  {
+    number: "04",
+    name: "Funding",
+    detail: "Required, requested and confirmed amounts stay visible before provider submission.",
+  },
+  {
+    number: "05",
+    name: "Execution",
+    detail: "A selected provider receives an idempotent request and returns its own reference.",
+  },
+  {
+    number: "06",
+    name: "Evidence",
+    detail: "Signed webhooks and status polling preserve provider proof without asserting finality.",
+  },
+  {
+    number: "07",
+    name: "Reconciliation",
+    detail: "Independent bank or PSP records are matched against the settlement record.",
+  },
+  {
+    number: "08",
+    name: "Finality",
+    detail: "The final review evaluates approval, proof, reconciliation and operational guardrails.",
+  },
 ] as const;
+
+const PROVIDER_CONTROLS = [
+  { icon: Route, title: "Explicit routing", body: "Provider selection is recorded per settlement and never inferred from display copy." },
+  { icon: KeyRound, title: "Credential isolation", body: "Connections retain opaque secret-manager references, not credential material." },
+  { icon: RefreshCcw, title: "Durable operations", body: "Every external request has an idempotency key, attempt history and provider reference." },
+  { icon: Webhook, title: "Verified callbacks", body: "Connector-specific signature verification happens before a webhook enters the inbox." },
+] as const;
+
+const FAQ = [
+  {
+    question: "Does INRSettle move customer money?",
+    answer:
+      "No. Execution and liquidity remain with integrated providers. INRSettle controls the workflow, records provider activity and evaluates settlement evidence.",
+  },
+  {
+    question: "Can one customer use more than one settlement provider?",
+    answer:
+      "Yes. Connections, capabilities and operations are tenant-scoped. The connector contract is provider-agnostic and supports explicit provider selection today and routing policy expansion over time.",
+  },
+  {
+    question: "Does provider success make a settlement final?",
+    answer:
+      "No. Provider completion is one input. Finality review also requires the applicable approval record, independent reconciliation and operational guardrails.",
+  },
+  {
+    question: "How are uncertain provider outcomes handled?",
+    answer:
+      "An uncertain execution is placed into review and is not automatically resubmitted. Operators must confirm provider status or record a controlled no-effect resolution.",
+  },
+  {
+    question: "Can a bank or partner review the evidence?",
+    answer:
+      "Authorized users can inspect the settlement timeline, proof, reconciliation records, provider operations and audit history from the same tenant-scoped workspace.",
+  },
+] as const;
+
+function SectionIntro({
+  label,
+  title,
+  body,
+  align = "left",
+}: {
+  label: string;
+  title: string;
+  body: string;
+  align?: "left" | "center";
+}) {
+  return (
+    <div className={cn("max-w-2xl", align === "center" && "mx-auto text-center")}>
+      <p className="platform-kicker">{label}</p>
+      <h2 className="platform-section-title">{title}</h2>
+      <p className="platform-section-copy">{body}</p>
+    </div>
+  );
+}
+
+function ProductBoundary() {
+  return (
+    <div className="platform-boundary-strip">
+      <p>INRSettle owns the operating record.</p>
+      <span aria-hidden="true" />
+      <p>Integrated providers supply liquidity and execute settlement.</p>
+      <span aria-hidden="true" />
+      <p>Independent evidence determines finality.</p>
+    </div>
+  );
+}
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-white text-slate-950 antialiased">
+    <div className="min-h-screen overflow-x-clip bg-white text-slate-950 antialiased">
       <SiteHeader />
-
-      <main className="relative">
+      <main>
         <SettlementProofScene />
+        <ProductBoundary />
 
-        {/* ════ THE ASSEMBLY · five scenes, five compositions ═════════ */}
-        <section id="how-it-works" className="relative overflow-x-clip scroll-mt-20" aria-label="How the evidence assembles">
-          <div className="ee-spine" aria-hidden="true" />
-
-          <div className="mx-auto max-w-6xl px-4 pt-20 text-center sm:px-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--status-pending)]">
-              The evidence engine
-            </p>
-            <h2 className="mx-auto mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
-              Five layers of evidence. One defensible record.
-            </h2>
+        <section id="lifecycle" className="platform-section scroll-mt-20">
+          <div className="platform-container">
+            <SectionIntro
+              label="Settlement lifecycle"
+              title="One operating record. Eight controlled stages."
+              body="Every stage shows its owner, current state, evidence and next required action. Operations teams do not have to reconstruct the settlement from provider portals, spreadsheets and message threads."
+            />
+            <ol className="platform-lifecycle-grid">
+              {LIFECYCLE_STAGES.map((stage) => (
+                <li key={stage.name}>
+                  <span>{stage.number}</span>
+                  <h3>{stage.name}</h3>
+                  <p>{stage.detail}</p>
+                </li>
+              ))}
+            </ol>
           </div>
+        </section>
 
-          {/* 01 · THE SIGNATURE — an approval slip lands on the spine */}
-          <article className="ee-act relative mx-auto max-w-2xl px-4 py-16 text-center sm:px-6">
-            <p className="ee-act-num" aria-hidden="true">01</p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-tight">Approval, before anything moves</h3>
-            <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-slate-600">
-              Every settlement starts from quote-locked terms and a recorded approval. Creators cannot
-              approve their own settlements — dual control is enforced, not optional.
-            </p>
-            <div className="ee-slip relative z-10 mx-auto mt-9 max-w-md p-5 text-left">
-              <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">Approval record</p>
-                <span className="rounded-full bg-[var(--status-ok-bg)] px-2 py-0.5 text-[11px] font-semibold text-[var(--status-ok)]">Recorded</span>
+        <section id="providers" className="platform-section platform-section--ink scroll-mt-20">
+          <div className="platform-container">
+            <div className="grid gap-14 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
+              <SectionIntro
+                label="Provider network"
+                title="Providers stay behind one customer experience."
+                body="Customers work inside INRSettle. Each provider is represented by the same connection, capability and operation model, while provider-specific authentication and payloads remain inside the adapter."
+              />
+              <div className="provider-topology" aria-label="Provider-agnostic platform topology">
+                <div className="provider-topology__customer">
+                  <span>Customer operations</span>
+                  <strong>INRSettle workspace</strong>
+                </div>
+                <div className="provider-topology__core">
+                  <span>Routing</span>
+                  <span>Controls</span>
+                  <span>Evidence</span>
+                </div>
+                <div className="provider-topology__providers">
+                  <div><Network aria-hidden="true" /><span>Settlement provider A</span></div>
+                  <div><Network aria-hidden="true" /><span>Settlement provider B</span></div>
+                  <div><Network aria-hidden="true" /><span>Future provider adapter</span></div>
+                </div>
               </div>
-              <dl className="mt-3 space-y-2">
-                {[
-                  ["Quote", "83.1500 INR/USDT · locked · 15 min"],
-                  ["Approved by", "Treasury manager · second operator"],
-                  ["Control", "Dual-control · self-approval rejected"],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex items-baseline justify-between gap-4">
-                    <dt className="shrink-0 text-xs text-slate-400">{k}</dt>
-                    <dd className="text-right text-[13px] font-medium text-slate-800">{v}</dd>
-                  </div>
-                ))}
+            </div>
+            <div className="platform-control-grid">
+              {PROVIDER_CONTROLS.map(({ icon: Icon, title, body }) => (
+                <article key={title}>
+                  <Icon aria-hidden="true" />
+                  <h3>{title}</h3>
+                  <p>{body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="funding" className="platform-section scroll-mt-20">
+          <div className="platform-container grid gap-14 lg:grid-cols-2 lg:items-center">
+            <div className="funding-ledger">
+              <div className="funding-ledger__head">
+                <div>
+                  <p>Funding position</p>
+                  <span>Required before provider execution</span>
+                </div>
+                <strong>Confirmed</strong>
+              </div>
+              <div className="funding-ledger__amount">
+                <span>Coverage</span>
+                <strong>100%</strong>
+              </div>
+              <div className="funding-ledger__track"><span /></div>
+              <dl>
+                <div><dt>Required</dt><dd>Recorded from settlement terms</dd></div>
+                <div><dt>Confirmed</dt><dd>Approved by a separate operator</dd></div>
+                <div><dt>Execution gate</dt><dd>Open only after funding control passes</dd></div>
               </dl>
             </div>
-          </article>
-
-          {/* 02 · THE WIRE — provider proof as a full-width ticket */}
-          <article className="ee-act relative px-4 py-16 sm:px-6">
-            <div className="mx-auto max-w-6xl">
-              <div className="max-w-lg">
-                <p className="ee-act-num" aria-hidden="true">02</p>
-                <h3 className="mt-2 text-2xl font-semibold tracking-tight">The provider executes. The proof is captured.</h3>
-                <p className="mt-3 text-[15px] leading-relaxed text-slate-600">
-                  Your provider moves the money. INRSettle captures the provider&rsquo;s own execution
-                  record — transaction ID, UTR, reported amount — delivered over signed webhooks.
-                </p>
-              </div>
-              <div className="ee-ticket relative z-10 mt-9">
-                {[
-                  ["Provider", "PontisGlobe (sandbox)"],
-                  ["Transaction", "sb_demo_pontis_001"],
-                  ["UTR", "UTR2606DEMO0001 · verified"],
-                  ["Received via", "Signed webhook · HMAC"],
-                ].map(([k, v]) => (
-                  <div key={k}>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">{k}</p>
-                    <p className="mt-1 text-sm font-medium tabular-nums text-slate-900">{v}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </article>
-
-          {/* 03 · THE MATCH — claim meets independent record */}
-          <article className="ee-act ee-match-scene relative px-4 py-16 text-center sm:px-6">
-            <p className="ee-act-num" aria-hidden="true">03</p>
-            <h3 className="mx-auto mt-2 max-w-xl text-2xl font-semibold tracking-tight">One side&rsquo;s word is never enough</h3>
-            <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-slate-600">
-              Bank and PSP records are matched against every settlement — amount, currency, value date.
-              Provider claims are excluded from reconciliation by design.
-            </p>
-            <div className="relative z-10 mx-auto mt-10 flex max-w-4xl flex-col items-center gap-5 lg:flex-row lg:items-stretch lg:gap-0">
-              <div className="ee-claim w-full flex-1 text-left">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--status-pending)]">Provider claim · excluded from matching</p>
-                <p className="mt-2 text-sm font-medium text-slate-900">status: completed</p>
-                <p className="text-sm tabular-nums text-slate-600">reported ₹8,31,500.00</p>
-              </div>
-              <div className="relative z-20 -my-3 flex items-center justify-center lg:-mx-5 lg:my-auto">
-                <span className="ee-bracket text-lg" aria-label="matched">=</span>
-              </div>
-              <div className="ee-bank w-full flex-1 text-left">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--status-ok)]">Bank record · independent evidence</p>
-                <p className="mt-2 text-sm font-medium text-slate-900">BANK-STMT-04412</p>
-                <p className="text-sm tabular-nums text-slate-600">₹8,31,500.00 · value date 12 Jun 2026</p>
-              </div>
-            </div>
-            <p className="relative z-10 mt-6 inline-flex items-center gap-1.5 rounded-full border border-[var(--status-ok-line)] bg-[var(--status-ok-bg)] px-3 py-1 text-xs font-semibold text-[var(--status-ok)]">
-              <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />
-              MATCHED · 100% — amount + currency + value date
-            </p>
-          </article>
-
-          {/* 04 · THE LEDGER — the black-box recorder, the one dark object */}
-          <article className="ee-act relative px-4 py-16 sm:px-6">
-            <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-16">
-              <div className="ee-ledger relative z-10 p-6">
-                <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">Audit trail</p>
-                  <p className="text-[11px] text-white/40">append-only</p>
-                </div>
-                <div className="mt-2">
-                  {[
-                    ["PENDING_APPROVAL → APPROVED", "10:41:07 IST"],
-                    ["APPROVED → EXECUTING", "10:52:31 IST"],
-                    ["EXECUTING → SETTLED", "11:19:04 IST"],
-                    ["SETTLED → RECONCILED", "14:03:56 IST"],
-                  ].map(([event, at]) => (
-                    <div key={event} className="ee-ledger-row">
-                      <span className="ok">{event}</span>
-                      <span className="text-white/45">{at}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-3 text-[11px] leading-relaxed text-white/40">
-                  Actor and before/after state recorded on every event.
-                </p>
-              </div>
-              <div>
-                <p className="ee-act-num" aria-hidden="true">04</p>
-                <h3 className="mt-2 text-2xl font-semibold tracking-tight">Every action, on the record</h3>
-                <p className="mt-3 max-w-md text-[15px] leading-relaxed text-slate-600">
-                  Approvals, transitions, matches and decisions are written to an append-only audit
-                  trail. When a payout is questioned, the answer is a query — not a memory.
-                </p>
-              </div>
-            </div>
-          </article>
-
-          {/* 05 · THE VERDICT ARRIVES — the finality decision, sealed */}
-          <article className="ee-act relative px-4 pb-20 pt-16 sm:px-6">
-            <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
-              <div>
-                <p className="ee-act-num" aria-hidden="true">05</p>
-                <h3 className="mt-2 text-2xl font-semibold tracking-tight">Finality is a decision, made on evidence</h3>
-                <p className="mt-3 max-w-md text-[15px] leading-relaxed text-slate-600">
-                  A deterministic engine weighs the four inputs — proof, independent match, approval,
-                  guardrails — and renders the decision. The same engine answers the console and the
-                  API; they can never disagree.
-                </p>
-              </div>
-              <div className="ee-fragment ee-finality-fragment relative z-10 p-6" style={{ transform: "rotate(0.8deg)" }}>
-                <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3 pl-2">
-                  <p className="text-sm font-semibold tracking-tight text-slate-950">Finality review</p>
-                  <span className="rounded-full bg-[var(--status-ok-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--status-ok)]">Ready to finalize</span>
-                </div>
-                <dl className="ee-finality-list mt-3 space-y-2.5 pl-2">
-                  {[
-                    ["Provider proof", "Verified"],
-                    ["Independent reconciliation", "Verified"],
-                    ["Recorded approval", "Verified"],
-                    ["Guardrails", "Within cap · live payouts disabled"],
-                  ].map(([k, v]) => (
-                    <div key={k} className="ee-finality-row">
-                      <dt className="min-w-0 text-[13px] text-slate-500">{k}</dt>
-                      <dd className="min-w-0 text-right text-[13px] font-medium text-[var(--status-ok)]">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
-                <span className="ee-seal" aria-hidden="true">
-                  <Check className="h-6 w-6" strokeWidth={2.75} />
-                </span>
-              </div>
-            </div>
-          </article>
-        </section>
-
-        {/* ════ THE VERDICT ═══════════════════════════════════════════ */}
-        <section id="platform" className="ee-verdict scroll-mt-20">
-          <div className="mx-auto max-w-4xl px-4 py-24 text-center sm:px-6">
-            <div className="lp-cert-rule" aria-hidden="true" />
-            <h2 className="ee-display mx-auto mt-8 max-w-3xl">
-              <span className="lp-ink">Settlement finality is something you prove,</span>{" "}
-              <span className="lp-ink">not something you&rsquo;re told.</span>
-            </h2>
-            <p className="mx-auto mt-6 max-w-xl text-lg text-slate-600">
-              The result is a report per settlement that finance teams, auditors and counterparties
-              can rely on — print-ready, referenceable, and built only from persisted evidence.
-            </p>
-            <Link
-              href="/sample-report"
-              className={cn(buttonVariants({ variant: "outline", size: "default" }), "lp-arrow-link mt-8 inline-flex items-center gap-1.5")}
-            >
-              Read the sample evidence package
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
+            <SectionIntro
+              label="Funding visibility"
+              title="Funding is a control state, not a chat update."
+              body="Required and confirmed amounts remain attached to the settlement. Dual control records who confirmed funding, when it happened and whether provider execution may begin."
+            />
           </div>
         </section>
 
-        {/* ════ DISTRIBUTION — who this document is prepared for ═════ */}
-        <section className="mx-auto max-w-3xl px-4 py-20 sm:px-6" aria-label="Distribution">
-          <p className="text-center text-xs font-semibold uppercase tracking-[0.14em] text-[var(--status-pending)]">Distribution</p>
-          <h2 className="mx-auto mt-3 max-w-xl text-center text-3xl font-semibold tracking-tight sm:text-4xl">
-            This record is prepared for.
-          </h2>
-          <div className="ee-dossier mt-10">
-            {AUDIENCES.map((audience, index) => (
-              <div key={audience.who} className="ee-dossier-row">
-                <span className="ee-dossier-num">{String(index + 1).padStart(2, "0")}</span>
-                <span>
-                  <span className="block text-base font-semibold tracking-tight text-slate-950">{audience.who}</span>
-                  <span className="mt-0.5 block text-sm leading-relaxed text-slate-600">{audience.need}</span>
-                </span>
-              </div>
-            ))}
+        <section id="execution" className="platform-section platform-section--soft scroll-mt-20">
+          <div className="platform-container">
+            <SectionIntro
+              label="Execution orchestration"
+              title="External execution with an internal control record."
+              body="INRSettle creates a durable operation before calling a provider. Outcomes, retries and uncertainty remain explicit, so an operator never has to guess whether a request reached the external rail."
+              align="center"
+            />
+            <div className="operation-sequence">
+              {[
+                ["01", "Validate", "Approval, limits and funding"],
+                ["02", "Record", "Operation and idempotency key"],
+                ["03", "Submit", "Provider-specific adapter"],
+                ["04", "Observe", "Webhook and status polling"],
+                ["05", "Resolve", "Success, failure or review"],
+              ].map(([number, title, body]) => (
+                <div key={number}>
+                  <span>{number}</span>
+                  <h3>{title}</h3>
+                  <p>{body}</p>
+                  <ChevronRight aria-hidden="true" />
+                </div>
+              ))}
+            </div>
           </div>
-          <p className="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 text-sm font-medium text-slate-600">
-            <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
-              <ShieldCheck className="h-4 w-4 text-[var(--status-ok)]" aria-hidden="true" />
-              Enforced, not optional
-            </span>
-            {["Append-only audit trail", "Role-based access", "Dual-control approvals", "Signed webhooks", "Exportable evidence"].map(
-              (control) => (
-                <span key={control} className="lp-ctrl">{control}</span>
-              ),
-            )}
-          </p>
         </section>
 
-        {/* ════ THE SIGNATURE PAGE — the instrument closes ════════════ */}
-        <section className="ee-signature relative px-4 pb-24 pt-24 text-center sm:px-6">
-          <span
-            className="ee-seal relative mx-auto grid"
-            style={{ position: "relative", right: "auto", bottom: "auto" }}
-            aria-hidden="true"
-          >
-            <Check className="h-6 w-6" strokeWidth={2.75} />
-          </span>
-          <h2 className="mx-auto mt-7 max-w-2xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-            Prove your settlements are actually final.
-          </h2>
-          <div className="mt-10">
-            <div className="ee-sigline" aria-hidden="true" />
-            <p className="mt-2.5 text-sm italic text-slate-500">
-              Providers move money. INRSettle proves what happened.
-            </p>
+        <section id="evidence" className="platform-section scroll-mt-20">
+          <div className="platform-container grid gap-14 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+            <SectionIntro
+              label="Evidence engine"
+              title="Provider proof is preserved, not promoted into finality."
+              body="The platform records the provider reference, reported status, amount, currency, UTR where applicable, receipt channel and timestamp. Proof remains append-only and traceable to the settlement."
+            />
+            <div className="evidence-record">
+              <div className="evidence-record__head">
+                <span>Provider proof</span>
+                <strong>Received</strong>
+              </div>
+              <div className="evidence-record__lines">
+                <div><span>Provider reference</span><b>Recorded</b></div>
+                <div><span>Receipt channel</span><b>Verified webhook</b></div>
+                <div><span>Payload integrity</span><b>Hash retained</b></div>
+                <div><span>Finality effect</span><b>Evidence input only</b></div>
+              </div>
+            </div>
           </div>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/contact?intent=access"
-              className={cn(buttonVariants({ variant: "primary", size: "lg" }), "lp-cta-primary")}
-            >
-              Start a pilot
-            </Link>
-            <Link href="/contact?intent=sales" className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
-              Talk to us
-            </Link>
+        </section>
+
+        <section id="reconciliation" className="platform-section platform-section--ink scroll-mt-20">
+          <div className="platform-container">
+            <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+              <div className="recon-comparison">
+                <div>
+                  <p>Settlement record</p>
+                  <strong>Expected amount and value date</strong>
+                  <span>Provider claim remains separate</span>
+                </div>
+                <Scale aria-hidden="true" />
+                <div>
+                  <p>Independent record</p>
+                  <strong>Bank or PSP statement</strong>
+                  <span>Source and external reference retained</span>
+                </div>
+                <footer><Check aria-hidden="true" /> Match criteria satisfied</footer>
+              </div>
+              <SectionIntro
+                label="Reconciliation"
+                title="Independent matching before completion."
+                body="Bank and PSP records are evaluated independently from provider claims. Mismatches become exceptions with an explicit reason, owner and route back to the settlement workspace."
+              />
+            </div>
+          </div>
+        </section>
+
+        <section id="audit" className="platform-section scroll-mt-20">
+          <div className="platform-container grid gap-14 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+            <SectionIntro
+              label="Audit trail"
+              title="Every privileged action leaves a durable record."
+              body="Approvals, funding confirmations, provider operations, reconciliation decisions, finality and configuration changes record actor, resource, time and relevant before-and-after state."
+            />
+            <div className="audit-ledger">
+              {[
+                ["Approval recorded", "User · dual control"],
+                ["Funding confirmed", "User · step-up verified"],
+                ["Provider request accepted", "API · idempotent operation"],
+                ["Proof received", "System · signed webhook"],
+                ["Reconciliation matched", "User · independent source"],
+              ].map(([event, actor], index) => (
+                <div key={event}>
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  <p><strong>{event}</strong><small>{actor}</small></p>
+                  <Check aria-hidden="true" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="finality" className="platform-section platform-section--soft scroll-mt-20">
+          <div className="platform-container">
+            <SectionIntro
+              label="Finality review"
+              title="Completion is a decision supported by evidence."
+              body="A deterministic review brings approval, provider proof, independent reconciliation and operational guardrails together. Blocking issues stay visible until they are resolved."
+              align="center"
+            />
+            <div className="finality-matrix">
+              {[
+                ["Recorded approval", "Verified"],
+                ["Funding control", "Verified"],
+                ["Provider proof", "Received"],
+                ["Independent reconciliation", "Matched"],
+                ["Operational guardrails", "Within policy"],
+              ].map(([label, value]) => (
+                <div key={label}><span>{label}</span><strong><Check aria-hidden="true" />{value}</strong></div>
+              ))}
+              <footer>
+                <span>Finality decision</span>
+                <strong>Ready for authorized completion</strong>
+              </footer>
+            </div>
+          </div>
+        </section>
+
+        <section id="api" className="platform-section platform-section--ink scroll-mt-20">
+          <div className="platform-container grid gap-14 lg:grid-cols-[0.78fr_1.22fr] lg:items-center">
+            <SectionIntro
+              label="Multi-provider API"
+              title="One lifecycle model across provider adapters."
+              body="The platform API exposes settlement state, provider operations, funding and finality without leaking provider-specific payloads into the customer workflow."
+            />
+            <div className="api-window">
+              <div className="api-window__bar">
+                <span>GET</span>
+                <code>/api/settlements/:id/finality</code>
+              </div>
+              <pre><code>{`{
+  "settlement": "SET-…",
+  "provider": {
+    "connection": "configured",
+    "operation": "succeeded",
+    "reference": "recorded"
+  },
+  "evidence": {
+    "providerProof": "verified",
+    "reconciliation": "matched",
+    "approval": "recorded"
+  },
+  "decision": "ready_to_finalize"
+}`}</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="security" className="platform-section scroll-mt-20">
+          <div className="platform-container">
+            <SectionIntro
+              label="Enterprise security"
+              title="Controls follow the settlement, not the screen."
+              body="Authorization and tenant scope are enforced at server boundaries. Sensitive decisions require role policy, session assurance and an auditable actor."
+            />
+            <div className="security-grid">
+              {[
+                [Fingerprint, "Session assurance", "TOTP MFA, recovery codes, lockout and short-lived step-up for sensitive operations."],
+                [LockKeyhole, "Role enforcement", "Six tenant roles with server-side mutation gates and sensitive financial-data masking."],
+                [Layers3, "Tenant isolation", "Organization scope is applied to settlements, operations, reconciliation and audit queries."],
+                [Database, "Auditability", "Append-only audit records capture privileged actions and configuration changes."],
+                [Webhook, "Webhook trust", "Provider-specific signatures are verified before a delivery can affect settlement state."],
+                [KeyRound, "Secret boundary", "Credential values stay outside application records; only opaque manager references are retained."],
+              ].map(([Icon, title, body]) => (
+                <article key={String(title)}>
+                  <Icon aria-hidden="true" />
+                  <h3>{String(title)}</h3>
+                  <p>{String(body)}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="compliance" className="platform-section platform-section--soft scroll-mt-20">
+          <div className="platform-container grid gap-12 lg:grid-cols-2 lg:items-center">
+            <div className="compliance-register">
+              {[
+                ["Separation of duties", "Creator and approver are evaluated separately"],
+                ["Evidence provenance", "Provider and independent records retain their source"],
+                ["Decision traceability", "Finality inputs and blockers remain inspectable"],
+                ["Controlled exceptions", "Uncertain outcomes require explicit intervention"],
+              ].map(([title, body]) => (
+                <div key={title}><ClipboardCheck aria-hidden="true" /><p><strong>{title}</strong><span>{body}</span></p></div>
+              ))}
+            </div>
+            <SectionIntro
+              label="Compliance operations"
+              title="Operational evidence for review and oversight."
+              body="INRSettle supports control execution and evidence collection. It does not replace a customer’s licensing analysis, provider due diligence or regulatory obligations."
+            />
+          </div>
+        </section>
+
+        <section id="customer-stories" className="platform-section scroll-mt-20">
+          <div className="platform-container">
+            <SectionIntro
+              label="Operating models"
+              title="The same record answers different teams."
+              body="Each team sees the part of the settlement it owns without losing the shared operating context. These are workflow patterns, not fabricated customer claims."
+              align="center"
+            />
+            <div className="role-stories">
+              {[
+                ["Settlement operations", "What happens next?", "A prioritized queue, current lifecycle stage, blockers and the next permitted action."],
+                ["Treasury", "Is the settlement funded?", "Required amount, confirmed position, funding approver and provider execution gate."],
+                ["Compliance", "Can the decision be defended?", "Approval provenance, provider proof, independent match and finality rationale."],
+                ["Partnerships", "Can another provider integrate?", "Capabilities, connection posture, operations, webhooks and performance in one provider layer."],
+              ].map(([role, question, answer]) => (
+                <article key={role}>
+                  <span>{role}</span>
+                  <h3>{question}</h3>
+                  <p>{answer}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="developers" className="platform-section platform-section--ink scroll-mt-20">
+          <div className="platform-container grid gap-12 lg:grid-cols-2">
+            <article className="developer-path">
+              <Code2 aria-hidden="true" />
+              <p className="platform-kicker">API</p>
+              <h2>Integrate against stable settlement concepts.</h2>
+              <p>
+                Create and inspect settlement records, retrieve finality decisions,
+                manage provider connections and receive tenant-scoped responses.
+              </p>
+              <Link href="/developers">Explore the API model <ArrowRight aria-hidden="true" /></Link>
+            </article>
+            <article className="developer-path">
+              <ScrollText aria-hidden="true" />
+              <p className="platform-kicker">Documentation</p>
+              <h2>Understand controls before writing code.</h2>
+              <p>
+                Start with the lifecycle, approval model, provider boundary,
+                webhook trust rules and reconciliation requirements.
+              </p>
+              <Link href="/docs">Read the documentation <ArrowRight aria-hidden="true" /></Link>
+            </article>
+          </div>
+        </section>
+
+        <section id="faq" className="platform-section scroll-mt-20">
+          <div className="platform-container grid gap-12 lg:grid-cols-[0.65fr_1.35fr]">
+            <SectionIntro
+              label="FAQ"
+              title="Clear boundaries from the first conversation."
+              body="The platform is designed to make operating responsibility explicit across customers, INRSettle and integrated providers."
+            />
+            <div className="platform-faq">
+              {FAQ.map((item) => (
+                <details key={item.question}>
+                  <summary>{item.question}<span aria-hidden="true">+</span></summary>
+                  <p>{item.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="enterprise-cta">
+          <div className="platform-container">
+            <div>
+              <p className="platform-kicker">Enterprise deployment</p>
+              <h2>Bring your settlement workflow and provider model.</h2>
+              <p>
+                We will map the controls, evidence sources and integration boundary
+                required to operate the flow inside INRSettle.
+              </p>
+            </div>
+            <div>
+              <Link
+                href="/contact?intent=sales"
+                className={cn(buttonVariants({ variant: "primary", size: "lg" }), "group")}
+              >
+                Start the technical discussion
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </Link>
+              <Link href="/security" className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+                Review security controls
+              </Link>
+            </div>
           </div>
         </section>
       </main>
-
       <SiteFooter />
     </div>
   );

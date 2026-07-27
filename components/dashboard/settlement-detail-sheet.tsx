@@ -29,7 +29,6 @@ export type SettlementDetail = {
   reconciledAt?: string;
   sourceAccount: string;
   targetAccount: string;
-  counterparty: { name: string; type: string; country: string };
   events: { label: string; note?: string; at: string }[];
   reconciliation: { externalRef: string; source: string; status: string; amount: string; valueDate: string }[];
   finality: FinalityReviewData;
@@ -66,7 +65,7 @@ export function SettlementDetailSheet({
                 ? "case-chip border-emerald-200 bg-emerald-50 text-emerald-700"
                 : settlement.finality.decision === "needs_review"
                   ? "case-chip case-chip--gold"
-                  : "case-chip case-chip--demo"
+                  : "case-chip case-chip--shadow"
             }
           >
             {settlement.finality.decision === "ready_to_finalize"
@@ -116,12 +115,6 @@ export function SettlementDetailSheet({
               <StatRow label="Funding status" value={settlement.fundingStatus.replaceAll("_", " ")} />
               {settlement.fundingRequired ? <StatRow label="Funding required" value={settlement.fundingRequired} /> : null}
               {settlement.fundedAmount ? <StatRow label="Funded amount" value={settlement.fundedAmount} /> : null}
-            </div>
-            <div className="mt-3 rounded-xl border border-[var(--ops-line)] p-3">
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Counterparty</p>
-              <StatRow label="Name" value={settlement.counterparty.name} />
-              <StatRow label="Type" value={settlement.counterparty.type} />
-              <StatRow label="Country" value={settlement.counterparty.country} />
             </div>
           </TabsContent>
 

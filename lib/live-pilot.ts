@@ -1,4 +1,4 @@
-// Live Pilot Readiness engine for LIVE_TEST settlements (pure, deterministic).
+// Live Pilot Readiness engine for CONTROLLED_PILOT settlements (pure, deterministic).
 //
 // "Live pilot readiness" means INRSettle can safely TRACK AND CONTROL a tiny
 // pilot workflow — not freely move money. INRSettle never moves funds unless
@@ -43,7 +43,7 @@ export type LivePilotFlags = {
   createdById: string;
   /** A settlement report was generated for this settlement (audit-evidenced). */
   reportGenerated: boolean;
-  /** Today's cumulative LIVE_TEST INR volume, EXCLUDING this settlement. */
+  /** Today's cumulative CONTROLLED_PILOT INR volume, EXCLUDING this settlement. */
   dailyUsedInrExcludingThis: number;
 };
 
@@ -63,12 +63,12 @@ export function isProviderAllowedForLiveTest(
   config: ShadowConfig,
 ): boolean {
   if (!provider?.trim()) return false;
-  return config.liveTestAllowedProviders.some(
+  return config.controlledPilotAllowedProviders.some(
     (allowed) => allowed.toLowerCase() === provider.trim().toLowerCase(),
   );
 }
 
-/** Builds the LIVE_TEST pilot readiness checklist and final decision. */
+/** Builds the CONTROLLED_PILOT pilot readiness checklist and final decision. */
 export function buildLivePilotReadiness(
   settlement: ShadowSettlementLike,
   proofs: ShadowProofLike[],
@@ -79,9 +79,9 @@ export function buildLivePilotReadiness(
   finalityDecision: "ready_to_finalize" | "needs_review" | "not_ready",
 ): LivePilotReadiness {
   const amount = inrLegOf(settlement);
-  const withinCap = amount > 0 && amount <= config.liveTestMaxInr;
+  const withinCap = amount > 0 && amount <= config.controlledPilotMaxInr;
   const dailyTotal = flags.dailyUsedInrExcludingThis + amount;
-  const withinDailyCap = dailyTotal <= config.liveTestDailyMaxInr;
+  const withinDailyCap = dailyTotal <= config.controlledPilotDailyMaxInr;
   const providerAllowed = isProviderAllowedForLiveTest(settlement.provider, config);
   const approvalRecorded = hasAuditApproval(settlement, events);
   const proofRecorded = proofs.length > 0;
@@ -94,17 +94,15 @@ export function buildLivePilotReadiness(
 
   const items: LivePilotItem[] = [
     {
-      key: "live_payout_guarded",
-      label: "Live payouts: not enabled (guarded)",
+      key: "execution_boundary",
+      label: "External provider execution boundary",
       blocking: true,
-      done: !config.livePayoutsEnabled,
-      detail: config.livePayoutsEnabled
-        ? "LIVE_PAYOUTS_ENABLED is set — INRSettle must not move funds during the pilot. Unset it."
-        : "INRSettle does not move funds. Provider sandbox isTest stays true; no execution switch exists.",
+      done: true,
+      detail: "INRSettle controls and records the operation; the integrated provider performs execution.",
     },
     {
       key: "amount_cap",
-      label: `Per-settlement cap (${inr(config.liveTestMaxInr)})`,
+      label: `Per-settlement cap (${inr(config.controlledPilotMaxInr)})`,
       blocking: true,
       done: withinCap,
       detail:
@@ -116,12 +114,12 @@ export function buildLivePilotReadiness(
     },
     {
       key: "daily_cap",
-      label: `Daily pilot cap (${inr(config.liveTestDailyMaxInr)})`,
+      label: `Daily pilot cap (${inr(config.controlledPilotDailyMaxInr)})`,
       blocking: true,
       done: withinDailyCap,
       detail: withinDailyCap
-        ? `Today's LIVE_TEST volume including this settlement: ${inr(dailyTotal)}.`
-        : `Today's LIVE_TEST volume would reach ${inr(dailyTotal)} — over the daily cap. Wait for the next day.`,
+        ? `Today's CONTROLLED_PILOT volume including this settlement: ${inr(dailyTotal)}.`
+        : `Today's CONTROLLED_PILOT volume would reach ${inr(dailyTotal)} — over the daily cap. Wait for the next day.`,
     },
     {
       key: "provider_allowed",
@@ -129,9 +127,9 @@ export function buildLivePilotReadiness(
       blocking: true,
       done: providerAllowed,
       detail: providerAllowed
-        ? `${settlement.provider} is allowed for live-test pilots.`
+        ? `${settlement.provider} is allowed for controlled-pilot operations.`
         : settlement.provider?.trim()
-          ? `${settlement.provider} is not on the allowlist (${config.liveTestAllowedProviders.join(", ")}).`
+          ? `${settlement.provider} is not on the allowlist (${config.controlledPilotAllowedProviders.join(", ")}).`
           : "No provider assigned — assign one from the pilot allowlist.",
     },
     {
@@ -152,7 +150,7 @@ export function buildLivePilotReadiness(
         ? "Explicit finality approval recorded by a user other than the settlement creator."
         : flags.finalityApprovedById
           ? "Finality approval exists but was made by the settlement creator — a DIFFERENT operator must approve."
-          : "No explicit finality approval recorded yet (Shadow console → Approve finality).",
+          : "No explicit finality approval recorded yet (Settlement controls → Approve finality).",
     },
     {
       key: "provider_proof",

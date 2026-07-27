@@ -1,6 +1,6 @@
 # INRSettle
 
-INRSettle is a multi-tenant B2B settlement operations platform for proof, reconciliation, audit trail, funding visibility and finality review.
+INRSettle is a multi-tenant B2B Settlement Operations Platform. It controls the lifecycle from request and approval through funding visibility, provider orchestration, proof, reconciliation and finality.
 
 It is **not** a PSP, exchange, payout provider, liquidity network or custodian. Where a configured external provider connector is used, that provider performs the external operation; INRSettle records the request, provider outcome, independent reconciliation and approval evidence.
 
@@ -9,13 +9,16 @@ It is **not** a PSP, exchange, payout provider, liquidity network or custodian. 
 - Next.js 16 App Router console and public marketing pages.
 - PostgreSQL data model and migrations through Prisma 7.
 - Cookie-session authentication, active-organization enforcement and six tenant roles.
-- Quote → settlement → approval → funding → provider execution/manual external execution → proof → reconciliation → finality review → report.
-- Dual control for lifecycle approval, funding confirmation and LIVE_TEST finality approval.
+- Quote → settlement → encrypted execution instruction → approval → funding → provider execution → proof → reconciliation → finality review → report.
+- Dual control for lifecycle approval, funding confirmation and finality approval.
 - Deterministic finality engine: provider proof alone never establishes finality.
-- Generic provider connector registry, per-tenant connection metadata, durable outbound operation ledger and durable verified-webhook inbox.
-- Existing sandbox-oriented PontisGlobe and RemitQuickly adapters.
+- Provider-agnostic connector registry, capability and corridor declarations, tenant connection posture, durable outbound operation ledger and verified-webhook inbox.
+- Signed webhook verification, persistent idempotency records, explicit uncertain-outcome handling, circuit evaluation and operator-controlled resolution.
+- AES-256-GCM encrypted settlement instructions and redacted provider payload persistence.
+- Scoped service credentials with one-time secret display and idempotency enforcement on mutation routes.
+- PontisGlobe and RemitQuickly adapters behind the universal connector contract.
 
-InvoiceMate / PayMate is **not** implemented or claimed as integrated. No authoritative API contract, credentials, webhook scheme or status mapping for it exists in this repository. A connector can be added through `lib/providers/contracts.ts` after those artifacts are supplied.
+InvoiceMate / PayMate is not hardcoded or claimed as integrated. It can be added as another connector only after its authoritative API contract, credentials, webhook scheme, status semantics and reconciliation references are supplied.
 
 ## Product map
 
@@ -25,10 +28,11 @@ InvoiceMate / PayMate is **not** implemented or claimed as integrated. No author
 - Funding: `lib/funding.ts`, `app/(dashboard)/settlements/[id]/funding`
 - Finality: `lib/finality.ts`, `lib/finality-input.ts`
 - Provider layer: `lib/providers/contracts.ts`, `registry.ts`, `service.ts`, `webhook-inbox.ts`
+- Encrypted instructions: `lib/settlement-instructions.ts`, `lib/sensitive-data.ts`
+- Provider routing: `lib/providers/routing.ts`
+- Service API: `lib/api.ts`, `lib/api-credentials.ts`, `lib/api-idempotency.ts`
 - Data model/migrations: `prisma/schema.prisma`, `prisma/migrations`
 - Pontis static-IP gateway: `gateway/pontis`
-
-The Accounts, Counterparties, KYB, Monitoring and Pilot Readiness screens contain explicitly labelled illustrative/static datasets. They are not systems of record, live monitoring, connected balances, document storage or completed provider DD.
 
 ## Local setup
 
@@ -54,7 +58,7 @@ npx prisma validate
 
 ## Deployment and secrets
 
-The application deploys as Next.js (the repository is not a static Netlify site). Use a secret manager for production values. `ProviderConnection.credentialsRef` stores only an opaque reference such as `vault://...`; it must never contain a credential value.
+The application deploys as Next.js. Use a secret manager for production values. `ProviderConnection.credentialsRef` stores only an opaque reference such as `vault://...`; it must never contain a credential value. `MFA_ENCRYPTION_KEY`, `SETTLEMENT_DATA_ENCRYPTION_KEY`, `API_KEY_PEPPER` and `SESSION_SECRET` must be independent values.
 
 Vercel uses `npm run build:vercel`, which applies committed Prisma migrations
 before compiling the application. The deployment fails closed if the database
@@ -66,8 +70,4 @@ verification when a legacy `prefer`, `require` or `verify-ca` alias is supplied.
 
 Pontis deployments that require a whitelisted static IP should use `gateway/pontis`. Provider credentials remain on that gateway; the app receives only the gateway URL and a separate shared secret.
 
-## Known production blockers
-
-The repository is suitable for a controlled, clearly labelled product demonstration after environment setup. It is not yet approved for first production clients. TOTP MFA, recovery codes, short-lived approval step-up, account lockout and primary FINANCE_VIEWER masking are implemented. Open blockers include distributed IP/device throttling and administrative recovery, service-account/OAuth API authentication, secret-manager resolution, encrypted-at-rest PII/provider payloads and document storage, immutable audit export/WORM, automated retry workers and alerting, real KYB/screening integrations, provider-specific DD, and deployment/DR/penetration evidence.
-
-See `docs/partner-readiness-audit-2026-07-20.md` for the evidence-backed audit, priority plan and readiness gates.
+Production activation still requires deployment-specific evidence outside this repository: provider contracts and credentials, approved provider/client due diligence, bank and reconciliation sources, monitored infrastructure, backup/restore validation, incident contacts and independent security testing.

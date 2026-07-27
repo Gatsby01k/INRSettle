@@ -10,7 +10,6 @@ import { PageHeader } from "@/components/ops/page-header";
 import {
   autoMatchReconciliation,
   createSettlement,
-  generateSettlementBankRecordAndReconcile,
   transitionSettlement,
 } from "@/lib/domain";
 import { friendlyErrorMessage } from "@/lib/errors";
@@ -22,7 +21,7 @@ import {
   isIndependentReconciliationSource,
 } from "@/lib/reconciliation";
 import { lifecycleApprovalViolation } from "@/lib/settlement-actions";
-import { MODE_LABEL, getShadowConfig, safetyFor, type SettlementMode } from "@/lib/shadow-mode";
+import { getShadowConfig, safetyFor } from "@/lib/shadow-mode";
 import {
   approvalMfaViolation,
   canApproveSettlement,
@@ -30,7 +29,6 @@ import {
   canViewSensitiveFinancialData,
   roleErrorMessage,
 } from "@/lib/permissions";
-import { counterpartyForCorridor } from "@/lib/treasury";
 import { prisma } from "@/lib/prisma";
 import {
   cn,
@@ -159,39 +157,6 @@ function caseOperationalSummary(
   return "Settlement in progress.";
 }
 
-function demoSettlementWhere(organizationId: string) {
-  return {
-    organizationId,
-    OR: [{ publicId: { startsWith: "SET-DEMO" } }, { reference: { startsWith: "DEMO-" } }],
-  };
-}
-
-const MODE_CHIP_CLASS: Record<SettlementMode, string> = {
-  DEMO: "case-chip--demo",
-  SHADOW: "case-chip--shadow",
-  LIVE_TEST: "case-chip--live",
-};
-
-function ModeChip({ testMode }: { testMode: string }) {
-  const key = (testMode in MODE_CHIP_CLASS ? testMode : "DEMO") as SettlementMode;
-  return (
-    <span
-      className={cn("case-chip", MODE_CHIP_CLASS[key])}
-      title="DEMO: simulated data · SHADOW/LIVE TEST: money moves externally via the partner/provider — INRSettle does not move funds"
-    >
-      {MODE_LABEL[key]}
-    </span>
-  );
-}
-
-function DemoFocusBadge() {
-  return (
-    <span className="inline-flex items-center rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-amber-800">
-      Demo focus mode
-    </span>
-  );
-}
-
 type SettlementRow = Awaited<
   ReturnType<
     typeof prisma.settlement.findMany<{
@@ -259,7 +224,6 @@ function toFinalityReviewData(settlement: SettlementRow): SettlementDetail["fina
 }
 
 function toSettlementDetail(settlement: SettlementRow, canViewSensitive: boolean): SettlementDetail {
-  const cp = counterpartyForCorridor(settlement.corridor);
   return {
     publicId: settlement.publicId,
     reference: settlement.reference,
@@ -289,7 +253,6 @@ function toSettlementDetail(settlement: SettlementRow, canViewSensitive: boolean
     targetAccount: canViewSensitive
       ? settlement.targetAccount
       : maskFinancialIdentifier(settlement.targetAccount),
-    counterparty: { name: cp.name, type: cp.type, country: cp.country },
     events: settlement.events.map((event) => ({
       label: event.toStatus.replaceAll("_", " "),
       note: event.note ?? undefined,
@@ -387,8 +350,8 @@ async function transition(formData: FormData) {
         where: { id: settlementId, organizationId: organization.id },
         select: { testMode: true },
       });
-      if (target?.testMode === "LIVE_TEST") {
-        throw new Error("LIVE_TEST execution requires an explicitly selected, configured provider connector.");
+      if (target?.testMode === "CONTROLLED_PILOT") {
+        throw new Error("Controlled-pilot execution requires an explicitly selected and activated provider connector.");
       }
       await transitionSettlement(
         settlementId,
@@ -438,38 +401,6 @@ async function runAutoMatch(formData: FormData) {
   redirect("/settlements");
 }
 
-async function generateAndReconcile(formData: FormData) {
-  "use server";
-  const { user, organization, membership } = await requireSession();
-  if (!canApproveSettlement(membership.role)) redirect("/settlements");
-  const settlementId = String(formData.get("settlementId") ?? "");
-
-  // P0 guard: this helper FABRICATES an independent bank record. It must never
-  // run against SHADOW/LIVE_TEST settlements — real cases require a real
-  // bank/PSP record via the Reconciliation page.
-  const target = await prisma.settlement.findFirst({
-    where: { id: settlementId, organizationId: organization.id },
-    select: { testMode: true },
-  });
-  if (!target || target.testMode !== "DEMO") {
-    redirect(
-      `/settlements?reconcileRequired=${settlementId}&error=${encodeURIComponent(
-        "Demo reconciliation is only available in DEMO mode.",
-      )}`,
-    );
-  }
-
-  try {
-    await generateSettlementBankRecordAndReconcile(settlementId, user.id, organization.id);
-  } catch (error) {
-    redirect(
-      `/settlements?reconcileRequired=${settlementId}&error=${encodeURIComponent(friendlyErrorMessage(error))}`,
-    );
-  }
-  revalidateSettlementsPage();
-  redirect("/settlements?success=reconciled");
-}
-
 async function checkStatus(formData: FormData) {
   "use server";
   const { user, organization, membership } = await requireSession();
@@ -497,22 +428,18 @@ export default async function SettlementsPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    mode?: string;
     error?: string;
     success?: string;
     q?: string;
     status?: string;
     reconcileRequired?: string;
-    demo?: string;
     page?: string;
+    quoteId?: string;
   }>;
 }) {
   const { organization, membership } = await requireSession();
   const params = await searchParams;
-  const demoFocus = params.demo === "1";
-  const settlementWhere = demoFocus
-    ? demoSettlementWhere(organization.id)
-    : { organizationId: organization.id };
+  const settlementWhere = { organizationId: organization.id };
   const flashMessage = pageFlashMessage(params.success);
   const justCompleted =
     params.success === "reconciled" || params.success === "matched";
@@ -534,6 +461,7 @@ export default async function SettlementsPage({
         events: { orderBy: { createdAt: "asc" } },
         reconciliation: true,
         providerProofs: { orderBy: { receivedAt: "desc" } },
+        executionInstruction: { select: { id: true, updatedAt: true } },
       },
     }),
     // Display-only signal: is there anything for auto-match to work with?
@@ -549,7 +477,7 @@ export default async function SettlementsPage({
     prisma.providerConnection.findMany({
       where: {
         organizationId: organization.id,
-        status: { in: ["SANDBOX_READY", "PILOT_READY"] },
+        status: { in: ["INTEGRATION_VERIFIED", "COMMERCIAL_READY"] },
       },
       select: { providerCode: true },
     }),
@@ -557,7 +485,6 @@ export default async function SettlementsPage({
   const hasOpenRecords = openIndependentRecords > 0;
 
   const query = params.q?.toLowerCase().trim() ?? "";
-  const modeFilter = params.mode && ["DEMO", "SHADOW", "LIVE_TEST"].includes(params.mode) ? params.mode : null;
 
   // Case files: settlement + its full deterministic finality detail, computed
   // once and reused for stats, cards, evidence strips and the detail sheet.
@@ -573,8 +500,7 @@ export default async function SettlementsPage({
       settlement.publicId.toLowerCase().includes(query) ||
       settlement.reference.toLowerCase().includes(query);
     const matchesStatus = !params.status || settlement.status === params.status;
-    const matchesMode = !modeFilter || settlement.testMode === modeFilter;
-    return matchesSearch && matchesStatus && matchesMode;
+    return matchesSearch && matchesStatus;
   });
 
   // Pagination (Phase 4.1-lite): the case list never renders unbounded.
@@ -586,8 +512,6 @@ export default async function SettlementsPage({
     const sp = new URLSearchParams();
     if (params.q) sp.set("q", params.q);
     if (params.status) sp.set("status", params.status);
-    if (modeFilter) sp.set("mode", modeFilter);
-    if (demoFocus) sp.set("demo", "1");
     if (target > 1) sp.set("page", String(target));
     const qs = sp.toString();
     return qs ? `/settlements?${qs}` : "/settlements";
@@ -598,17 +522,6 @@ export default async function SettlementsPage({
   const reconciledCount = settlements.filter((s) => s.status === SettlementStatus.RECONCILED).length;
   const finalityReadyCount = caseFiles.filter(({ detail }) => detail.finality.decision === "ready_to_finalize").length;
   const needsReviewCount = caseFiles.filter(({ detail }) => detail.finality.decision === "needs_review").length;
-  const liveTestCases = settlements.filter((s) => s.testMode === "LIVE_TEST").length;
-
-  const modeHref = (mode: string | null) => {
-    const sp = new URLSearchParams();
-    if (params.q) sp.set("q", params.q);
-    if (params.status) sp.set("status", params.status);
-    if (demoFocus) sp.set("demo", "1");
-    if (mode) sp.set("mode", mode);
-    const qs = sp.toString();
-    return qs ? `/settlements?${qs}` : "/settlements";
-  };
   const autoRefreshSettlements = settlements.some(
     (s) =>
       s.status === SettlementStatus.EXECUTING ||
@@ -624,16 +537,14 @@ export default async function SettlementsPage({
     <div className="space-y-4">
       <AreaTabs area="settlements" />
       <PageHeader
-        title="Settlements"
-        description="Provider proof, reconciliation and approvals, tracked through to finality."
-        actions={demoFocus ? <DemoFocusBadge /> : undefined}
+        title="Settlement workspace"
+        description="Create, approve and operate provider-executed settlements from request through funding, evidence, reconciliation and finality."
         stats={[
-          { label: "Requested", value: requested, tone: requested ? ("pending" as const) : ("neutral" as const), href: `/settlements?status=REQUESTED${demoFocus ? "&demo=1" : ""}` },
+          { label: "Requested", value: requested, tone: requested ? ("pending" as const) : ("neutral" as const), href: "/settlements?status=REQUESTED" },
           { label: "In flight", value: inFlight, tone: "info" as const },
           { label: "Needs review", value: needsReviewCount, tone: needsReviewCount ? ("pending" as const) : ("neutral" as const) },
           { label: "Finality ready", value: finalityReadyCount, tone: "ok" as const },
-          { label: "Reconciled", value: reconciledCount, tone: "ok" as const, href: `/settlements?status=RECONCILED${demoFocus ? "&demo=1" : ""}` },
-          { label: "Live test", value: liveTestCases, tone: liveTestCases ? ("blocked" as const) : ("neutral" as const) },
+          { label: "Reconciled", value: reconciledCount, tone: "ok" as const, href: "/settlements?status=RECONCILED" },
         ]}
       />
 
@@ -644,32 +555,16 @@ export default async function SettlementsPage({
       ) : null}
       {flashMessage ? <SettlementPageFlash message={flashMessage} /> : null}
 
-      {/* Control bar: search + status + mode filters */}
-      <div className="ov-reveal ov-reveal-1 space-y-2">
+      <div className="ov-reveal ov-reveal-1">
         <Suspense fallback={null}>
           <FilterBar
             searchPlaceholder="Search ID or reference..."
             statusOptions={["REQUESTED", "APPROVED", "EXECUTING", "SETTLED", "RECONCILED"]}
           />
         </Suspense>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-400">Mode</span>
-          <Link href={modeHref(null)} className={cn("mode-filter", !modeFilter && "mode-filter--on")}>
-            All
-          </Link>
-          {(["DEMO", "SHADOW", "LIVE_TEST"] as const).map((mode) => (
-            <Link
-              key={mode}
-              href={modeHref(mode)}
-              className={cn("mode-filter", modeFilter === mode && "mode-filter--on")}
-            >
-              {MODE_LABEL[mode]}
-            </Link>
-          ))}
-          {justCompleted ? (
-            <span className="ml-auto case-chip border-emerald-200 bg-emerald-50 text-emerald-700">+1 completed just now</span>
-          ) : null}
-        </div>
+        {justCompleted ? (
+          <p className="mt-2 text-xs font-semibold text-emerald-700">Settlement completion recorded.</p>
+        ) : null}
       </div>
 
       {filteredCases.length ? (
@@ -721,13 +616,15 @@ export default async function SettlementsPage({
                     : finality.decision === "ready_to_finalize"
                       ? "Generate the settlement report and finalize — all three evidence sources agree."
                       : finality.recommendedActions[0] ?? null;
+            const settlementProviders = providers.filter((provider) =>
+              provider.supportedCorridors.includes(settlement.corridor),
+            );
 
             return (
               <article
                 key={settlement.id}
                 className={cn(
                   "scase",
-                  `scase--${settlement.testMode in MODE_CHIP_CLASS ? settlement.testMode : "DEMO"}`,
                   finality.riskLevel === "high"
                     ? "scase--fin-risk"
                     : finality.decision === "ready_to_finalize"
@@ -744,7 +641,6 @@ export default async function SettlementsPage({
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <p className="text-[15px] font-semibold tracking-tight text-slate-950">{settlement.publicId}</p>
-                      <ModeChip testMode={settlement.testMode} />
                       <StatusBadge status={settlement.status} />
                       <span
                         className={cn(
@@ -859,23 +755,30 @@ export default async function SettlementsPage({
                     >
                       <input type="hidden" name="settlementId" value={settlement.id} />
                       {settlement.status === SettlementStatus.REQUESTED ? (
-                        <SubmitButton
-                          name="status"
-                          value="APPROVED"
-                          variant="primary"
-                          size="sm"
-                          pendingText="Approving..."
-                          settlementId={settlement.id}
-                          action="approve"
-                        >
-                          Approve settlement
-                        </SubmitButton>
+                        <>
+                          <Button asChild variant="outline" size="sm">
+                            <Link href={`/settlements/${settlement.id}/execution`}>
+                              {settlement.executionInstruction ? "Review execution instruction" : "Add execution instruction"}
+                            </Link>
+                          </Button>
+                          <SubmitButton
+                            name="status"
+                            value="APPROVED"
+                            variant="primary"
+                            size="sm"
+                            pendingText="Approving..."
+                            settlementId={settlement.id}
+                            action="approve"
+                          >
+                            Approve settlement
+                          </SubmitButton>
+                        </>
                       ) : null}
                       {settlement.status === SettlementStatus.APPROVED ? (
                         <>
                           <input type="hidden" name="status" value="EXECUTING" />
-                          {providers.length > 0 ? (
-                          providers.map((provider) => (
+                          {settlementProviders.length > 0 ? (
+                          settlementProviders.map((provider) => (
                             <SubmitButton
                               key={provider.code}
                               name="providerCode"
@@ -890,15 +793,11 @@ export default async function SettlementsPage({
                             </SubmitButton>
                           ))
                           ) : (
-                          <SubmitButton
-                            variant="primary"
-                            size="sm"
-                            pendingText="Starting..."
-                            settlementId={settlement.id}
-                            action="execute"
-                          >
-                            Start external execution
-                          </SubmitButton>
+                          <Button asChild variant="outline" size="sm">
+                            <Link href={`/settlements/${settlement.id}/execution`}>
+                              Prepare provider execution
+                            </Link>
+                          </Button>
                           )}
                         </>
                       ) : null}
@@ -917,7 +816,7 @@ export default async function SettlementsPage({
                       ) : null}
                     </SettlementActionForm>
                   ) : !canApprove ? (
-                    <span className="case-chip case-chip--demo">Read-only role</span>
+                    <span className="case-chip">Read-only role</span>
                   ) : null}
                   {settlement.status === SettlementStatus.APPROVED || settlement.fundingStatus !== "NOT_REQUIRED" ? (
                     <Button asChild variant="outline" size="sm">
@@ -936,7 +835,7 @@ export default async function SettlementsPage({
                   settlement.reconciliation.length > 0 ? (
                     <>
                       <Button asChild variant="primary" size="sm">
-                        <Link href={`/reconciliation${demoFocus ? "?demo=1" : ""}`}>Open reconciliation</Link>
+                        <Link href="/reconciliation">Open reconciliation</Link>
                       </Button>
                       {canApprove && hasOpenRecords ? (
                         <form action={runAutoMatch}>
@@ -995,8 +894,8 @@ export default async function SettlementsPage({
                     <Link href={`/settlements/${settlement.id}/report`}>Report</Link>
                   </Button>
                   <Button asChild variant="outline" size="sm">
-                    <Link href={`/settlements/${settlement.id}/shadow`}>
-                      {settlement.testMode === "LIVE_TEST" ? "Live pilot" : "Shadow"}
+                    <Link href={`/settlements/${settlement.id}/controls`}>
+                      Finality review
                     </Link>
                   </Button>
                 </div>
@@ -1012,7 +911,6 @@ export default async function SettlementsPage({
                       canReconcile={canApprove}
                       autoMatchAction={runAutoMatch}
                       hasOpenRecords={hasOpenRecords}
-                      generateReconcileAction={settlement.testMode === "DEMO" ? generateAndReconcile : undefined}
                       reconcileRequired={params.reconcileRequired === settlement.id}
                       inlineError={params.reconcileRequired === settlement.id ? params.error : undefined}
                     />
@@ -1053,9 +951,7 @@ export default async function SettlementsPage({
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold tracking-tight text-slate-900">No settlement cases match</p>
             <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-              {modeFilter
-                ? `No ${MODE_LABEL[modeFilter as keyof typeof MODE_LABEL]} settlements. Set mode from a settlement's Shadow console.`
-                : "Create a settlement from an active quote, or adjust search and filters."}
+              Create a settlement from an active quote, or adjust search and filters.
             </p>
           </div>
           <Link
@@ -1068,7 +964,7 @@ export default async function SettlementsPage({
       )}
 
       {canCreate ? (
-      <Card>
+      <Card id="create-settlement" className="scroll-mt-24">
         <CardHeader>
           <CardTitle>Create settlement</CardTitle>
           <CardDescription>Only ACTIVE, unexpired quotes appear. The quote becomes ACCEPTED after creation.</CardDescription>
@@ -1084,6 +980,7 @@ export default async function SettlementsPage({
               <FormSelect
                 name="quoteId"
                 placeholder="Select quote"
+                defaultValue={quotes.some((quote) => quote.id === params.quoteId) ? params.quoteId : undefined}
                 required
                 disabled={quotes.length === 0}
                 options={
@@ -1097,7 +994,7 @@ export default async function SettlementsPage({
               />
             </Field>
             <Field label="Reference" htmlFor="reference" hint="Your internal batch identifier." required>
-              <Input id="reference" name="reference" placeholder="psp_batch_1842" required />
+              <Input id="reference" name="reference" required />
             </Field>
             <Field label="Source account" htmlFor="sourceAccount" hint="Account to debit." required>
               <Input id="sourceAccount" name="sourceAccount" required />
@@ -1122,7 +1019,7 @@ export default async function SettlementsPage({
       </Card>
       ) : (
         <div className="flex items-center gap-2 rounded-xl border border-[var(--ops-line)] bg-white px-3 py-2">
-          <span className="case-chip case-chip--demo">Read-only role</span>
+          <span className="case-chip">Read-only role</span>
           <p className="text-xs text-slate-500">
             You can review settlement cases, but creating settlements requires an operational role.
           </p>

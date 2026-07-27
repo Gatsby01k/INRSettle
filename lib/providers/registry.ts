@@ -15,16 +15,26 @@ import {
   PROVIDER as PONTIS_NAME,
 } from "@/lib/providers/pontis/settlement";
 import type { ProviderConnector } from "@/lib/providers/contracts";
+import { getSettlementInstruction } from "@/lib/settlement-instructions";
 
 const connectors: ProviderConnector[] = [
   {
     code: "pontis",
     displayName: "PontisGlobe",
     persistedName: PONTIS_NAME,
+    supportedCorridors: ["USDT_INR"],
     capabilities: ["india_settlement", "execute", "status_poll", "signed_webhook", "reconciliation_reference"],
+    authentication: ["jwt", "provider_gateway"],
+    credentialStrategy: "deployment_secret",
+    webhookVerification: "gateway_verified",
     isConfigured: () => isPontisGatewayConfigured() || isPontisConfigured(),
-    execute: ({ settlementId, userId, organizationId }) =>
-      executePontisSettlement(settlementId, userId, organizationId),
+    execute: async ({ settlementId, userId, organizationId }) =>
+      executePontisSettlement(
+        settlementId,
+        userId,
+        organizationId,
+        await getSettlementInstruction(settlementId, organizationId),
+      ),
     checkStatus: ({ settlementId, userId, organizationId }) =>
       checkPontisStatus(settlementId, userId, organizationId),
   },
@@ -32,10 +42,19 @@ const connectors: ProviderConnector[] = [
     code: "remitquickly",
     displayName: "RemitQuickly",
     persistedName: REMITQUICKLY_NAME,
+    supportedCorridors: ["USDT_INR"],
     capabilities: ["india_settlement", "execute", "status_poll", "signed_webhook", "reconciliation_reference"],
+    authentication: ["api_key_hmac"],
+    credentialStrategy: "deployment_secret",
+    webhookVerification: "hmac_raw_body",
     isConfigured: isRemitQuicklyConfigured,
-    execute: ({ settlementId, userId, organizationId }) =>
-      executeRemitQuicklySettlement(settlementId, userId, organizationId),
+    execute: async ({ settlementId, userId, organizationId }) =>
+      executeRemitQuicklySettlement(
+        settlementId,
+        userId,
+        organizationId,
+        await getSettlementInstruction(settlementId, organizationId),
+      ),
     checkStatus: ({ settlementId, userId, organizationId }) =>
       checkRemitQuicklyStatus(settlementId, userId, organizationId),
   },
@@ -46,7 +65,11 @@ export function providerCatalog() {
     code: connector.code,
     displayName: connector.displayName,
     persistedName: connector.persistedName,
+    supportedCorridors: [...connector.supportedCorridors],
     capabilities: [...connector.capabilities],
+    authentication: [...connector.authentication],
+    credentialStrategy: connector.credentialStrategy,
+    webhookVerification: connector.webhookVerification,
     configured: connector.isConfigured(),
     supportsStatusPoll: Boolean(connector.checkStatus),
   }));

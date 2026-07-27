@@ -1,60 +1,44 @@
 # RBAC matrix
 
-Current role capabilities, as enforced in code. Source of truth:
-`lib/permissions.ts` (gates), `lib/settlement-actions.ts` (lifecycle
-dual-control), the server actions in `app/(dashboard)/**`, and
-`lib/__tests__/permissions.test.ts` (which asserts this matrix).
+The enforcement sources are `lib/permissions.ts`,
+`lib/settlement-actions.ts`, server actions under `app/(dashboard)`, and
+`lib/__tests__/permissions.test.ts`.
 
-All data access is organization-scoped (`organizationId`) for every role —
-RBAC controls *what you can do*, membership controls *what you can see*.
+All operational data access is organization-scoped. Membership determines
+which organization a user can access; roles determine which actions that user
+may perform.
 
-| Capability | OWNER | ADMIN | TREASURY_MANAGER | SETTLEMENT_OPERATOR | COMPLIANCE_OFFICER | FINANCE_VIEWER |
-|---|---|---|---|---|---|---|
-| View dashboard | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Create quote | ✓ | ✓ | ✓ | ✓ | — | — |
-| Create settlement | ✓ | ✓ | ✓ | ✓ | — | — |
-| Record provider proof (manual) | ✓ | ✓ | ✓ | ✓ | — | — |
-| Add reconciliation record | ✓ | ✓ | ✓ | ✓ | — | — |
-| Run auto-match | ✓ | ✓ | ✓ | ✓ | — | — |
-| Approve lifecycle (REQUESTED → APPROVED) | ✓* | ✓* | ✓* | — | — | — |
-| Approve finality | ✓* | ✓* | ✓* | — | — | — |
-| Manage / confirm funding | ✓* | ✓* | ✓* | — | — | — |
-| View reports | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| View audit logs | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| View Provider Risk Shield | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Manage settings | ✓ | ✓ | — | — | — | — |
-| Compliance review / flag only | ✓ | ✓ | — | — | ✓ | — |
+| Capability | Owner | Admin | Treasury manager | Settlement operator | Compliance officer | Finance viewer |
+|---|---:|---:|---:|---:|---:|---:|
+| View operational workspaces | Yes | Yes | Yes | Yes | Yes | Yes |
+| Create quotes and settlements | Yes | Yes | Yes | Yes | No | No |
+| Record proof and reconciliation | Yes | Yes | Yes | Yes | No | No |
+| Approve another user's settlement | Yes | Yes | Yes | No | No | No |
+| Confirm funding for another user's settlement | Yes | Yes | Yes | No | No | No |
+| Record finality for another user's settlement | Yes | Yes | Yes | No | No | No |
+| Review due diligence and risk | Yes | Yes | No | No | Yes | No |
+| Manage providers and credentials | Yes | Yes | No | No | No | No |
+| Manage team and organization settings | Yes | Yes | No | No | No | No |
+| View evidence, reports, and audit history | Yes | Yes | Yes | Yes | Yes | Yes |
 
-`✓*` = **dual control**: the settlement **creator can never approve their own
-settlement** for lifecycle approval, funding confirmation or finality. A
-different user with an approval role must approve. Checks are enforced
-server-side in `lib/settlement-actions.ts`, settlement/funding actions and the
-finality action.
+## Dual control
 
-When `requireMfaForApproval` is enabled, approval and FUNDED confirmation also
-require `User.mfaEnabled=true` and a session MFA assertion no older than ten
-minutes. TOTP secrets are encrypted with `MFA_ENCRYPTION_KEY`; recovery codes
-are one-time keyed hashes. WebAuthn, administrative recovery and distributed
-IP/device rate limiting remain future hardening items.
+The settlement creator cannot approve their own lifecycle transition, funding
+confirmation, or finality decision. This is enforced server-side, not only by
+button visibility. When the organization requires MFA for approvals, the
+approver must have MFA enabled and a recent step-up assertion.
 
-## Role intents
+## Role intent
 
-- **OWNER / ADMIN** — full admin/write. Settings management, all operational
-  writes, approvals (never of their own settlements).
-- **TREASURY_MANAGER** — the approver/write role. Operational writes plus
-  lifecycle/finality approval of *other operators'* settlements.
-- **SETTLEMENT_OPERATOR** — operational writes (quotes, settlements, proof,
-  reconciliation), no approvals.
-- **COMPLIANCE_OFFICER** — read/compliance-only. `canManageCompliance` is
-  reserved; no quote/settlement/reconciliation mutations, no approvals.
-- **FINANCE_VIEWER** — read-only auditor. No mutations anywhere; blocked
-  server-side with "Read-only role cannot perform this action."
+- **Owner** and **Admin** manage tenant configuration and privileged controls.
+- **Treasury manager** is the operational approver for work created by another
+  user.
+- **Settlement operator** creates and maintains operational records but cannot
+  approve them.
+- **Compliance officer** reviews due diligence and risk without gaining
+  treasury execution permissions.
+- **Finance viewer** has read-only access to evidence, reconciliation, reports,
+  and audit history.
 
-## Next steps (documented, not yet implemented)
-
-- **Compliance "flag for review" action**: a minimal, audit-only action
-  (`compliance.flagged_for_review` event, no state transition) for
-  COMPLIANCE_OFFICER. Deferred to keep this hardening pass free of new
-  mutation surfaces.
-- In-app role management UI with `membership.role_changed` audit events
-  (script-side events exist today in `scripts/create-demo-approver.ts`).
+Role changes, provider credential changes, approvals, funding decisions,
+manual interventions, and finality decisions must all leave audit records.

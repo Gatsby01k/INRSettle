@@ -93,6 +93,45 @@ export async function PUT(request: NextRequest) {
         },
       },
     });
+    const activationRequested =
+      input.status === ProviderConnectionStatus.INTEGRATION_VERIFIED ||
+      input.status === ProviderConnectionStatus.COMMERCIAL_READY;
+    if (activationRequested && !catalogEntry.configured) {
+      return NextResponse.json(
+        { error: "The connector deployment configuration must be verified before this connection can be activated." },
+        { status: 409 },
+      );
+    }
+    const effectiveCredentialsRef =
+      input.credentialsRef === undefined ? before?.credentialsRef ?? null : input.credentialsRef;
+    if (
+      activationRequested &&
+      catalogEntry.credentialStrategy === "tenant_secret_reference" &&
+      !effectiveCredentialsRef
+    ) {
+      return NextResponse.json(
+        { error: "A tenant secret-manager reference is required before this connector can be activated." },
+        { status: 409 },
+      );
+    }
+    if (input.status === ProviderConnectionStatus.COMMERCIAL_READY) {
+      const approvedDueDiligence = await prisma.dueDiligenceCase.findUnique({
+        where: {
+          organizationId_subjectType_subjectRef: {
+            organizationId: context.organization.id,
+            subjectType: "PROVIDER",
+            subjectRef: input.providerCode,
+          },
+        },
+        select: { status: true },
+      });
+      if (approvedDueDiligence?.status !== "APPROVED") {
+        return NextResponse.json(
+          { error: "Approved provider due diligence is required before commercial activation." },
+          { status: 409 },
+        );
+      }
+    }
 
     const connection = await prisma.$transaction(async (tx) => {
       const saved = await tx.providerConnection.upsert({

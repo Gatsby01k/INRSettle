@@ -5,6 +5,7 @@ import { AuditActorType, Prisma, ProofReceivedVia, type ProviderProof } from "@p
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
 import { UserFacingError } from "@/lib/errors";
+import { redactProviderPayload } from "@/lib/providers/redaction";
 
 export type { ProviderProof };
 export { ProofReceivedVia };
@@ -29,7 +30,7 @@ export type RecordProviderProofInput = {
 
 function asJson(value: unknown): Prisma.InputJsonValue | undefined {
   if (value === undefined || value === null) return undefined;
-  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+  return JSON.parse(JSON.stringify(redactProviderPayload(value))) as Prisma.InputJsonValue;
 }
 
 function asDecimal(value: number | string | null | undefined): Prisma.Decimal | null {

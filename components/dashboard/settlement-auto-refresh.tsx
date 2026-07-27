@@ -16,8 +16,8 @@ export type SettlementAction = "approve" | "execute" | "settle" | "check" | "rec
 export const ACTION_STEPS: Record<SettlementAction, string[]> = {
   approve: ["Validating settlement", "Approving request", "Ready for execution"],
   execute: [
-    "Creating Pontis payout",
-    "Receiving transaction id",
+    "Creating provider operation",
+    "Receiving provider reference",
     "Checking provider status",
     "Settling settlement",
     "Reconciling records",
@@ -32,7 +32,7 @@ const EXECUTING_STEPS = [
   "Payout request created",
   "Waiting for provider status",
   "Settlement update",
-  "Auto-reconciliation",
+  "Reconciliation",
 ];
 
 export type OperationPanelSettlement = {
@@ -153,10 +153,6 @@ function resolvePanelState(
   return null;
 }
 
-function providerLabel(mode: "sandbox" | "live") {
-  return mode === "sandbox" ? "PontisGlobe sandbox" : "PontisGlobe";
-}
-
 export function SettlementActionsProvider({ children }: { children: ReactNode }) {
   const [pendingAction, setPendingActionState] = useState<PendingAction | null>(null);
 
@@ -248,7 +244,7 @@ export function useSettlementActionStep(settlementId?: string, action?: Settleme
 
 const ROW_STATUS_HINTS: Record<string, string> = {
   APPROVED: "Ready to execute",
-  EXECUTING: "Tracking via PontisGlobe",
+  EXECUTING: "Tracking provider execution",
   SETTLED: "Payout completed",
   RECONCILED: "Reconciled automatically",
 };
@@ -307,13 +303,13 @@ export function SettlementOperationPanel({
           <div>
             <p className="text-sm font-semibold text-slate-900">Ready for provider execution</p>
             <p className="mt-1 text-sm text-slate-600">
-              Settlement approved. Execute payout via PontisGlobe to start provider tracking.
+              Settlement approved. Select an eligible provider connection to begin external execution.
             </p>
           </div>
           <MetadataChip label="Next step" value="Execute payout" />
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          <MetadataChip label="Provider" value={providerLabel("sandbox")} />
+          <MetadataChip label="Provider" value={focusSettlement.provider ?? "Selected at execution"} />
           <MetadataChip label="Amount" value={focusSettlement.amount} />
           {focusSettlement.corridor ? (
             <MetadataChip label="Route" value={focusSettlement.corridor} />
@@ -331,7 +327,7 @@ export function SettlementOperationPanel({
           <div>
             <p className="text-sm font-semibold text-slate-900">Provider execution in progress</p>
             <p className="mt-1 text-sm text-slate-600">
-              INRSettle is tracking the payout status from PontisGlobe.
+              INRSettle is tracking the external provider operation and recorded status.
             </p>
           </div>
           <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full border border-cyan-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-cyan-700">
@@ -344,7 +340,7 @@ export function SettlementOperationPanel({
         </div>
         {focusSettlement ? (
           <div className="mt-3 flex flex-wrap gap-2 border-t border-cyan-100 pt-3">
-            <MetadataChip label="Provider" value={providerLabel("sandbox")} />
+            <MetadataChip label="Provider" value={focusSettlement.provider ?? "Integrated provider"} />
             {focusSettlement.amount ? <MetadataChip label="Amount" value={focusSettlement.amount} /> : null}
             {focusSettlement.providerTransactionId ? (
               <MetadataChip label="Transaction" value={focusSettlement.providerTransactionId} />
@@ -371,7 +367,9 @@ export function SettlementOperationPanel({
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <div className="flex items-center justify-between rounded-lg border border-emerald-100 bg-white px-3 py-2 text-xs">
             <span className="text-slate-500">Provider</span>
-            <span className="font-medium text-slate-800">{providerLabel("live")}</span>
+            <span className="font-medium text-slate-800">
+              {focusSettlement.provider ?? "Integrated provider"}
+            </span>
           </div>
           <div className="flex items-center justify-between rounded-lg border border-emerald-100 bg-white px-3 py-2 text-xs">
             <span className="text-slate-500">Provider status</span>

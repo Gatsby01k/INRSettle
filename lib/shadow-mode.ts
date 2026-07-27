@@ -1,64 +1,53 @@
-// Shadow test testMode: caps, safety checks, and the readiness checklist for
-// SHADOW / LIVE_TEST settlements.
+// Operating posture controls: caps, safety checks, and the readiness checklist for
+// PROVIDER_OBSERVED / CONTROLLED_PILOT settlements.
 //
-// Core principle: INRSettle NEVER moves funds directly. In SHADOW and
-// LIVE_TEST modes a partner/provider moves money externally while INRSettle
+// Core principle: INRSettle NEVER moves funds directly. In PROVIDER_OBSERVED and
+// CONTROLLED_PILOT modes a partner/provider moves money externally while INRSettle
 // records and controls the operational layer (quote → settlement → provider
 // proof → independent reconciliation → audit trail → finality → report).
 //
 // Everything here is deterministic and takes config/data as parameters so it
-// can be unit-tested; only `getShadowConfig` / `isLivePayoutDisabled` read the
-// environment.
+// can be unit-tested; only `getShadowConfig` reads the environment.
 
 import { isIndependentReconciliationSource } from "@/lib/reconciliation";
 import { hasAuditApproval, type EventLike, type NumberLike } from "@/lib/finality-input";
 import type { FinalitySafetyInput } from "@/lib/finality";
 
-export type SettlementMode = "DEMO" | "SHADOW" | "LIVE_TEST";
+export type SettlementMode = "EVIDENCE_ONLY" | "PROVIDER_OBSERVED" | "CONTROLLED_PILOT";
 
-export const SETTLEMENT_MODES: SettlementMode[] = ["DEMO", "SHADOW", "LIVE_TEST"];
+export const SETTLEMENT_MODES: SettlementMode[] = ["EVIDENCE_ONLY", "PROVIDER_OBSERVED", "CONTROLLED_PILOT"];
 
 export const MODE_LABEL: Record<SettlementMode, string> = {
-  DEMO: "Demo",
-  SHADOW: "Shadow",
-  LIVE_TEST: "Live test",
+  EVIDENCE_ONLY: "Evidence-only",
+  PROVIDER_OBSERVED: "Provider-observed",
+  CONTROLLED_PILOT: "Controlled pilot",
 };
 
 export const MODE_DESCRIPTION: Record<SettlementMode, string> = {
-  DEMO: "Simulated data — no real-world funds involved.",
-  SHADOW: "Real-world operation tracked by INRSettle. Money moves externally via a partner/provider; INRSettle does not move funds.",
-  LIVE_TEST: "Tiny, capped, manually guarded provider test. INRSettle does not move funds directly.",
+  EVIDENCE_ONLY: "Evidence review without an automated provider instruction.",
+  PROVIDER_OBSERVED: "External provider activity is observed, evidenced and reconciled.",
+  CONTROLLED_PILOT: "Provider submission is constrained by explicit limits and approvals.",
 };
 
 export type ShadowConfig = {
-  /** Maximum INR leg for a SHADOW settlement. */
-  shadowMaxInr: number;
-  /** Maximum INR leg for a LIVE_TEST settlement (tighter than shadow). */
-  liveTestMaxInr: number;
-  /** Maximum cumulative LIVE_TEST INR volume per calendar day. */
-  liveTestDailyMaxInr: number;
-  /** Providers allowed to participate in LIVE_TEST pilots. */
-  liveTestAllowedProviders: string[];
-  /** Manual proof entry must be available/required for shadow tests. */
+  /** Maximum INR leg for a CONTROLLED_PILOT settlement (tighter than shadow). */
+  controlledPilotMaxInr: number;
+  /** Maximum cumulative CONTROLLED_PILOT INR volume per calendar day. */
+  controlledPilotDailyMaxInr: number;
+  /** Providers allowed to participate in CONTROLLED_PILOT pilots. */
+  controlledPilotAllowedProviders: string[];
+  /** Manual proof entry is available when provider evidence arrives out of band. */
   requireManualProof: boolean;
-  /** Independent reconciliation is required for shadow finality. */
+  /** Independent reconciliation is required for finality. */
   requireIndependentReconciliation: boolean;
-  /**
-   * True only if someone explicitly sets LIVE_PAYOUTS_ENABLED=true. Nothing in
-   * the codebase sets it; finality BLOCKS shadow/live-test settlements when it
-   * is on, as an extra tripwire.
-   */
-  livePayoutsEnabled: boolean;
 };
 
 export const DEFAULT_SHADOW_CONFIG: ShadowConfig = {
-  shadowMaxInr: 10_000,
-  liveTestMaxInr: 1_000,
-  liveTestDailyMaxInr: 2_000,
-  liveTestAllowedProviders: ["remitquickly", "PontisGlobe"],
+  controlledPilotMaxInr: 1_000,
+  controlledPilotDailyMaxInr: 2_000,
+  controlledPilotAllowedProviders: ["remitquickly", "PontisGlobe"],
   requireManualProof: true,
   requireIndependentReconciliation: true,
-  livePayoutsEnabled: false,
 };
 
 function envNumber(name: string, fallback: number): number {
@@ -68,19 +57,23 @@ function envNumber(name: string, fallback: number): number {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
-/** Reads the shadow-test configuration from the environment (with safe defaults). */
+/** Reads operating guardrails from the environment with conservative defaults. */
 export function getShadowConfig(): ShadowConfig {
-  const allowedRaw = process.env.LIVE_TEST_ALLOWED_PROVIDERS?.trim();
+  const allowedRaw = process.env.CONTROLLED_PILOT_ALLOWED_PROVIDERS?.trim();
   return {
-    shadowMaxInr: envNumber("SHADOW_MAX_INR", DEFAULT_SHADOW_CONFIG.shadowMaxInr),
-    liveTestMaxInr: envNumber("LIVE_TEST_MAX_INR", DEFAULT_SHADOW_CONFIG.liveTestMaxInr),
-    liveTestDailyMaxInr: envNumber("LIVE_TEST_DAILY_MAX_INR", DEFAULT_SHADOW_CONFIG.liveTestDailyMaxInr),
-    liveTestAllowedProviders: allowedRaw
+    controlledPilotMaxInr: envNumber(
+      "CONTROLLED_PILOT_MAX_INR",
+      DEFAULT_SHADOW_CONFIG.controlledPilotMaxInr,
+    ),
+    controlledPilotDailyMaxInr: envNumber(
+      "CONTROLLED_PILOT_DAILY_MAX_INR",
+      DEFAULT_SHADOW_CONFIG.controlledPilotDailyMaxInr,
+    ),
+    controlledPilotAllowedProviders: allowedRaw
       ? allowedRaw.split(",").map((value) => value.trim()).filter(Boolean)
-      : DEFAULT_SHADOW_CONFIG.liveTestAllowedProviders,
+      : DEFAULT_SHADOW_CONFIG.controlledPilotAllowedProviders,
     requireManualProof: true,
     requireIndependentReconciliation: true,
-    livePayoutsEnabled: process.env.LIVE_PAYOUTS_ENABLED === "true",
   };
 }
 
@@ -114,10 +107,9 @@ export function inrLegOf(settlement: ShadowSettlementLike): number {
   return 0;
 }
 
-/** The applicable cap for a mode, or null when the mode is uncapped (DEMO). */
+/** The applicable cap for an operating posture. */
 export function modeCap(mode: string | null | undefined, config: ShadowConfig): number | null {
-  if (mode === "SHADOW") return config.shadowMaxInr;
-  if (mode === "LIVE_TEST") return config.liveTestMaxInr;
+  if (mode === "CONTROLLED_PILOT") return config.controlledPilotMaxInr;
   return null;
 }
 
@@ -127,13 +119,13 @@ export function isWithinCap(settlement: ShadowSettlementLike, config: ShadowConf
   return inrLegOf(settlement) <= cap;
 }
 
-/** The safety block passed into the finality engine for SHADOW/LIVE_TEST settlements. */
+/** The safety block passed into the finality engine for PROVIDER_OBSERVED/CONTROLLED_PILOT settlements. */
 export function safetyFor(settlement: ShadowSettlementLike, config: ShadowConfig): FinalitySafetyInput {
   const cap = modeCap(settlement.testMode, config);
   return {
     withinCap: isWithinCap(settlement, config),
     capLabel: cap !== null ? `INR ${cap.toLocaleString("en-IN")}` : "uncapped",
-    livePayoutsDisabled: !config.livePayoutsEnabled,
+    executionBoundaryConfirmed: true,
   };
 }
 
@@ -147,7 +139,7 @@ export type ChecklistItem = {
 };
 
 /**
- * The shadow-test readiness checklist. Every item is derived deterministically
+ * The finality readiness checklist. Every item is derived deterministically
  * from persisted data + config — nothing is self-attested without evidence.
  */
 export function buildShadowChecklist(
@@ -186,7 +178,7 @@ export function buildShadowChecklist(
       label: "Beneficiary details recorded",
       done: Boolean(settlement.targetAccount && settlement.targetAccount.trim().length >= 3),
       detail: settlement.targetAccount?.trim()
-        ? "Target account is present. Verify the restricted identifier against partner records before any live test."
+        ? "Target account is present. Verify the restricted identifier against provider records before execution."
         : "Record the beneficiary/target account.",
     },
     {
@@ -215,12 +207,10 @@ export function buildShadowChecklist(
         : "Link an independent record on the Reconciliation page — provider claims never count.",
     },
     {
-      key: "live_payout_disabled",
-      label: "Live payouts disabled",
-      done: !config.livePayoutsEnabled,
-      detail: config.livePayoutsEnabled
-        ? "LIVE_PAYOUTS_ENABLED is set — turn it OFF before any shadow/live test."
-        : "Live payouts are structurally off (sandbox isTest stays true; no live flag set).",
+      key: "execution_boundary",
+      label: "External execution boundary",
+      done: true,
+      detail: "The integrated provider performs execution; INRSettle records workflow and evidence.",
     },
     {
       key: "finality_report",
@@ -242,8 +232,8 @@ export function isSettlementMode(value: string): value is SettlementMode {
 }
 
 /**
- * LIVE_TEST entry is gated by HARD GUARDRAILS only — checks that must hold
- * BEFORE the external money movement: caps, the live-payout tripwire,
+ * CONTROLLED_PILOT entry is gated by HARD GUARDRAILS only — checks that must hold
+ * BEFORE the external provider execution: caps,
  * beneficiary on file, operator approval, and (when known) an allowlisted
  * provider.
  *
@@ -251,7 +241,7 @@ export function isSettlementMode(value: string): value is SettlementMode {
  * settlement report, second approval) deliberately does NOT gate entry: it is
  * produced after the partner moves money, and it is strictly enforced where it
  * belongs — finality review (lib/finality.ts) and live-pilot readiness
- * (lib/live-pilot.ts). Splitting these lets the pilot enter LIVE_TEST first so
+ * (lib/live-pilot.ts). Splitting these lets the pilot enter CONTROLLED_PILOT first so
  * caps and the allowlist bind during the actual money movement.
  */
 const LIVE_TEST_ENTRY_CHECKLIST_KEYS = ["beneficiary_verified", "operator_approval"] as const;
@@ -267,35 +257,31 @@ export function modeChangeViolations(
   checklist: ChecklistItem[],
   config: ShadowConfig,
   options: {
-    /** Today's LIVE_TEST INR volume excluding this settlement (daily cap check). */
+    /** Today's CONTROLLED_PILOT INR volume excluding this settlement (daily cap check). */
     dailyUsedInrExcludingThis?: number;
   } = {},
 ): string[] {
   const violations: string[] = [];
 
-  if (newMode === "DEMO") return violations;
+  if (newMode === "EVIDENCE_ONLY") return violations;
 
-  if (config.livePayoutsEnabled) {
-    violations.push("LIVE_PAYOUTS_ENABLED is set — shadow/live-test modes are blocked until it is off.");
-  }
-
-  const cap = newMode === "SHADOW" ? config.shadowMaxInr : config.liveTestMaxInr;
+  const cap = newMode === "CONTROLLED_PILOT" ? config.controlledPilotMaxInr : null;
   const inrLeg = inrLegOf(settlement);
   if (inrLeg <= 0) {
     violations.push("The settlement has no positive INR leg.");
-  } else if (inrLeg > cap) {
+  } else if (cap !== null && inrLeg > cap) {
     violations.push(
       `INR leg ${inrLeg.toLocaleString("en-IN")} exceeds the ${MODE_LABEL[newMode]} cap of ${cap.toLocaleString("en-IN")}.`,
     );
   }
 
-  if (newMode === "LIVE_TEST") {
+  if (newMode === "CONTROLLED_PILOT") {
     // Daily cap (when today's usage is supplied by the caller).
     if (options.dailyUsedInrExcludingThis !== undefined && inrLeg > 0) {
       const dailyTotal = options.dailyUsedInrExcludingThis + inrLeg;
-      if (dailyTotal > config.liveTestDailyMaxInr) {
+      if (dailyTotal > config.controlledPilotDailyMaxInr) {
         violations.push(
-          `Daily LIVE_TEST cap exceeded: today's volume would reach INR ${dailyTotal.toLocaleString("en-IN")} of ${config.liveTestDailyMaxInr.toLocaleString("en-IN")}.`,
+          `Daily controlled-pilot cap exceeded: today's volume would reach INR ${dailyTotal.toLocaleString("en-IN")} of ${config.controlledPilotDailyMaxInr.toLocaleString("en-IN")}.`,
         );
       }
     }
@@ -304,9 +290,9 @@ export function modeChangeViolations(
     // (The provider is often assigned at execution; live-pilot readiness
     // re-checks it as a blocking guardrail after execution.)
     const provider = settlement.provider?.trim();
-    if (provider && !config.liveTestAllowedProviders.some((a) => a.toLowerCase() === provider.toLowerCase())) {
+    if (provider && !config.controlledPilotAllowedProviders.some((a) => a.toLowerCase() === provider.toLowerCase())) {
       violations.push(
-        `${provider} is not on the LIVE_TEST provider allowlist (${config.liveTestAllowedProviders.join(", ")}).`,
+        `${provider} is not on the controlled-pilot provider allowlist (${config.controlledPilotAllowedProviders.join(", ")}).`,
       );
     }
 

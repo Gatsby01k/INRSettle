@@ -114,11 +114,11 @@ export async function updateSettlementFunding(input: UpdateFundingInput) {
     if (
       providerCode !== "manual" &&
       (!connection ||
-        (connection.status !== ProviderConnectionStatus.SANDBOX_READY &&
-          connection.status !== ProviderConnectionStatus.PILOT_READY))
+        (connection.status !== ProviderConnectionStatus.INTEGRATION_VERIFIED &&
+          connection.status !== ProviderConnectionStatus.COMMERCIAL_READY))
     ) {
       throw new UserFacingError(
-        `Funding provider ${providerCode} requires a SANDBOX_READY or PILOT_READY tenant connection.`,
+        `Funding provider ${providerCode} requires an integration-verified or commercially enabled tenant connection.`,
       );
     }
 

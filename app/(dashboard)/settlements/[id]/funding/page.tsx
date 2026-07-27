@@ -106,7 +106,7 @@ export default async function FundingPage({
   const connections = await prisma.providerConnection.findMany({
     where: {
       organizationId: organization.id,
-      status: { in: ["SANDBOX_READY", "PILOT_READY"] },
+      status: { in: ["INTEGRATION_VERIFIED", "COMMERCIAL_READY"] },
     },
     orderBy: { displayName: "asc" },
   });

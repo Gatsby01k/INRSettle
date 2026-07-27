@@ -2,33 +2,50 @@ import { OrganizationStatus, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
 
+function required(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required for the bootstrap seed.`);
+  return value;
+}
+
 async function main() {
-  const passwordHash = await bcrypt.hash("ChangeMe123!", 12);
+  const email = required("BOOTSTRAP_ADMIN_EMAIL").toLowerCase();
+  const name = required("BOOTSTRAP_ADMIN_NAME");
+  const password = required("BOOTSTRAP_ADMIN_PASSWORD");
+  const organizationId = required("BOOTSTRAP_ORGANIZATION_ID");
+  const legalName = required("BOOTSTRAP_ORGANIZATION_LEGAL_NAME");
+  const displayName = required("BOOTSTRAP_ORGANIZATION_DISPLAY_NAME");
+  const country = process.env.BOOTSTRAP_ORGANIZATION_COUNTRY?.trim().toUpperCase() || "IN";
+
+  if (password.length < 14) {
+    throw new Error("BOOTSTRAP_ADMIN_PASSWORD must contain at least 14 characters.");
+  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    throw new Error("BOOTSTRAP_ADMIN_EMAIL must be a valid email address.");
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
 
   const user = await prisma.user.upsert({
-    where: { email: "ops@inrsettle.com" },
-    update: {},
+    where: { email },
+    update: { name },
     create: {
-      email: "ops@inrsettle.com",
-      name: "INRSettle Operator",
+      email,
+      name,
       passwordHash,
-      // Real MFA is enrolled interactively from /security; a boolean without a
-      // TOTP secret is no longer treated as enrollment.
       mfaEnabled: false,
     },
   });
 
   const organization = await prisma.organization.upsert({
-    where: { id: "demo-org" },
-    update: {},
+    where: { id: organizationId },
+    update: { legalName, displayName, country },
     create: {
-      id: "demo-org",
-      legalName: "INRSettle Demo Payments Pvt Ltd",
-      displayName: "INRSettle Demo",
-      country: "IN",
+      id: organizationId,
+      legalName,
+      displayName,
+      country,
       status: OrganizationStatus.ACTIVE,
-      settlementLimit: "10000000",
-      dailyLimit: "50000000",
     },
   });
 
@@ -54,12 +71,11 @@ async function main() {
       organizationId: organization.id,
       approvalThreshold: "2500000",
       quoteTtlSeconds: 900,
-      reconciliationEmail: "finance@inrsettle.com",
-      webhookUrl: "https://example.com/webhooks/inrsettle",
+      reconciliationEmail: process.env.BOOTSTRAP_RECONCILIATION_EMAIL?.trim() || email,
     },
   });
 
-  console.log("Seeded demo login: ops@inrsettle.com / ChangeMe123!");
+  console.log(`Bootstrap complete for ${displayName}. Enroll MFA before granting operational access.`);
 }
 
 main()

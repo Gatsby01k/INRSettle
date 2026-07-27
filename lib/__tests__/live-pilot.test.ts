@@ -3,13 +3,13 @@ import { DEFAULT_SHADOW_CONFIG } from "../shadow-mode";
 import { buildLivePilotReadiness, isProviderAllowedForLiveTest, type LivePilotFlags } from "../live-pilot";
 
 // Defaults: per-settlement cap 1,000 INR; daily cap 2,000 INR;
-// allowed providers remitquickly + PontisGlobe; live payouts off.
+// allowed providers remitquickly + PontisGlobe.
 const config = { ...DEFAULT_SHADOW_CONFIG };
 
 const settlement = {
   publicId: "SET-PILOT-1",
   status: "SETTLED",
-  testMode: "LIVE_TEST",
+  testMode: "CONTROLLED_PILOT",
   provider: "remitquickly",
   sourceCurrency: "USDT",
   targetCurrency: "INR",
@@ -61,7 +61,7 @@ describe("ready only when everything passes", () => {
 });
 
 describe("hard guardrails -> blocked (cannot bypass)", () => {
-  it("LIVE_TEST over the per-settlement cap is blocked even with perfect evidence", () => {
+  it("CONTROLLED_PILOT over the per-settlement cap is blocked even with perfect evidence", () => {
     const result = readiness({ settlement: { targetAmount: "1001.00" } });
     expect(result.decision).toBe("blocked");
     expect(result.blockedReasons.join(" ")).toMatch(/EXCEEDS the cap/);
@@ -79,11 +79,6 @@ describe("hard guardrails -> blocked (cannot bypass)", () => {
     expect(result.blockedReasons.join(" ")).toMatch(/not on the allowlist/);
   });
 
-  it("LIVE_PAYOUTS_ENABLED tripwire blocks the pilot", () => {
-    const result = readiness({ config: { livePayoutsEnabled: true } });
-    expect(result.decision).toBe("blocked");
-    expect(result.blockedReasons.join(" ")).toMatch(/must not move funds/);
-  });
 });
 
 describe("missing evidence -> needs_review (never ready)", () => {

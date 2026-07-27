@@ -1,86 +1,106 @@
-# INRSettle Operations Notes
+# INRSettle operations
 
-## Operating Model
+INRSettle is a Settlement Operations Platform. It records and controls the
+workflow around settlement; integrated providers execute settlement and, where
+contracted, supply liquidity. INRSettle does not custody funds, provide
+liquidity, or become the system of record for a bank balance.
 
-INRSettle should be operated as a B2B settlement-operations control and evidence platform for verified PSPs, merchants, payment operators, and treasury teams. It is not a PSP, exchange, payout provider, liquidity network or custodian.
+## Lifecycle
 
-## Client Onboarding
+1. A time-bound quote records the commercial inputs.
+2. An operator creates a settlement request.
+3. A different authorized user approves the request.
+4. Funding status is recorded against the designated settlement account.
+5. Encrypted execution instructions are released only to the selected provider.
+6. The provider accepts and executes the instruction.
+7. Provider proof is captured as evidence, not treated as finality.
+8. Independent bank or PSP evidence is reconciled.
+9. An authorized reviewer records the finality decision.
+10. The completed record and append-only audit history remain available for
+    review and export.
 
-Recommended onboarding sequence:
+Exceptions never disappear into the normal queue. They are surfaced in the
+Exception Center and retain their provider references, evidence, attempts, and
+operator decisions.
 
-1. Access request submitted.
-2. Business profile reviewed.
-3. KYB documentation collected.
-4. Corridor and use case assessed.
-5. Settlement limits and workflows approved.
-6. Dashboard access provisioned; service API access is not available until service authentication is implemented.
-7. Test settlement lifecycle completed.
-8. Production access enabled.
+## Provider execution safety
 
-## Settlement Lifecycle
+- Every request has a stable idempotency key.
+- Provider capabilities and corridor support are checked before an operation is
+  created.
+- Credentials remain server-side and connector-specific.
+- Submitted execution operations are never retried automatically because the
+  provider may already have acted.
+- Failed status checks are retried with bounded exponential backoff by
+  `/api/internal/provider-retries`.
+- Recent connector failures open a circuit and stop new execution requests.
+- `REVIEW_REQUIRED` means the provider may have received the request. An
+  operator must check provider status or use the controlled no-side-effect
+  attestation workflow; it must not be resubmitted as a new instruction.
+- Webhook signatures are verified before payload processing. Stored payloads
+  are redacted before persistence.
 
-1. Time-boxed quote created.
-2. Settlement created and approved under dual control.
-3. Funding marked not required or tracked through to funded.
-4. External provider execution is requested through an explicitly selected connector, or a shadow operation is recorded manually.
-5. Provider claim/proof is captured; it does not establish finality by itself.
-6. Independent bank/PSP evidence is reconciled.
-7. Finality review and evidence report are generated.
+Configure the scheduler with a random `CRON_SECRET` of at least 32 characters.
+The included `vercel.json` invokes the retry worker every two minutes.
 
-### Uncertain provider execution
+## Deployment
 
-- `REVIEW_REQUIRED` means the provider may have received the request; never submit it again automatically.
-- First use **Sync provider status** on `/providers`. This creates a separate status-check operation and closes the original only when the settlement reaches a final provider-derived state.
-- **Confirm no side effect** is allowed only for a different approver with a fresh MFA step-up, an exact attestation phrase, a substantive external-verification note, and no provider reference. It atomically resolves the operation and moves the settlement to `FAILED`; it never resets or retries it.
-- Queue/DLQ automation and a durable Pontis gateway callback outbox are still required before production.
+Required release sequence:
 
-## Support Model
+```text
+npm ci
+npx prisma generate
+npm run typecheck
+npm run lint
+npm test
+npm run build
+npx prisma migrate deploy
+```
 
-Recommended channels:
+Deploy migrations before sending traffic to a release that reads new columns.
+`prisma migrate status` must report that the database schema is current.
 
-- Dedicated business support email
-- Incident escalation contact
-- Treasury operations channel
-- Status page
+Generate independent secrets for session signing, MFA encryption, settlement
+instruction encryption, API credential hashing, and the retry scheduler. Do not
+reuse one value across these controls. Production PostgreSQL connections must
+use certificate verification (`sslmode=verify-full`).
 
-## Security Requirements
+## Access and approvals
 
-For the production application layer, implement:
+- Membership establishes tenant access; every operational query is scoped by
+  `organizationId`.
+- RBAC controls actions within the tenant.
+- Creation and approval are separated. A settlement creator cannot approve
+  lifecycle, funding, or finality for the same settlement.
+- Organizations can require recent MFA step-up for approval and funding
+  actions.
+- Privileged mutations create audit events with actor, organization, target,
+  time, and non-sensitive context.
 
-- MFA
-- RBAC
-- audit logs
-- signed webhooks
-- API key rotation
-- encrypted data storage
-- client-level permissions
-- IP allowlisting for API clients
+See `docs/rbac-matrix.md` and `docs/security-controls.md`.
 
-### MFA operations
+## Incident response
 
-- Set `MFA_ENCRYPTION_KEY` to an independently generated base64url 32-byte key.
-- Users enroll TOTP under `/settings/security`; the secret is AES-256-GCM encrypted and recovery codes are stored only as keyed hashes.
-- Approval, funding confirmation and finality approval require a successful MFA step-up within the previous 10 minutes when organization policy is enabled.
-- Five consecutive password/MFA failures lock the account for 15 minutes. A distributed IP/device rate limiter is still required before production exposure.
-- Back up and rotate the encryption key through a documented decrypt/re-encrypt procedure; losing it makes enrolled TOTP secrets unrecoverable.
+For a provider timeout or ambiguous response:
 
-## Compliance Requirements
+1. Stop new execution requests for the affected connector.
+2. Preserve the original operation and idempotency key.
+3. Poll status through the existing provider reference.
+4. Compare provider evidence with independent bank evidence.
+5. Escalate unresolved operations through Manual Intervention.
+6. Record the decision and supporting evidence in the audit trail.
 
-Before full launch, obtain qualified legal review for:
+Never “fix” an uncertain operation by creating a replacement request. See
+`docs/incident-handling-playbook.md` for ownership and evidence requirements.
 
-- India payment exposure
-- stablecoin settlement workflows
-- AML monitoring obligations
-- KYB documentation requirements
-- counterparty screening
-- sanctions controls
-- travel rule applicability where relevant
+## External production prerequisites
 
-## Website Maintenance
+Code readiness does not replace partner and organizational controls. Before
+real client settlement operations, each deployment still requires:
 
-When adding new pages:
-
-1. Add the page link to navigation or footer.
-2. Add the URL to `sitemap.xml`.
-3. Ensure no `.svg` references are introduced unless the asset exists.
-4. Keep copy institutional and infrastructure-first.
+- executed provider and data-processing agreements;
+- provider production credentials and documented corridor capabilities;
+- approved client due diligence and operating limits;
+- named incident contacts and reconciliation cut-off times;
+- tested backup, restore, key rotation, and incident procedures;
+- qualified legal, regulatory, and independent security review.

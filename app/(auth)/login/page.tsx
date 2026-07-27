@@ -11,10 +11,8 @@ import {
   recordAuthenticationSuccess,
 } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
-import { getDemoCredentials } from "@/lib/demo";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { AuthHero } from "@/components/auth/auth-hero";
-import { DemoAccessBlock } from "@/components/auth/demo-access-block";
 import { LoginForm, type LoginState } from "@/components/auth/login-form";
 import { verifyUserMfaChallenge } from "@/lib/mfa";
 
@@ -75,8 +73,6 @@ async function login(_prev: LoginState, formData: FormData): Promise<LoginState>
 export default async function LoginPage() {
   const session = await getSession();
   if (session) redirect("/dashboard");
-
-  const demoCredentials = getDemoCredentials();
 
   return (
     <AuthLayout hero={<AuthHero />}>
@@ -144,12 +140,6 @@ export default async function LoginPage() {
           Request access
         </Link>
       </p>
-
-      {demoCredentials ? (
-        <div className="mt-6">
-          <DemoAccessBlock credentials={demoCredentials} />
-        </div>
-      ) : null}
 
       <p className="mt-8 border-t border-slate-200/70 pt-5 text-[12px] leading-relaxed text-slate-400">
         Restricted environment. Access is logged for compliance and audit purposes.

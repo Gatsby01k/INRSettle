@@ -11,12 +11,12 @@ import {
   type ShadowSettlementLike,
 } from "../shadow-mode";
 
-const config = { ...DEFAULT_SHADOW_CONFIG }; // shadow 10,000 / live test 1,000 / payouts off
+const config = { ...DEFAULT_SHADOW_CONFIG };
 
 const baseSettlement: ShadowSettlementLike = {
-  publicId: "SET-SHADOW-1",
+  publicId: "SET-PROVIDER_OBSERVED-1",
   status: "SETTLED",
-  testMode: "SHADOW",
+  testMode: "PROVIDER_OBSERVED",
   provider: "remitquickly",
   sourceCurrency: "USDT",
   targetCurrency: "INR",
@@ -39,26 +39,25 @@ describe("caps", () => {
     ).toBe(5000);
   });
 
-  it("applies the right cap per mode (DEMO uncapped)", () => {
-    expect(modeCap("DEMO", config)).toBeNull();
-    expect(modeCap("SHADOW", config)).toBe(10_000);
-    expect(modeCap("LIVE_TEST", config)).toBe(1_000);
+  it("applies the right cap per mode (EVIDENCE_ONLY uncapped)", () => {
+    expect(modeCap("EVIDENCE_ONLY", config)).toBeNull();
+    expect(modeCap("PROVIDER_OBSERVED", config)).toBeNull();
+    expect(modeCap("CONTROLLED_PILOT", config)).toBe(1_000);
   });
 
   it("checks the cap against the INR leg", () => {
     expect(isWithinCap(baseSettlement, config)).toBe(true); // 8,315 <= 10,000
-    expect(isWithinCap({ ...baseSettlement, targetAmount: "10001" }, config)).toBe(false);
-    expect(isWithinCap({ ...baseSettlement, testMode: "LIVE_TEST" }, config)).toBe(false); // 8,315 > 1,000
-    expect(isWithinCap({ ...baseSettlement, testMode: "DEMO", targetAmount: "9999999" }, config)).toBe(true);
+    expect(isWithinCap({ ...baseSettlement, targetAmount: "10001" }, config)).toBe(true);
+    expect(isWithinCap({ ...baseSettlement, testMode: "CONTROLLED_PILOT" }, config)).toBe(false); // 8,315 > 1,000
+    expect(isWithinCap({ ...baseSettlement, testMode: "EVIDENCE_ONLY", targetAmount: "9999999" }, config)).toBe(true);
   });
 
-  it("safetyFor reflects cap and live-payout tripwire", () => {
+  it("safetyFor reflects the applicable cap and provider execution boundary", () => {
     expect(safetyFor(baseSettlement, config)).toEqual({
       withinCap: true,
-      capLabel: "INR 10,000",
-      livePayoutsDisabled: true,
+      capLabel: "uncapped",
+      executionBoundaryConfirmed: true,
     });
-    expect(safetyFor(baseSettlement, { ...config, livePayoutsEnabled: true }).livePayoutsDisabled).toBe(false);
   });
 });
 
@@ -83,7 +82,7 @@ describe("checklist", () => {
     expect(byKey.beneficiary_verified).toBe(false);
     expect(byKey.operator_approval).toBe(false);
     expect(byKey.independent_recon).toBe(false);
-    expect(byKey.live_payout_disabled).toBe(true);
+    expect(byKey.execution_boundary).toBe(true);
     expect(checklistComplete(items)).toBe(false);
   });
 
@@ -98,100 +97,79 @@ describe("checklist", () => {
     expect(items.find((item) => item.key === "independent_recon")?.done).toBe(false);
   });
 
-  it("live_payout_disabled fails when the tripwire env is set", () => {
-    const items = buildShadowChecklist(baseSettlement, proof, independentRecon, approvedEvents, {
-      ...config,
-      livePayoutsEnabled: true,
-    });
-    expect(items.find((item) => item.key === "live_payout_disabled")?.done).toBe(false);
-  });
 });
 
-describe("mode transitions: LIVE_TEST entry guardrails (pre-execution)", () => {
+describe("mode transitions: CONTROLLED_PILOT entry guardrails (pre-execution)", () => {
   // A pilot-flow settlement BEFORE execution: approved, beneficiary on file,
-  // under the LIVE_TEST cap — but no provider proof and no reconciliation yet.
+  // under the CONTROLLED_PILOT cap — but no provider proof and no reconciliation yet.
   const preExecution = { ...baseSettlement, targetAmount: "500.00", provider: null };
 
-  it("allows SHADOW within cap with basic data", () => {
+  it("allows PROVIDER_OBSERVED within cap with basic data", () => {
     const checklist = buildShadowChecklist(baseSettlement, proof, independentRecon, approvedEvents, config);
-    expect(modeChangeViolations(baseSettlement, "SHADOW", checklist, config)).toEqual([]);
+    expect(modeChangeViolations(baseSettlement, "PROVIDER_OBSERVED", checklist, config)).toEqual([]);
   });
 
-  it("blocks SHADOW over the shadow cap", () => {
-    const over = { ...baseSettlement, targetAmount: "10001" };
-    const checklist = buildShadowChecklist(over, proof, independentRecon, approvedEvents, config);
-    const violations = modeChangeViolations(over, "SHADOW", checklist, config);
-    expect(violations.join(" ")).toMatch(/exceeds the Shadow cap/);
-  });
-
-  it("LIVE_TEST can be entered BEFORE execution: no proof/reconciliation yet, guardrails pass", () => {
+  it("CONTROLLED_PILOT can be entered BEFORE execution: no proof/reconciliation yet, guardrails pass", () => {
     const checklist = buildShadowChecklist(preExecution, [], [], approvedEvents, config);
-    expect(modeChangeViolations(preExecution, "LIVE_TEST", checklist, config)).toEqual([]);
+    expect(modeChangeViolations(preExecution, "CONTROLLED_PILOT", checklist, config)).toEqual([]);
   });
 
-  it("blocks LIVE_TEST over the per-settlement cap even with full evidence", () => {
+  it("blocks CONTROLLED_PILOT over the per-settlement cap even with full evidence", () => {
     const checklist = buildShadowChecklist(baseSettlement, proof, independentRecon, approvedEvents, config);
     expect(checklistComplete(checklist)).toBe(true);
-    const violations = modeChangeViolations(baseSettlement, "LIVE_TEST", checklist, config); // 8,315 > 1,000
-    expect(violations.join(" ")).toMatch(/exceeds the Live test cap/);
+    const violations = modeChangeViolations(baseSettlement, "CONTROLLED_PILOT", checklist, config); // 8,315 > 1,000
+    expect(violations.join(" ")).toMatch(/exceeds the Controlled pilot cap/);
   });
 
-  it("blocks LIVE_TEST when the daily cap would be exceeded", () => {
+  it("blocks CONTROLLED_PILOT when the daily cap would be exceeded", () => {
     const checklist = buildShadowChecklist(preExecution, [], [], approvedEvents, config);
-    const violations = modeChangeViolations(preExecution, "LIVE_TEST", checklist, config, {
+    const violations = modeChangeViolations(preExecution, "CONTROLLED_PILOT", checklist, config, {
       dailyUsedInrExcludingThis: 1_800, // 1,800 + 500 > 2,000
     });
-    expect(violations.join(" ")).toMatch(/Daily LIVE_TEST cap exceeded/);
+    expect(violations.join(" ")).toMatch(/Daily controlled-pilot cap exceeded/);
     expect(
-      modeChangeViolations(preExecution, "LIVE_TEST", checklist, config, { dailyUsedInrExcludingThis: 1_000 }),
+      modeChangeViolations(preExecution, "CONTROLLED_PILOT", checklist, config, { dailyUsedInrExcludingThis: 1_000 }),
     ).toEqual([]);
   });
 
-  it("blocks LIVE_TEST when an assigned provider is not allowlisted", () => {
+  it("blocks CONTROLLED_PILOT when an assigned provider is not allowlisted", () => {
     const offList = { ...preExecution, provider: "acme_pay" };
     const checklist = buildShadowChecklist(offList, [], [], approvedEvents, config);
-    const violations = modeChangeViolations(offList, "LIVE_TEST", checklist, config);
-    expect(violations.join(" ")).toMatch(/not on the LIVE_TEST provider allowlist/);
+    const violations = modeChangeViolations(offList, "CONTROLLED_PILOT", checklist, config);
+    expect(violations.join(" ")).toMatch(/not on the controlled-pilot provider allowlist/);
   });
 
   it("allowlisted providers pass case-insensitively", () => {
     const listed = { ...preExecution, provider: "PONTISGLOBE" };
     const checklist = buildShadowChecklist(listed, [], [], approvedEvents, config);
-    expect(modeChangeViolations(listed, "LIVE_TEST", checklist, config)).toEqual([]);
+    expect(modeChangeViolations(listed, "CONTROLLED_PILOT", checklist, config)).toEqual([]);
   });
 
-  it("blocks LIVE_TEST when operator approval or beneficiary is missing (entry requirements)", () => {
+  it("blocks CONTROLLED_PILOT when operator approval or beneficiary is missing (entry requirements)", () => {
     const unapproved = { ...preExecution, approvedAt: null };
     let checklist = buildShadowChecklist(unapproved, [], [], [], config);
-    expect(modeChangeViolations(unapproved, "LIVE_TEST", checklist, config).join(" ")).toMatch(
+    expect(modeChangeViolations(unapproved, "CONTROLLED_PILOT", checklist, config).join(" ")).toMatch(
       /Entry requirement: Operator approval/,
     );
 
     const noBeneficiary = { ...preExecution, targetAccount: "" };
     checklist = buildShadowChecklist(noBeneficiary, [], [], approvedEvents, config);
-    expect(modeChangeViolations(noBeneficiary, "LIVE_TEST", checklist, config).join(" ")).toMatch(
+    expect(modeChangeViolations(noBeneficiary, "CONTROLLED_PILOT", checklist, config).join(" ")).toMatch(
       /Entry requirement: Beneficiary/,
     );
   });
 
-  it("blocks SHADOW and LIVE_TEST when live payouts are enabled (tripwire)", () => {
-    const hot = { ...config, livePayoutsEnabled: true };
-    const checklist = buildShadowChecklist(baseSettlement, proof, independentRecon, approvedEvents, hot);
-    expect(modeChangeViolations(baseSettlement, "SHADOW", checklist, hot).join(" ")).toMatch(/LIVE_PAYOUTS_ENABLED/);
-    expect(modeChangeViolations(preExecution, "LIVE_TEST", checklist, hot).join(" ")).toMatch(/LIVE_PAYOUTS_ENABLED/);
-  });
-
-  it("switching back to DEMO is always allowed", () => {
+  it("switching back to EVIDENCE_ONLY is always allowed", () => {
     const checklist = buildShadowChecklist(baseSettlement, [], [], [], config);
-    expect(modeChangeViolations(baseSettlement, "DEMO", checklist, config)).toEqual([]);
+    expect(modeChangeViolations(baseSettlement, "EVIDENCE_ONLY", checklist, config)).toEqual([]);
   });
 });
 
 describe("evidence stays a finality concern (not an entry gate)", () => {
-  it("missing proof/reconciliation never appears in LIVE_TEST entry violations", () => {
+  it("missing proof/reconciliation never appears in CONTROLLED_PILOT entry violations", () => {
     const pre = { ...baseSettlement, targetAmount: "500.00", provider: null };
     const checklist = buildShadowChecklist(pre, [], [], approvedEvents, config);
-    const violations = modeChangeViolations(pre, "LIVE_TEST", checklist, config);
+    const violations = modeChangeViolations(pre, "CONTROLLED_PILOT", checklist, config);
     expect(violations.join(" ")).not.toMatch(/proof|reconciliation|report/i);
   });
 });

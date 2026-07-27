@@ -5,6 +5,12 @@
   "installCommand": "npm install",
   "devCommand": "npm run dev",
   "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/internal/provider-retries",
+      "schedule": "*/2 * * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",

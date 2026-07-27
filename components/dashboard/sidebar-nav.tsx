@@ -5,16 +5,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  BadgeIndianRupee,
   BadgeCheck,
   Building2,
   BookOpen,
+  CircleAlert,
+  CircleCheckBig,
   ClipboardCheck,
   FileBarChart,
   FileClock,
   LayoutDashboard,
+  Network,
   Radio,
   Scale,
   Settings,
+  ShieldAlert,
   ShieldCheck,
   Users,
   WalletCards,
@@ -26,13 +31,18 @@ const ICONS: Record<string, typeof LayoutDashboard> = {
   "/dashboard": LayoutDashboard,
   "/quotes": WalletCards,
   "/settlements": Activity,
+  "/funding": BadgeIndianRupee,
   "/reconciliation": Scale,
+  "/finality": CircleCheckBig,
+  "/exceptions": CircleAlert,
   "/counterparties": Building2,
   "/accounts": Wallet,
   "/providers": ShieldCheck,
+  "/providers/operations": Network,
   "/kyb": BadgeCheck,
   "/monitoring": Radio,
   "/pilot-readiness": ClipboardCheck,
+  "/risk-review": ShieldAlert,
   "/reports": FileBarChart,
   "/audit-logs": FileClock,
   "/team": Users,
@@ -50,9 +60,9 @@ const groups = NAV_GROUPS;
 const NAV_ALIAS: Record<string, string> = {
   "/quotes": "/settlements",
   "/counterparties": "/providers",
-  "/kyb": "/providers",
-  "/monitoring": "/providers",
-  "/pilot-readiness": "/providers",
+  "/kyb": "/risk-review",
+  "/monitoring": "/providers/health",
+  "/pilot-readiness": "/risk-review",
   "/team": "/settings",
   "/accounts": "/settings",
   "/api-reference": "/settings",
@@ -70,6 +80,7 @@ export function SidebarContent({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const allItems = groups.flatMap((group) => group.items);
 
   return (
     <div className="ops-rail relative flex h-full flex-col text-white">
@@ -94,10 +105,16 @@ export function SidebarContent({
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 const aliased = NAV_ALIAS[pathname] ?? pathname;
+                const hasMoreSpecificMatch = allItems.some(
+                  (candidate) =>
+                    candidate.href !== item.href &&
+                    candidate.href.startsWith(`${item.href}/`) &&
+                    (pathname === candidate.href || pathname.startsWith(`${candidate.href}/`)),
+                );
                 const active =
+                  aliased === item.href ||
                   pathname === item.href ||
-                  pathname.startsWith(`${item.href}/`) ||
-                  aliased === item.href;
+                  (pathname.startsWith(`${item.href}/`) && !hasMoreSpecificMatch);
                 const Icon = ICONS[item.href] ?? LayoutDashboard;
                 return (
                   <Link
@@ -130,14 +147,13 @@ export function SidebarContent({
         ))}
       </nav>
 
-      <div className="border-t border-white/10 px-4 py-3.5">
-        <p className="text-[11px] font-medium text-white/55">INRSettle Console · Private beta</p>
-        <a
-          href="/contact?intent=sales"
-          className="mt-1 inline-block text-[11px] text-white/35 transition-colors hover:text-white/60"
-        >
-          Contact support
-        </a>
+      <div className="border-t border-white/10 px-4 py-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-white/35">
+          Execution boundary
+        </p>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-white/55">
+          Integrated providers execute settlement. INRSettle records controls and evidence.
+        </p>
       </div>
     </div>
   );
@@ -145,7 +161,7 @@ export function SidebarContent({
 
 export function SidebarNav({ organizationName }: { organizationName: string }) {
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 lg:block">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[272px] lg:block">
       <SidebarContent organizationName={organizationName} />
     </aside>
   );

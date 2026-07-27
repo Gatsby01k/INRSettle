@@ -22,28 +22,11 @@ import {
   isPontisGatewayConfigured,
   type PontisGatewayResult,
 } from "./gateway";
+import type { SettlementExecutionInstruction } from "@/lib/settlement-instructions";
+import { redactProviderPayload } from "@/lib/providers/redaction";
 
 /** Provider name persisted on the settlement + stamped on every audit entry. */
 export const PROVIDER = "PontisGlobe";
-
-/**
- * Overrides accepted when building a payout from a settlement. The settlement
- * model does not persist granular beneficiary banking details, so sandbox-safe
- * defaults are used and any field can be overridden by the caller.
- */
-export type PontisPayoutOverrides = {
-  country_code?: string;
-  currency_code?: string;
-  payment_method?: string;
-  source_amount?: string;
-  source_currency?: string;
-  recipient_details?: Partial<PontisPayoutData> & {
-    name?: string;
-    account_number?: string;
-    ifsc?: string;
-    [key: string]: unknown;
-  };
-};
 
 /**
  * The USDT (crypto) leg of a settlement — the amount PontisGlobe pays out from.
@@ -62,36 +45,38 @@ function formatSourceAmount(amount: number): string {
 }
 
 /**
- * Builds a PontisGlobe payout request from a settlement plus optional overrides,
- * mirroring the documented INR sandbox payload structure. `idempotency_key` is
- * the settlement's public id so retries are idempotent and the transaction can
- * be mapped back to the correct settlement.
+ * Builds a PontisGlobe request from the encrypted, operator-reviewed execution
+ * instruction. `idempotency_key` remains stable for the settlement.
  */
 export function buildPayoutRequest(
   settlement: Settlement,
-  overrides?: PontisPayoutOverrides,
+  instruction: SettlementExecutionInstruction,
 ): PontisPayoutRequest {
   return {
     // STABLE per settlement (never random): a retry after a timeout reuses the
     // same key, so the provider deduplicates instead of paying out twice.
     idempotency_key: pontisIdempotencyKeyFor(settlement.publicId),
-    country_code: overrides?.country_code ?? "IN",
-    currency_code: overrides?.currency_code ?? "INR",
-    payment_method: overrides?.payment_method ?? "bank_local",
-    source_amount: overrides?.source_amount ?? formatSourceAmount(usdtLeg(settlement)),
-    source_currency: overrides?.source_currency ?? "USDT",
+    country_code: "IN",
+    currency_code: "INR",
+    payment_method: "bank_local",
+    source_amount: formatSourceAmount(usdtLeg(settlement)),
+    source_currency: "USDT",
     recipient_details: {
-      name: overrides?.recipient_details?.name ?? "Test Beneficiary",
-      account_number: overrides?.recipient_details?.account_number ?? settlement.targetAccount,
-      ifsc: overrides?.recipient_details?.ifsc ?? "HDFC0001234",
-      ...overrides?.recipient_details,
+      name: instruction.beneficiaryName,
+      account_number: instruction.accountNumber,
+      ifsc: instruction.bankCode,
+      bank_name: instruction.bankName,
+      account_type: instruction.accountType,
+      mobile: instruction.mobile,
+      email: instruction.email || undefined,
+      purpose: instruction.purpose,
     },
   };
 }
 
 /** Coerces an arbitrary provider response into a Prisma-storable JSON value. */
 function asJson(value: unknown): Prisma.InputJsonValue {
-  return JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
+  return JSON.parse(JSON.stringify(redactProviderPayload(value ?? null))) as Prisma.InputJsonValue;
 }
 
 /** Normalises a direct Pontis client response into the gateway result shape. */
@@ -141,7 +126,7 @@ async function fetchStatus(transactionId: string): Promise<PontisGatewayResult> 
 
 /**
  * Executes an APPROVED settlement through PontisGlobe:
- *  - logs in + submits the payout (sandbox payload structure)
+ *  - authenticates and submits the provider request
  *  - persists provider = PontisGlobe and the provider transaction id
  *  - moves the settlement APPROVED -> EXECUTING
  *  - if the provider already reports a completed/failed outcome, applies it
@@ -152,7 +137,7 @@ export async function executeApprovedSettlement(
   settlementId: string,
   userId: string,
   organizationId: string,
-  options: { overrides?: PontisPayoutOverrides } = {},
+  instruction: SettlementExecutionInstruction,
 ) {
   const settlement = await prisma.settlement.findFirst({
     where: { id: settlementId, organizationId },
@@ -162,7 +147,7 @@ export async function executeApprovedSettlement(
     throw new UserFacingError("Only APPROVED settlements can be executed through PontisGlobe.");
   }
 
-  const request = buildPayoutRequest(settlement, options.overrides);
+  const request = buildPayoutRequest(settlement, instruction);
 
   const result = await submitPayout(request);
   const transactionId = result.transactionId;
@@ -216,9 +201,8 @@ export async function executeApprovedSettlement(
     },
   });
 
-  // The submit response may already carry a final outcome (e.g. the sandbox
-  // `.00` completed trigger). Apply it right away so the settlement lands in the
-  // correct state without waiting for a poll / webhook.
+  // A provider may return a final outcome in the submission response. Apply it
+  // immediately so the recorded state does not depend on a later poll.
   const outcome = mapPontisStatus(result.providerStatus);
   let resolution = null;
   if (outcome !== "pending") {

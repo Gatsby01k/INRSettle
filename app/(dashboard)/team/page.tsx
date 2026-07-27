@@ -1,15 +1,11 @@
-import { Check, ShieldCheck } from "lucide-react";
+import { Check, Fingerprint, ShieldCheck, Users } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { canApproveSettlement, canViewSensitiveFinancialData } from "@/lib/permissions";
 import { formatDateTime, maskFinancialIdentifier } from "@/lib/utils";
 import { AreaTabs } from "@/components/ops/area-tabs";
 import { prisma } from "@/lib/prisma";
-import { ACCESS_ROLES, DEMO_TEAM } from "@/lib/treasury";
-import { PageHeader } from "@/components/ops/page-header";
-import { MetricCard } from "@/components/ops/metric-card";
-import { StatusBadge } from "@/components/ops/status-badge";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader, SectionHeader } from "@/components/ops/page-header";
+import { StatusChip } from "@/components/ops/status-badge";
 import {
   DataGrid,
   DataGridBody,
@@ -19,22 +15,52 @@ import {
   DataGridTh,
 } from "@/components/ops/data-grid";
 
-export const metadata = { title: "Team" };
+export const metadata = { title: "Team and access" };
+
+const ROLE_DETAILS = [
+  {
+    role: "OWNER",
+    summary: "Organization administration and full settlement control.",
+    permissions: ["Manage settings", "Manage provider connections", "Approve sensitive operations"],
+  },
+  {
+    role: "ADMIN",
+    summary: "Administrative and operational control without ownership transfer.",
+    permissions: ["Manage settings", "Manage provider connections", "Approve settlements"],
+  },
+  {
+    role: "TREASURY_MANAGER",
+    summary: "Treasury approval, funding control and settlement oversight.",
+    permissions: ["Approve settlements", "Confirm funding", "Approve finality"],
+  },
+  {
+    role: "SETTLEMENT_OPERATOR",
+    summary: "Day-to-day quote, settlement and reconciliation operations.",
+    permissions: ["Create settlements", "Operate provider workflow", "Record reconciliation"],
+  },
+  {
+    role: "COMPLIANCE_OFFICER",
+    summary: "Control and evidence review without settlement mutation.",
+    permissions: ["Review audit evidence", "Review finality", "Inspect provider records"],
+  },
+  {
+    role: "FINANCE_VIEWER",
+    summary: "Read-only financial reporting with sensitive-data masking.",
+    permissions: ["View operations", "View reports", "No mutation access"],
+  },
+] as const;
 
 export default async function TeamPage() {
   const { user, organization, membership: activeMembership } = await requireSession();
   const canViewSensitive = canViewSensitiveFinancialData(activeMembership.role);
-
-  // Real, login-capable members of this organization (read-only — RBAC and
-  // auth are untouched). These are the users who can actually act in the app,
-  // including the dual-control finality approver.
   const memberships = await prisma.membership.findMany({
     where: { organizationId: organization.id },
     orderBy: { createdAt: "asc" },
     include: { user: true },
   });
 
-  const realMembers = memberships.map((membership) => ({
+  const members = memberships.map((membership) => ({
+    id: membership.user.id,
     name: membership.user.name,
     email: canViewSensitive
       ? membership.user.email
@@ -42,142 +68,122 @@ export default async function TeamPage() {
     role: membership.role,
     isYou: membership.user.id === user.id,
     canApprove: canApproveSettlement(membership.role),
+    mfaEnabled: membership.user.mfaEnabled,
     lastLoginAt: membership.user.lastLoginAt,
   }));
-
-  const approverCount = realMembers.filter((member) => member.canApprove).length;
-  const dualControlPossible = approverCount >= 2 || (approverCount >= 1 && realMembers.length >= 2);
+  const approvers = members.filter((member) => member.canApprove).length;
+  const mfaEnrolled = members.filter((member) => member.mfaEnabled).length;
+  const dualControlAvailable = approvers >= 2 || (approvers >= 1 && members.length >= 2);
 
   return (
     <div className="space-y-6">
       <AreaTabs area="settings" />
       <PageHeader
-        title="Team & access"
-        description="Role-based access control for treasury, settlement, compliance and finance teams."
+        title="Team and access"
+        description="Tenant membership, role scope, MFA enrollment and approval capability from the live organization directory."
+        stats={[
+          { label: "Members", value: members.length, tone: members.length ? "info" : "pending" },
+          { label: "Approval roles", value: approvers, tone: approvers ? "ok" : "pending" },
+          { label: "MFA enrolled", value: `${mfaEnrolled}/${members.length}`, tone: mfaEnrolled === members.length && members.length ? "ok" : "pending" },
+          { label: "Dual control", value: dualControlAvailable ? "Available" : "Blocked", tone: dualControlAvailable ? "ok" : "blocked" },
+        ]}
       />
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <MetricCard label="Members" value={realMembers.length} hint="Can sign in and act" />
-        <MetricCard label="Finality approvers" value={approverCount} hint="Can approve settlements & finality" tone="success" />
-        <MetricCard
-          label="Dual control"
-          value={dualControlPossible ? "Available" : "Not yet"}
-          hint={
-            dualControlPossible
-              ? "A second operator can approve finality"
-              : "Requires a second member with approval rights"
-          }
-          tone={dualControlPossible ? "success" : "warning"}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <article className="ops-panel flex items-start gap-3 p-5">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" aria-hidden="true" />
+          <div>
+            <h2 className="text-sm font-semibold text-slate-950">Separation of duties</h2>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              Settlement creators cannot approve their own controlled lifecycle or finality decision.
+            </p>
+          </div>
+        </article>
+        <article className="ops-panel flex items-start gap-3 p-5">
+          <Fingerprint className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" aria-hidden="true" />
+          <div>
+            <h2 className="text-sm font-semibold text-slate-950">Sensitive-operation assurance</h2>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              Approval and funding controls evaluate role, MFA enrollment and recent step-up verification.
+            </p>
+          </div>
+        </article>
+      </div>
+
+      <section>
+        <SectionHeader
+          title="Organization directory"
+          description="Only users with persisted tenant membership appear here."
         />
-      </div>
-
-      {/* Dual-control explainer */}
-      <div className="flex items-start gap-2 rounded-xl border border-[var(--ops-line)] bg-white p-3">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-emerald-ink" />
-        <p className="text-xs leading-relaxed text-slate-600">
-          <span className="font-semibold text-slate-900">Dual control:</span> Live-test finality requires approval by
-          a second operator. Creators can&apos;t approve their own settlements.
-        </p>
-      </div>
-
-      {/* Real database members */}
-      <div>
-        <p className="ops-eyebrow mb-2">Organization members</p>
         <DataGrid>
-          <table className="w-full min-w-[680px]">
+          <table className="w-full min-w-[760px]">
             <DataGridHead>
               <DataGridTh>Member</DataGridTh>
               <DataGridTh>Role</DataGridTh>
-              <DataGridTh>Finality approval</DataGridTh>
+              <DataGridTh>Approval capability</DataGridTh>
+              <DataGridTh>MFA</DataGridTh>
               <DataGridTh>Last sign-in</DataGridTh>
             </DataGridHead>
             <DataGridBody>
-              {realMembers.map((member) => (
-                <DataGridRow key={member.email}>
+              {members.map((member) => (
+                <DataGridRow key={member.id}>
                   <DataGridTd>
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-slate-950">{member.name}</p>
-                      {member.isYou ? <span className="case-chip case-chip--shadow">you</span> : null}
+                      <p className="font-semibold text-slate-950">{member.name}</p>
+                      {member.isYou ? <StatusChip tone="info">Current user</StatusChip> : null}
                     </div>
-                    <p className="text-xs text-slate-500">{member.email}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{member.email}</p>
                   </DataGridTd>
                   <DataGridTd>
-                    <Badge tone={member.role === "OWNER" ? "info" : "neutral"}>{member.role}</Badge>
+                    <StatusChip tone={member.role === "OWNER" ? "info" : "neutral"}>
+                      {member.role.replaceAll("_", " ")}
+                    </StatusChip>
+                  </DataGridTd>
+                  <DataGridTd className="text-xs text-slate-600">
+                    {member.canApprove ? "Can approve controlled actions" : "No approval authority"}
                   </DataGridTd>
                   <DataGridTd>
-                    {member.canApprove ? (
-                      <span className="case-chip case-chip--gold">Can approve finality</span>
-                    ) : (
-                      <span className="text-xs text-slate-400">—</span>
-                    )}
+                    <StatusChip tone={member.mfaEnabled ? "success" : "warning"} dot>
+                      {member.mfaEnabled ? "Enrolled" : "Not enrolled"}
+                    </StatusChip>
                   </DataGridTd>
                   <DataGridTd className="text-xs text-slate-500">
-                    {member.lastLoginAt ? formatDateTime(member.lastLoginAt) : "Never"}
+                    {member.lastLoginAt ? formatDateTime(member.lastLoginAt) : "No sign-in recorded"}
                   </DataGridTd>
                 </DataGridRow>
               ))}
             </DataGridBody>
           </table>
         </DataGrid>
-      </div>
+      </section>
 
-      {/* Role matrix */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {ACCESS_ROLES.map((role) => (
-          <Card key={role.role}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Badge tone={role.role === "OWNER" ? "info" : "neutral"}>{role.role}</Badge>
-              </CardTitle>
-              <CardDescription>{role.description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-1.5">
+      <section>
+        <SectionHeader
+          title="Role model"
+          description="The interface summarizes role intent; server-side permissions remain authoritative."
+        />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {ROLE_DETAILS.map((role) => (
+            <article key={role.role} className="ops-panel p-5">
+              <div className="flex items-center justify-between gap-3">
+                <Users className="h-5 w-5 text-emerald-700" aria-hidden="true" />
+                <StatusChip tone={role.role === "OWNER" ? "info" : "neutral"}>
+                  {role.role.replaceAll("_", " ")}
+                </StatusChip>
+              </div>
+              <p className="mt-5 text-sm font-semibold leading-relaxed text-slate-950">{role.summary}</p>
+              <ul className="mt-4 space-y-2">
                 {role.permissions.map((permission) => (
-                  <li key={permission} className="flex items-start gap-1.5 text-xs text-slate-600">
-                    <Check className="mt-0.5 h-3 w-3 shrink-0 text-brand-emerald-ink" />
+                  <li key={permission} className="flex items-start gap-2 text-xs text-slate-600">
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" aria-hidden="true" />
                     {permission}
                   </li>
                 ))}
               </ul>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Demo roster — display-only sample data, clearly separated */}
-      <div>
-        <p className="ops-eyebrow mb-2">
-          Sample directory <span className="case-chip case-chip--demo ml-1">display only</span>
-        </p>
-        <DataGrid>
-          <table className="w-full min-w-[680px]">
-            <DataGridHead>
-              <DataGridTh>Member</DataGridTh>
-              <DataGridTh>Role</DataGridTh>
-              <DataGridTh>Last active (sample)</DataGridTh>
-              <DataGridTh>Status</DataGridTh>
-            </DataGridHead>
-            <DataGridBody>
-              {DEMO_TEAM.map((member) => (
-                <DataGridRow key={member.email}>
-                  <DataGridTd>
-                    <p className="font-medium text-slate-950">{member.name}</p>
-                    <p className="text-xs text-slate-500">{member.email}</p>
-                  </DataGridTd>
-                  <DataGridTd>
-                    <Badge tone="neutral">{member.role}</Badge>
-                  </DataGridTd>
-                  <DataGridTd className="text-xs text-slate-500">{member.lastActive}</DataGridTd>
-                  <DataGridTd>
-                    <StatusBadge status={member.status} />
-                  </DataGridTd>
-                </DataGridRow>
-              ))}
-            </DataGridBody>
-          </table>
-        </DataGrid>
-      </div>
+            </article>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
