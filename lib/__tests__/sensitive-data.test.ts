@@ -30,7 +30,7 @@ describe("settlement instruction encryption", () => {
   it("rejects a modified authentication tag", () => {
     const ciphertext = encryptSettlementData({ accountNumber: "50100040199211" });
     const parts = ciphertext.split(".");
-    parts[2] = `${parts[2].slice(0, -1)}${parts[2].endsWith("A") ? "B" : "A"}`;
+    parts[2] = `${parts[2].startsWith("A") ? "B" : "A"}${parts[2].slice(1)}`;
     expect(() => decryptSettlementData(parts.join("."))).toThrow(/integrity verification/);
   });
 });

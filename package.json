@@ -19,8 +19,8 @@
     "gateway:pontis:start": "npm --prefix gateway/pontis run start"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "7.8.0",
-    "@prisma/client": "7.8.0",
+    "@prisma/adapter-pg": "7.9.1",
+    "@prisma/client": "7.9.1",
     "@radix-ui/react-dialog": "1.1.15",
     "@radix-ui/react-dropdown-menu": "2.1.16",
     "@radix-ui/react-select": "2.2.6",
@@ -34,7 +34,7 @@
     "cmdk": "1.1.1",
     "jose": "6.2.3",
     "lucide-react": "1.17.0",
-    "next": "16.2.6",
+    "next": "16.2.12",
     "pg": "8.21.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",
@@ -51,12 +51,16 @@
     "@types/react-dom": "19.2.3",
     "autoprefixer": "10.5.0",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.2.6",
-    "postcss": "8.5.15",
-    "prisma": "7.8.0",
+    "eslint-config-next": "16.2.12",
+    "postcss": "8.5.23",
+    "prisma": "7.9.1",
     "tailwindcss": "4.3.0",
     "tsx": "4.22.4",
     "typescript": "6.0.3",
     "vitest": "4.1.8"
+  },
+  "overrides": {
+    "postcss": "$postcss",
+    "sharp": "0.35.3"
   }
 }
