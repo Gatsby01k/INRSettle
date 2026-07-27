@@ -9007,6 +9007,24 @@ body {
   font-size: 12px;
 }
 
+.auth-form-card,
+.auth-status-card {
+  animation: none;
+  box-shadow: none;
+}
+
+.auth-card-ring,
+.auth-trust-card {
+  background: transparent;
+  box-shadow: none;
+}
+
+@media (max-width: 767px) {
+  .auth-form-card input {
+    height: 44px;
+  }
+}
+
 @media (max-width: 767px) {
   .platform-hero > .relative {
     min-height: 0;

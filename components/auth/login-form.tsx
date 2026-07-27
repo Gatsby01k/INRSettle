@@ -90,7 +90,7 @@ export function LoginForm({
         action={
           <Link
             href="/contact?intent=access"
-            className="text-[12.5px] font-medium text-brand-emerald-ink transition-colors hover:text-brand-emerald"
+            className="inline-flex min-h-11 items-center text-[12.5px] font-medium text-brand-emerald-ink transition-colors hover:text-brand-emerald"
           >
             Forgot password?
           </Link>
@@ -123,7 +123,7 @@ export function LoginForm({
         size="lg"
         variant="primary"
         disabled={isPending}
-        className="auth-submit mt-1 w-full bg-gradient-to-r from-[hsl(168_90%_30%)] via-[hsl(168_90%_33%)] to-[hsl(174_85%_36%)] shadow-[0_14px_34px_rgba(8,127,105,0.32)] hover:shadow-[0_18px_42px_rgba(8,127,105,0.42)]"
+        className="mt-1 w-full"
       >
         {isPending ? (
           <>
