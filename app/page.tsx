@@ -160,7 +160,7 @@ export default function HomePage() {
             <SectionIntro
               label="Settlement lifecycle"
               title="One operating record. Eight controlled stages."
-              body="Every stage shows its owner, current state, evidence and next required action. Operations teams do not have to reconstruct the settlement from provider portals, spreadsheets and message threads."
+              body="Each stage shows its owner, state, evidence and next action—without reconstructing the settlement across provider portals and spreadsheets."
             />
             <ol className="platform-lifecycle-grid">
               {LIFECYCLE_STAGES.map((stage) => (
@@ -180,7 +180,7 @@ export default function HomePage() {
               <SectionIntro
                 label="Provider network"
                 title="Providers stay behind one customer experience."
-                body="Customers work inside INRSettle. Each provider is represented by the same connection, capability and operation model, while provider-specific authentication and payloads remain inside the adapter."
+                body="Customers remain in INRSettle. Connections and operations follow one model; provider-specific details remain inside each adapter."
               />
               <div className="provider-topology" aria-label="Provider-agnostic platform topology">
                 <div className="provider-topology__customer">
@@ -235,7 +235,7 @@ export default function HomePage() {
             <SectionIntro
               label="Funding visibility"
               title="Funding is a control state, not a chat update."
-              body="Required and confirmed amounts remain attached to the settlement. Dual control records who confirmed funding, when it happened and whether provider execution may begin."
+              body="Required and confirmed amounts stay with the settlement. Dual control records who cleared execution and when."
             />
           </div>
         </section>
@@ -245,7 +245,7 @@ export default function HomePage() {
             <SectionIntro
               label="Execution orchestration"
               title="External execution with an internal control record."
-              body="INRSettle creates a durable operation before calling a provider. Outcomes, retries and uncertainty remain explicit, so an operator never has to guess whether a request reached the external rail."
+              body="A durable operation is recorded before provider submission. Outcomes, retries and uncertain states remain explicit."
               align="center"
             />
             <div className="operation-sequence">
@@ -272,7 +272,7 @@ export default function HomePage() {
             <SectionIntro
               label="Evidence engine"
               title="Provider proof is preserved, not promoted into finality."
-              body="The platform records the provider reference, reported status, amount, currency, UTR where applicable, receipt channel and timestamp. Proof remains append-only and traceable to the settlement."
+              body="Provider references, status, amount, receipt channel and time remain append-only and traceable to the settlement."
             />
             <div className="evidence-record">
               <div className="evidence-record__head">
@@ -309,7 +309,7 @@ export default function HomePage() {
               <SectionIntro
                 label="Reconciliation"
                 title="Independent matching before completion."
-                body="Bank and PSP records are evaluated independently from provider claims. Mismatches become exceptions with an explicit reason, owner and route back to the settlement workspace."
+                body="Bank and PSP records are evaluated independently. Mismatches become owned exceptions linked to the settlement."
               />
             </div>
           </div>
@@ -320,7 +320,7 @@ export default function HomePage() {
             <SectionIntro
               label="Audit trail"
               title="Every privileged action leaves a durable record."
-              body="Approvals, funding confirmations, provider operations, reconciliation decisions, finality and configuration changes record actor, resource, time and relevant before-and-after state."
+              body="Approvals, funding, provider operations, reconciliation and finality retain actor, time and relevant state."
             />
             <div className="audit-ledger">
               {[
@@ -345,7 +345,7 @@ export default function HomePage() {
             <SectionIntro
               label="Finality review"
               title="Completion is a decision supported by evidence."
-              body="A deterministic review brings approval, provider proof, independent reconciliation and operational guardrails together. Blocking issues stay visible until they are resolved."
+              body="Approval, provider proof, independent reconciliation and guardrails produce one reviewable decision."
               align="center"
             />
             <div className="finality-matrix">
@@ -371,7 +371,7 @@ export default function HomePage() {
             <SectionIntro
               label="Multi-provider API"
               title="One lifecycle model across provider adapters."
-              body="The platform API exposes settlement state, provider operations, funding and finality without leaking provider-specific payloads into the customer workflow."
+              body="Settlement, provider operation, funding and finality states remain stable across provider adapters."
             />
             <div className="api-window">
               <div className="api-window__bar">
@@ -401,7 +401,7 @@ export default function HomePage() {
             <SectionIntro
               label="Enterprise security"
               title="Controls follow the settlement, not the screen."
-              body="Authorization and tenant scope are enforced at server boundaries. Sensitive decisions require role policy, session assurance and an auditable actor."
+              body="Tenant scope is enforced at server boundaries. Sensitive decisions require role policy, session assurance and an auditable actor."
             />
             <div className="security-grid">
               {[
@@ -437,7 +437,7 @@ export default function HomePage() {
             <SectionIntro
               label="Compliance operations"
               title="Operational evidence for review and oversight."
-              body="INRSettle supports control execution and evidence collection. It does not replace a customer’s licensing analysis, provider due diligence or regulatory obligations."
+              body="INRSettle supports control execution and evidence collection; licensing, provider diligence and regulatory obligations remain with the responsible parties."
             />
           </div>
         </section>
@@ -447,7 +447,7 @@ export default function HomePage() {
             <SectionIntro
               label="Operating models"
               title="The same record answers different teams."
-              body="Each team sees the part of the settlement it owns without losing the shared operating context. These are workflow patterns, not fabricated customer claims."
+              body="Each team sees the decisions it owns without losing the shared settlement context."
               align="center"
             />
             <div className="role-stories">
@@ -497,7 +497,7 @@ export default function HomePage() {
             <SectionIntro
               label="FAQ"
               title="Clear boundaries from the first conversation."
-              body="The platform is designed to make operating responsibility explicit across customers, INRSettle and integrated providers."
+              body="Operating responsibility stays explicit across customers, INRSettle and integrated providers."
             />
             <div className="platform-faq">
               {FAQ.map((item) => (

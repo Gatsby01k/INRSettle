@@ -121,9 +121,8 @@ export function SettlementProofScene() {
             <span>from request to finality.</span>
           </h1>
           <p className="platform-hero__copy">
-            INRSettle gives operations, treasury and compliance teams one control
-            plane for provider-executed settlement: approvals, funding visibility,
-            orchestration, proof, reconciliation and finality review.
+            One operating record for provider-executed settlement: approval,
+            funding visibility, orchestration, proof, reconciliation and finality.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link

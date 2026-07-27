@@ -8,14 +8,14 @@ export function FlashMessage({ message, tone = "success" }: { message: string; t
   return (
     <div
       className={cn(
-        "flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-[13.5px] font-medium",
+        "flex items-start gap-2.5 rounded-md border-l-4 px-3.5 py-3 text-[13px] font-medium",
         isError
-          ? "border-rose-200 bg-rose-50/80 text-rose-800"
-          : "border-[#00c79d]/25 bg-[#e7faf4]/80 text-brand-emerald-ink",
+          ? "border-y-rose-200 border-r-rose-200 border-l-rose-500 bg-rose-50 text-rose-800"
+          : "border-y-emerald-200 border-r-emerald-200 border-l-emerald-600 bg-emerald-50 text-emerald-800",
       )}
       role="status"
     >
-      <Icon className="h-4 w-4 shrink-0" />
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
       {message}
     </div>
   );

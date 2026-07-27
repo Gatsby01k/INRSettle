@@ -46,12 +46,12 @@ export function CommandPalette() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-500 shadow-ops-xs transition-colors hover:border-slate-300 hover:text-slate-700 lg:flex"
+        className="hidden h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-[13px] text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-800 lg:flex"
         aria-label="Open command palette"
       >
         <Search className="h-4 w-4 text-slate-400" />
         <span>Search</span>
-        <kbd className="ml-1 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-mono text-[10px] font-medium text-slate-400">
+        <kbd className="ml-2 rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-mono text-[10px] font-medium text-slate-400">
           ⌘K
         </kbd>
       </button>

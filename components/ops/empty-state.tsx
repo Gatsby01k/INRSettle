@@ -14,14 +14,16 @@ export function EmptyState({
   icon?: LucideIcon;
 }) {
   return (
-    <div className="ops-panel ops-grid-faint flex flex-col items-center justify-center px-6 py-16 text-center">
-      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-b from-[#00c79d]/15 to-[#0bb4c4]/5 text-brand-emerald-ink ring-1 ring-[#00c79d]/25 shadow-ops-xs">
-        <Icon className="h-6 w-6" />
+    <div className="ops-panel flex min-h-44 flex-col items-start justify-center px-6 py-8 text-left sm:flex-row sm:items-center sm:justify-start sm:gap-4">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500">
+        <Icon className="h-5 w-5" />
       </span>
-      <p className="mt-4 text-[15px] font-semibold tracking-tight text-slate-950">{title}</p>
-      <p className="mt-1.5 max-w-sm text-[13.5px] leading-relaxed text-slate-500">{description}</p>
+      <div className="mt-3 min-w-0 sm:mt-0">
+        <p className="text-sm font-semibold tracking-tight text-slate-950">{title}</p>
+        <p className="mt-1 max-w-lg text-[13px] leading-5 text-slate-500">{description}</p>
+      </div>
       {action ? (
-        <Button asChild className="mt-5" variant="primary" size="sm">
+        <Button asChild className="mt-4 sm:ml-auto sm:mt-0" variant="outline" size="sm">
           <Link href={action.href}>{action.label}</Link>
         </Button>
       ) : null}

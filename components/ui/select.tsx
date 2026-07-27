@@ -16,7 +16,7 @@ export function SelectTrigger({
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        "flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-slate-900 shadow-ops-xs transition-[border-color,box-shadow] hover:border-slate-300 focus:border-brand-emerald focus:outline-none focus:ring-4 focus:ring-brand-emerald/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70 data-[placeholder]:text-slate-400",
+        "flex h-10 w-full items-center justify-between gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 transition-[border-color,box-shadow] hover:border-slate-400 focus:border-[#087f69] focus:outline-none focus:ring-3 focus:ring-[#087f69]/12 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 data-[placeholder]:text-slate-400",
         className,
       )}
       {...props}
@@ -39,7 +39,7 @@ export function SelectContent({
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         className={cn(
-          "ops-animate-pop z-50 max-h-80 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-xl border border-[var(--ops-line)] bg-white text-slate-950 shadow-ops-lg",
+          "ops-animate-pop z-50 max-h-80 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-[var(--ops-line)] bg-white text-slate-950 shadow-ops-md",
           className,
         )}
         position={position}

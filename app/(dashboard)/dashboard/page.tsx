@@ -69,11 +69,11 @@ function ageLabel(from: Date | null | undefined): string | null {
 }
 
 const STREAM_ACTIONS: Record<string, string> = {
-  "pontis.payout.created": "Provider payout submitted",
-  "remitquickly.payout.created": "Provider payout submitted",
+  "pontis.payout.created": "Provider execution submitted",
+  "remitquickly.payout.created": "Provider execution submitted",
   "pontis.payout.status_updated": "Provider status updated",
-  "pontis.payout.settled": "Provider payout completed",
-  "remitquickly.payout.settled": "Provider payout completed",
+  "pontis.payout.settled": "Provider execution completed",
+  "remitquickly.payout.settled": "Provider execution completed",
   "reconciliation.auto_match": "Reconciliation matched (auto)",
   "reconciliation.confirm_match": "Reconciliation matched (operator)",
   "settlement.finality_approved": "Finality approved (dual-control)",

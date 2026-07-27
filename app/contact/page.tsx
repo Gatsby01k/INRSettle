@@ -67,7 +67,7 @@ function DirectContact() {
 
 function IntentTabs({ active }: { active: "access" | "sales" }) {
   return (
-    <div className="inline-flex rounded-lg border border-[var(--ops-line)] bg-white/70 p-1 backdrop-blur">
+    <div className="inline-flex rounded-lg border border-[var(--ops-line)] bg-white p-1">
       {(
         [
           ["access", "Request access"],
@@ -79,8 +79,8 @@ function IntentTabs({ active }: { active: "access" | "sales" }) {
           href={`/contact?intent=${value}`}
           aria-current={active === value ? "page" : undefined}
           className={cn(
-            "rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors",
-            active === value ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:text-slate-950",
+            "inline-flex min-h-10 items-center rounded-md px-3.5 text-sm font-medium transition-colors",
+            active === value ? "bg-slate-950 text-white" : "text-slate-600 hover:text-slate-950",
           )}
         >
           {label}
@@ -124,14 +124,13 @@ export default async function ContactPage({
             <IntentTabs active={mode} />
           </div>
 
-          <div className="mt-10 grid items-start gap-12 lg:grid-cols-[1fr_0.9fr] lg:gap-20">
-            {/* ── The case for talking to us ── */}
-            <div>
+          <div className="contact-layout mt-10">
+            <div className="contact-intro">
               <h1 className="lp-reveal lp-d2 text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">
                 {isAccess ? (
                   <>
-                    <span className="lp-ink">Bring settlement operations</span>{" "}
-                    <span className="lp-ink">under control.</span>
+                    <span className="lp-ink">Review your settlement</span>{" "}
+                    <span className="lp-ink">operating workflow.</span>
                   </>
                 ) : (
                   <>
@@ -144,7 +143,20 @@ export default async function ContactPage({
                   ? "Review the operating workflow with your settlement, finance, technology and compliance stakeholders."
                   : "Define provider responsibilities, integration scope, settlement volume, controls and commercial terms."}
               </p>
+            </div>
 
+            <div className="contact-form-panel lp-cert relative p-6 sm:p-8">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                {isAccess ? "Workspace review" : "Partnership review"}
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                A few details about your {isAccess ? "settlement workflow" : "corridor"}. We reply from a named
+                address, not a queue.
+              </p>
+              <div className="mt-5"><ContactMailForm mode={mode} /></div>
+            </div>
+
+            <div className="contact-support">
               <ul className="lp-reveal lp-d4 mt-8 space-y-3">
                 {(isAccess ? ACCESS_POINTS : SALES_POINTS).map((point) => (
                   <li key={point} className="flex items-start gap-2.5 text-[15px] text-slate-700">
@@ -172,18 +184,6 @@ export default async function ContactPage({
               </div>
 
               <DirectContact />
-            </div>
-
-            {/* ── The form, as an instrument ── */}
-            <div className="lp-cert relative p-6 sm:p-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                {isAccess ? "Workspace review" : "Partnership review"}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                A few details about your {isAccess ? "settlement workflow" : "corridor"}. We reply from a named
-                address, not a queue.
-              </p>
-              <div className="mt-5"><ContactMailForm mode={mode} /></div>
             </div>
           </div>
         </div>

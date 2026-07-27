@@ -356,7 +356,7 @@ export function SettlementOperationConsoleRow({
                   Settlement approved. Select an eligible provider connection to begin external execution.
                 </p>
               </div>
-              <MetadataChip label="Next step" value="Execute payout" />
+              <MetadataChip label="Next step" value="Start provider execution" />
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               <MetadataChip label="Provider" value={settlement.provider ?? "Selected at execution"} />
@@ -402,7 +402,7 @@ export function SettlementOperationConsoleRow({
             <div>
               <p className="text-xs font-semibold text-slate-900">Awaiting independent reconciliation</p>
               <p className="mt-0.5 text-[11px] text-slate-600">
-                Provider payout is complete. Add or match a bank/PSP record before finality.
+                Provider execution is complete. Add or match a bank/PSP record before finality.
               </p>
             </div>
             <ReconciliationProofGrid settlement={settlement} providerStatus={providerStatus} />
@@ -441,7 +441,7 @@ export function SettlementOperationConsoleRow({
             <div>
               <p className="text-xs font-semibold text-slate-900">Reconciliation record required</p>
               <p className="mt-0.5 text-[11px] text-slate-600">
-                Provider payout completed, but no matching bank record was found for this settlement.
+                Provider execution completed, but no matching bank record was found for this settlement.
               </p>
             </div>
             <ReconciliationProofGrid settlement={settlement} providerStatus={providerStatus} />
@@ -490,7 +490,7 @@ export function SettlementOperationConsoleRow({
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-emerald-900">Settlement complete</p>
                 <p className="mt-0.5 text-[11px] text-emerald-700/85">
-                  Provider payout, settlement update, reconciliation and audit trail are complete.
+                  Provider execution, settlement update, reconciliation and audit trail are complete.
                 </p>
               </div>
             </div>

@@ -15,10 +15,10 @@ export default function DashboardError({
 }) {
   return (
     <div className="ops-panel mx-auto mt-10 max-w-md p-6 text-center">
-      <p className="text-[15px] font-semibold tracking-tight text-slate-950">Something went wrong loading this view</p>
+      <p className="text-[15px] font-semibold tracking-tight text-slate-950">This workspace could not be loaded</p>
       <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
-        Your data is unaffected — this is a display error, not a settlement error. Retry, or contact support if it
-        persists.
+        No action was confirmed from this view. Retry once. If the error continues, ask your operations administrator
+        to contact support with the time and page address.
       </p>
       <div className="mt-4 flex items-center justify-center gap-2">
         <Button type="button" variant="primary" size="sm" onClick={() => reset()}>
@@ -26,7 +26,7 @@ export default function DashboardError({
           Retry
         </Button>
         <Button asChild variant="outline" size="sm">
-          <a href="/dashboard">Back to Home</a>
+          <a href="/dashboard">Back to overview</a>
         </Button>
       </div>
     </div>

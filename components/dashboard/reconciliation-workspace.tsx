@@ -241,12 +241,9 @@ export function ReconciliationWorkspace({
     >
       <div className="border-b border-[var(--ops-line)] lg:border-b-0 lg:border-r">
         <div className="flex items-center justify-between gap-2 border-b border-[var(--ops-line-soft)] bg-slate-50/60 px-3 py-1.5">
-          <div className="flex items-center gap-2">
-            <span className="reconciliation-live-dot h-1.5 w-1.5 rounded-full bg-brand-emerald" aria-hidden="true" />
-            <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-slate-500">
-              Evidence queue · {records.length} external record{records.length === 1 ? "" : "s"}
-            </p>
-          </div>
+          <p className="text-xs font-medium text-slate-600">
+            Evidence queue · {records.length} external record{records.length === 1 ? "" : "s"}
+          </p>
         </div>
         <ul className="ops-scroll reconciliation-console-scroll divide-y divide-slate-100/90 overflow-y-auto">
           {records.map((record) => {

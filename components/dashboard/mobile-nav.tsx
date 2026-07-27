@@ -11,7 +11,7 @@ export function MobileNav({ organizationName }: { organizationName: string }) {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger
-        className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-ops-xs transition-colors hover:border-slate-300 hover:text-slate-900 lg:hidden"
+        className="grid h-10 w-10 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900 lg:hidden"
         aria-label="Open navigation"
       >
         <Menu className="h-[18px] w-[18px]" />
@@ -19,7 +19,7 @@ export function MobileNav({ organizationName }: { organizationName: string }) {
       <Dialog.Portal>
         <Dialog.Overlay className="ops-animate-overlay fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm lg:hidden" />
         <Dialog.Content
-          className="fixed inset-y-0 left-0 z-50 w-[270px] outline-none lg:hidden"
+          className="fixed inset-y-0 left-0 z-50 w-[280px] outline-none lg:hidden"
           aria-label="Navigation"
         >
           <Dialog.Title className="sr-only">Navigation</Dialog.Title>

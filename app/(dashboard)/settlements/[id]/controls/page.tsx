@@ -416,18 +416,17 @@ export default async function SettlementControlsPage({
           </div>
         </div>
 
-        {/* Money movement statement */}
-        <div className="flex items-start gap-2 rounded-xl border border-indigo-200 bg-indigo-50/60 p-3">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" />
-          <p className="text-sm text-indigo-900">
-            <span className="font-semibold">Execution remains outside INRSettle.</span> The integrated provider
-            moves funds; this workspace controls evidence, reconciliation, approvals and finality.
+        <div className="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+          <p className="text-sm text-slate-700">
+            <span className="font-semibold text-slate-900">Execution remains with the integrated provider.</span>{" "}
+            This workspace controls evidence, reconciliation, approvals and finality.
           </p>
         </div>
 
         {/* Operating controls */}
-        <div className="rounded-xl border border-[var(--ops-line)] p-4">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Operating controls</p>
+        <div className="rounded-lg border border-[var(--ops-line)] p-4">
+          <h2 className="mb-2 text-sm font-semibold text-slate-950">Operating controls</h2>
           <StatRow label="Execution posture" value={`${OPERATING_MODE_LABEL[mode]} — ${OPERATING_MODE_DESCRIPTION[mode]}`} />
           <StatRow
             label="INR leg"
@@ -475,11 +474,11 @@ export default async function SettlementControlsPage({
         </div>
 
         {/* Checklist */}
-        <div className="rounded-xl border border-[var(--ops-line)] p-4">
+        <div className="rounded-lg border border-[var(--ops-line)] p-4">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+            <h2 className="text-sm font-semibold text-slate-950">
               Finality readiness checklist
-            </p>
+            </h2>
             <span
               className={cn(
                 "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em]",
@@ -506,11 +505,11 @@ export default async function SettlementControlsPage({
 
         {/* Controlled pilot readiness */}
         {pilot ? (
-          <div className="rounded-xl border border-red-200 p-4">
+          <div className="rounded-lg border border-red-200 p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+              <h2 className="text-sm font-semibold text-slate-950">
                 Controlled pilot readiness
-              </p>
+              </h2>
               <span
                 className={cn(
                   "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em]",
@@ -568,10 +567,10 @@ export default async function SettlementControlsPage({
         ) : null}
 
         {/* Manual proof entry */}
-        <div className="rounded-xl border border-[var(--ops-line)] p-4">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+        <div className="rounded-lg border border-[var(--ops-line)] p-4">
+          <h2 className="mb-1 text-sm font-semibold text-slate-950">
             Record provider proof manually
-          </p>
+          </h2>
           <p className="mb-3 text-xs text-slate-500">
             Use this only when provider evidence arrives outside the automated connector. Record exactly what the
             provider reported; expected values are never accepted as proof.
@@ -625,7 +624,7 @@ export default async function SettlementControlsPage({
 
           {settlement.providerProofs.length > 0 ? (
             <div className="mt-4 space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Proof on file</p>
+              <h3 className="text-xs font-semibold text-slate-700">Proof on file</h3>
               {settlement.providerProofs.map((proof) => (
                 <div key={proof.id} className="rounded-lg border border-[var(--ops-line-soft)] px-3 py-2 text-xs text-slate-600">
                   <span className="font-medium text-slate-900">{proof.provider}</span> · {proof.providerStatus} · via{" "}
@@ -642,10 +641,10 @@ export default async function SettlementControlsPage({
         </div>
 
         {/* Reconciliation pointer */}
-        <div className="rounded-xl border border-[var(--ops-line)] p-4">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+        <div className="rounded-lg border border-[var(--ops-line)] p-4">
+          <h2 className="mb-1 text-sm font-semibold text-slate-950">
             Independent reconciliation
-          </p>
+          </h2>
           {settlement.reconciliation.length > 0 ? (
             <p className="text-sm text-slate-600">
               {settlement.reconciliation.length} record(s) linked. Manage matching on the{" "}

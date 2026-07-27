@@ -39,8 +39,8 @@ export function FilterBar({
   return (
     <div
       className={cn(
-        "flex flex-col gap-2.5 p-2.5 lg:flex-row lg:items-center lg:justify-between",
-        embedded ? "border-b border-[var(--ops-line-soft)] bg-slate-50/50" : "ops-panel gap-3 p-3",
+        "flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between",
+        embedded ? "border-b border-[var(--ops-line-soft)] bg-slate-50/60 p-3" : "border-y border-[var(--ops-line-soft)] py-3",
       )}
     >
       <form
@@ -73,9 +73,6 @@ export function FilterBar({
 
       {statusOptions.length ? (
         <div className={cn("flex items-center gap-2 overflow-x-auto", pending && "opacity-60")}>
-          <span className="hidden shrink-0 text-[11px] font-semibold uppercase tracking-[0.07em] text-slate-400 sm:inline">
-            Status
-          </span>
           <Segmented
             ariaLabel="Filter by status"
             size="sm"

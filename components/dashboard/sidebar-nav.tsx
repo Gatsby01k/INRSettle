@@ -84,9 +84,9 @@ export function SidebarContent({
 
   return (
     <div className="ops-rail relative flex h-full flex-col text-white">
-      <div className="flex h-16 items-center gap-3 border-b border-white/10 px-4">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 ring-1 ring-white/15">
-          <Image src="/assets/mark.png" alt="" width={22} height={22} className="rounded-md" />
+      <div className="flex h-14 items-center gap-3 border-b border-white/8 px-4">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/[0.07] ring-1 ring-white/10">
+          <Image src="/assets/mark.png" alt="" width={20} height={20} className="rounded" />
         </span>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold tracking-tight text-white">INRSettle</p>
@@ -94,11 +94,11 @@ export function SidebarContent({
         </div>
       </div>
 
-      <nav className="ops-scroll flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Primary">
+      <nav className="ops-scroll flex-1 space-y-6 overflow-y-auto px-3 py-5" aria-label="Primary">
         {groups.map((group) => (
           <div key={group.label}>
             {groups.length > 1 ? (
-              <p className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35">
+              <p className="px-2.5 pb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/35">
                 {group.label}
               </p>
             ) : null}
@@ -123,19 +123,19 @@ export function SidebarContent({
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "group relative flex items-center gap-3 rounded-lg px-2.5 py-2 text-[13.5px] font-medium transition-colors duration-200",
+                      "group relative flex min-h-9 items-center gap-3 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors duration-150",
                       active
-                        ? "bg-white/[0.08] text-white ring-1 ring-white/10"
-                        : "text-white/60 hover:bg-white/[0.05] hover:text-white",
+                        ? "bg-white/[0.08] text-white"
+                        : "text-white/58 hover:bg-white/[0.045] hover:text-white/90",
                     )}
                   >
                     {active ? (
-                      <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-brand-emerald shadow-[0_0_12px_rgba(0,199,157,0.7)]" />
+                      <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-[#62d9c0]" />
                     ) : null}
                     <Icon
                       className={cn(
                         "h-[18px] w-[18px] shrink-0 transition-colors",
-                        active ? "text-brand-emerald" : "text-white/45 group-hover:text-white/70",
+                        active ? "text-[#62d9c0]" : "text-white/40 group-hover:text-white/65",
                       )}
                     />
                     {item.label}
@@ -147,21 +147,13 @@ export function SidebarContent({
         ))}
       </nav>
 
-      <div className="border-t border-white/10 px-4 py-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-white/35">
-          Execution boundary
-        </p>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-white/55">
-          Integrated providers execute settlement. INRSettle records controls and evidence.
-        </p>
-      </div>
     </div>
   );
 }
 
 export function SidebarNav({ organizationName }: { organizationName: string }) {
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[272px] lg:block">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 lg:block">
       <SidebarContent organizationName={organizationName} />
     </aside>
   );

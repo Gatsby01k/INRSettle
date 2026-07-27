@@ -18,7 +18,7 @@ export type NavGroup = { label: string; items: NavItem[] };
 
 export const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Operations",
+    label: "Settlement workflow",
     items: [
       { href: "/dashboard", label: "Operations overview" },
       { href: "/settlements", label: "Settlements" },
@@ -29,7 +29,7 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "Provider infrastructure",
+    label: "Provider network",
     items: [
       { href: "/providers", label: "Providers" },
       { href: "/providers/operations", label: "Provider operations" },
@@ -37,7 +37,7 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "Governance",
+    label: "Control & evidence",
     items: [
       { href: "/risk-review", label: "Risk & due diligence" },
       { href: "/reports", label: "Reports" },

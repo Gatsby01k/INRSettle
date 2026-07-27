@@ -77,7 +77,7 @@ export const metadata = { title: "Settlements" };
 function pageFlashMessage(value?: string) {
   if (value === "created") return "Settlement created.";
   if (value === "reconciled" || value === "matched") {
-    return "Settlement complete — provider payout, reconciliation and audit trail recorded.";
+    return "Settlement complete — provider execution, reconciliation and audit trail recorded.";
   }
   return null;
 }
@@ -133,10 +133,10 @@ function caseOperationalSummary(
     return "Awaiting approval before execution.";
   }
   if (status === SettlementStatus.APPROVED) {
-    return "Approved. Execute the payout via the provider to start tracking.";
+    return "Approved. Start provider execution to begin tracking.";
   }
   if (status === SettlementStatus.EXECUTING) {
-    return "Payout submitted. Tracking provider status.";
+    return "Submitted to the provider. Tracking external execution.";
   }
   if (status === SettlementStatus.FAILED) {
     return "Provider reported a terminal failure before money moved.";
@@ -147,12 +147,12 @@ function caseOperationalSummary(
   if (status === SettlementStatus.SETTLED || status === SettlementStatus.RECONCILED) {
     const recon = finality.reconciliation;
     if (recon && (recon.status === "UNMATCHED" || recon.status === "EXCEPTION")) {
-      return "Provider payout completed, but independent evidence does not match — investigate before finality.";
+      return "Provider execution completed, but independent evidence does not match — investigate before finality.";
     }
     if (finality.riskLevel === "high") {
-      return "Provider payout completed, but a high-risk issue blocks finality.";
+      return "Provider execution completed, but a high-risk issue blocks finality.";
     }
-    return "Provider payout completed. Reconciliation is still pending before finality.";
+    return "Provider execution completed. Reconciliation is still pending before finality.";
   }
   return "Settlement in progress.";
 }
@@ -880,24 +880,19 @@ export default async function SettlementsPage({
                   <SettlementDetailSheet
                     key={`${settlement.id}-${settlement.status}-${settlement.providerTransactionId ?? ""}-${settlement.events.length}`}
                     settlement={detail}
-                    triggerLabel={isCompleted(settlement.status) ? "View proof" : "Case details"}
+                    triggerLabel="Case details"
                   />
-                  {settlement.status === SettlementStatus.RECONCILED ? (
-                    <SettlementDetailSheet
-                      key={`${settlement.id}-audit-${settlement.events.length}`}
-                      settlement={detail}
-                      defaultTab="audit"
-                      triggerLabel="Audit trail"
-                    />
+                  {isCompleted(settlement.status) ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/settlements/${settlement.id}/controls`}>Finality review</Link>
+                    </Button>
                   ) : null}
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/settlements/${settlement.id}/report`}>Report</Link>
-                  </Button>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/settlements/${settlement.id}/controls`}>
-                      Finality review
-                    </Link>
-                  </Button>
+                  {settlement.status === SettlementStatus.RECONCILED &&
+                  finality.decision !== "ready_to_finalize" ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/settlements/${settlement.id}/report`}>Settlement report</Link>
+                    </Button>
+                  ) : null}
                 </div>
 
                 {/* Embedded case console (provider tracking / reconcile) */}

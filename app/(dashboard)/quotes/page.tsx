@@ -189,7 +189,7 @@ function QuotePreviewPanel({ quote }: { quote?: PreviewQuote | null }) {
       <div className="relative flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/40">
-            INR payout · Quote lock preview
+            Target amount · Quote lock preview
           </p>
           {isLocked && quote?.id ? (
             <p className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -213,7 +213,7 @@ function QuotePreviewPanel({ quote }: { quote?: PreviewQuote | null }) {
       </div>
 
       <div className="relative mt-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/35">INR payout</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/35">Target amount</p>
         <p className={cn("qlock__payout mt-1", !payout && "qlock__payout--empty")}>
           {payout ?? "₹ —"}
         </p>

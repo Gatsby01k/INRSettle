@@ -1,4 +1,14 @@
-import { AlertTriangle, Check, Circle, Clock, X, type LucideIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  Circle,
+  Clock3,
+  LoaderCircle,
+  X,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -22,8 +32,8 @@ const TONE_BY_STATUS: Record<string, Tone> = {
   INTEGRATION_VERIFIED: "success",
   COMMERCIAL_READY: "success",
   // In-flight / needs attention soon
-  EXECUTING: "warning",
-  REQUESTED: "warning",
+  EXECUTING: "info",
+  REQUESTED: "info",
   OPEN: "warning",
   EXPIRED: "warning",
   PARTIALLY_MATCHED: "warning",
@@ -55,8 +65,19 @@ const TONE_BY_STATUS: Record<string, Tone> = {
 export function StatusBadge({ status, dot = true }: { status: string; dot?: boolean }) {
   const normalized = status.toUpperCase();
   const tone = TONE_BY_STATUS[normalized] ?? "neutral";
+  const Icon =
+    tone === "success"
+      ? CheckCircle2
+      : tone === "danger"
+        ? XCircle
+        : tone === "warning"
+          ? Clock3
+          : tone === "info"
+            ? LoaderCircle
+            : Circle;
   return (
-    <Badge tone={tone} dot={dot}>
+    <Badge tone={tone} dot={false} title={`Status: ${normalized.replaceAll("_", " ")}`}>
+      {dot ? <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} aria-hidden="true" /> : null}
       {normalized.replaceAll("_", " ")}
     </Badge>
   );
@@ -94,7 +115,7 @@ export type StateKind = "ok" | "pending" | "blocked" | "attention" | "idle";
 
 const STATE_ICON: Record<StateKind, LucideIcon> = {
   ok: Check,
-  pending: Clock,
+  pending: Clock3,
   blocked: X,
   attention: AlertTriangle,
   idle: Circle,

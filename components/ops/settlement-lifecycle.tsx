@@ -1,178 +1,110 @@
-import { Check } from "lucide-react";
-import { SETTLEMENT_LIFECYCLE, settlementStepIndex } from "@/lib/ops";
+import {
+  Check,
+  Circle,
+  Clock3,
+  Pause,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const LABELS: Record<string, string> = {
-  REQUESTED: "Requested",
-  APPROVED: "Approved",
-  EXECUTING: "Executing",
-  SETTLED: "Settled",
-  RECONCILED: "Reconciled",
+const STEPS = [
+  { key: "REQUESTED", label: "Request" },
+  { key: "APPROVED", label: "Approval" },
+  { key: "EXECUTING", label: "Provider" },
+  { key: "SETTLED", label: "Evidence" },
+  { key: "RECONCILED", label: "Finality" },
+] as const;
+
+const INDEX_BY_STATUS: Record<string, number> = {
+  REQUESTED: 0,
+  QUOTED: 0,
+  PENDING_APPROVAL: 1,
+  APPROVED: 1,
+  EXECUTING: 2,
+  SETTLED: 3,
+  RECONCILED: 4,
+  ON_HOLD: 1,
+  FAILED: 2,
+  CANCELLED: 0,
 };
 
-const PROOF_RAIL_STEPS = ["Approved", "Executed", "Provider", "Settled", "Reconciled"] as const;
+type VisualState = "complete" | "active" | "waiting" | "blocked" | "paused";
 
-function proofRailIndex(status: string): number {
-  switch (status.toUpperCase()) {
-    case "RECONCILED":
-      return 4;
-    case "SETTLED":
-      return 3;
-    case "EXECUTING":
-      return 2;
-    case "APPROVED":
-      return 1;
-    default:
-      return 0;
-  }
+const ICON_BY_STATE: Record<VisualState, LucideIcon> = {
+  complete: Check,
+  active: Clock3,
+  waiting: Circle,
+  blocked: X,
+  paused: Pause,
+};
+
+function stateFor(status: string, index: number, current: number): VisualState {
+  const normalized = status.toUpperCase();
+  if (normalized === "FAILED" && index === current) return "blocked";
+  if (normalized === "CANCELLED" && index === current) return "blocked";
+  if (normalized === "ON_HOLD" && index === current) return "paused";
+  if (normalized === "RECONCILED" && index <= current) return "complete";
+  if (index < current) return "complete";
+  if (index === current) return "active";
+  return "waiting";
 }
 
 export function SettlementLifecycle({
   status,
-  compact,
-  spotlight,
-  proofRail,
+  compact = false,
+  spotlight = false,
 }: {
   status: string;
   compact?: boolean;
   spotlight?: boolean;
-  /** Compact proof rail: Approved → Executed → Provider → Settled → Reconciled */
   proofRail?: boolean;
 }) {
-  if (proofRail) {
-    const current = proofRailIndex(status);
-    const terminalComplete = status.toUpperCase() === "RECONCILED";
-
-    return (
-      <div className="w-full">
-        <div className="flex items-center">
-          {PROOF_RAIL_STEPS.map((label, index) => {
-            const done = index < current || (terminalComplete && index === current);
-            const active = index === current && !terminalComplete;
-            const future = index > current;
-            const connectorDone = index < current || (terminalComplete && index === current);
-            const connectorActive = index === current && !terminalComplete;
-
-            return (
-              <div key={label} className="flex flex-1 items-center last:flex-none">
-                <div
-                  className="proof-rail-step flex flex-col items-center gap-1"
-                  style={{ animationDelay: `${index * 70}ms` }}
-                >
-                  <div
-                    className={cn(
-                      "grid h-6 w-6 place-items-center rounded-full border text-[10px] font-semibold transition-colors",
-                      done && "border-[#42d5b7] bg-[#42d5b7] text-[#07132b] settlement-step-complete",
-                      active &&
-                        "border-[#07132b] bg-[#07132b] text-white ring-2 ring-[#42d5b7]/30 settlement-step-active",
-                      future && "border-slate-200/90 bg-white/80 text-slate-400",
-                    )}
-                    style={done ? { animationDelay: `${index * 90}ms` } : undefined}
-                  >
-                    {done ? (
-                      <Check
-                        className="h-3 w-3 settlement-step-check"
-                        style={{ animationDelay: `${index * 90 + 100}ms` }}
-                      />
-                    ) : (
-                      index + 1
-                    )}
-                  </div>
-                  <span
-                    className={cn(
-                      "max-w-[4.5rem] truncate text-center text-[9px] font-semibold uppercase tracking-wide",
-                      active ? "text-[#07132b]" : done ? "text-teal-700" : "text-slate-400",
-                    )}
-                  >
-                    {label}
-                  </span>
-                </div>
-                {index < PROOF_RAIL_STEPS.length - 1 ? (
-                  <div
-                    className={cn(
-                      "proof-rail-connector mx-0.5 h-px flex-1 rounded-full",
-                      connectorDone && "bg-[#42d5b7]",
-                      connectorActive && "settlement-connector-active",
-                      !connectorDone && !connectorActive && "bg-slate-200/80",
-                    )}
-                    style={{ animationDelay: `${index * 70 + 40}ms` }}
-                  />
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  const current = settlementStepIndex(status);
-  // When fully reconciled, the lifecycle is complete — every step, including the
-  // final RECONCILED step, should render as done rather than "in progress".
-  const terminalComplete = status.toUpperCase() === "RECONCILED";
+  const normalized = status.toUpperCase();
+  const current = INDEX_BY_STATUS[normalized] ?? 0;
+  const exceptional = ["FAILED", "CANCELLED", "ON_HOLD"].includes(normalized);
 
   return (
-    <div className="w-full">
-      <div className="flex items-center">
-        {SETTLEMENT_LIFECYCLE.map((step, index) => {
-          const done = index < current || (terminalComplete && index === current);
-          const active = index === current && !terminalComplete;
-          const future = index > current;
-          const connectorDone = index < current || (terminalComplete && index === current);
-          const connectorActive = index === current && !terminalComplete;
-
+    <div
+      className={cn("ops-lifecycle", compact && "ops-lifecycle--compact", spotlight && "ops-lifecycle--spotlight")}
+      aria-label={`Settlement lifecycle. Current status: ${normalized.replaceAll("_", " ")}`}
+    >
+      <ol>
+        {STEPS.map((step, index) => {
+          const state = stateFor(normalized, index, current);
+          const Icon = ICON_BY_STATE[state];
+          const isCurrent = index === current;
           return (
-            <div key={step} className="flex flex-1 items-center last:flex-none">
-              <div
-                className="flex flex-col items-center gap-1.5"
-                style={{ animationDelay: `${index * 60}ms` }}
-              >
-                <div
-                  className={cn(
-                    "grid place-items-center rounded-full border font-semibold transition-colors",
-                    spotlight ? "h-9 w-9 text-sm" : "h-7 w-7 text-xs",
-                    done && "border-[#42d5b7] bg-[#42d5b7] text-[#07132b] settlement-step-complete",
-                    active &&
-                      "border-[#07132b] bg-[#07132b] text-white ring-4 ring-[#42d5b7]/25 settlement-step-active",
-                    future && "border-slate-200 bg-white text-slate-400",
-                  )}
-                  style={done ? { animationDelay: `${index * 80}ms` } : undefined}
-                >
-                  {done ? (
-                    <Check
-                      className={cn("settlement-step-check", spotlight ? "h-4 w-4" : "h-3.5 w-3.5")}
-                      style={{ animationDelay: `${index * 80 + 120}ms` }}
-                    />
-                  ) : (
-                    index + 1
-                  )}
-                </div>
-                {!compact ? (
-                  <span
-                    className={cn(
-                      "font-medium uppercase tracking-wide",
-                      spotlight ? "text-[11px]" : "text-[10px]",
-                      active ? "text-[#07132b]" : done ? "text-teal-700" : "text-slate-400",
-                    )}
-                  >
-                    {LABELS[step]}
-                  </span>
-                ) : null}
-              </div>
-              {index < SETTLEMENT_LIFECYCLE.length - 1 ? (
-                <div
-                  className={cn(
-                    "mx-1 h-0.5 flex-1 rounded-full transition-colors",
-                    connectorDone && "bg-[#42d5b7]",
-                    connectorActive && "settlement-connector-active",
-                    !connectorDone && !connectorActive && "bg-slate-200",
-                  )}
-                />
+            <li key={step.key} className={`is-${state}`} aria-current={isCurrent ? "step" : undefined}>
+              <span className="ops-lifecycle__rail" aria-hidden="true" />
+              <span className="ops-lifecycle__marker" aria-hidden="true">
+                <Icon />
+              </span>
+              {!compact ? (
+                <span className="ops-lifecycle__copy">
+                  <strong>{step.label}</strong>
+                  {isCurrent ? (
+                    <small>
+                      {state === "blocked"
+                        ? "Exception"
+                        : state === "paused"
+                          ? "On hold"
+                          : normalized === "RECONCILED"
+                            ? "Complete"
+                            : "Current"}
+                    </small>
+                  ) : null}
+                </span>
               ) : null}
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ol>
+      {exceptional ? (
+        <span className="sr-only">
+          {normalized === "ON_HOLD" ? "Workflow is paused and requires attention." : "Workflow is blocked and requires intervention."}
+        </span>
+      ) : null}
     </div>
   );
 }

@@ -29,7 +29,7 @@ export const ACTION_STEPS: Record<SettlementAction, string[]> = {
 };
 
 const EXECUTING_STEPS = [
-  "Payout request created",
+  "Provider request created",
   "Waiting for provider status",
   "Settlement update",
   "Reconciliation",
@@ -245,7 +245,7 @@ export function useSettlementActionStep(settlementId?: string, action?: Settleme
 const ROW_STATUS_HINTS: Record<string, string> = {
   APPROVED: "Ready to execute",
   EXECUTING: "Tracking provider execution",
-  SETTLED: "Payout completed",
+  SETTLED: "Provider execution completed",
   RECONCILED: "Reconciled automatically",
 };
 
@@ -306,7 +306,7 @@ export function SettlementOperationPanel({
               Settlement approved. Select an eligible provider connection to begin external execution.
             </p>
           </div>
-          <MetadataChip label="Next step" value="Execute payout" />
+          <MetadataChip label="Next step" value="Start provider execution" />
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <MetadataChip label="Provider" value={focusSettlement.provider ?? "Selected at execution"} />
@@ -359,7 +359,7 @@ export function SettlementOperationPanel({
     return (
       <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/40 p-4 shadow-sm">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Payout completed</p>
+          <p className="text-sm font-semibold text-slate-900">Provider execution completed</p>
           <p className="mt-1 text-sm text-slate-600">
             Provider execution completed and settlement was recorded.
           </p>

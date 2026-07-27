@@ -21,7 +21,7 @@ type PublicPage = {
 const PAGES: Record<string, PublicPage> = {
   "use-cases.html": {
     eyebrow: "Operating models",
-    title: "One control plane for settlement operations.",
+    title: "One operating record for settlement teams.",
     description:
       "INRSettle gives finance, operations and compliance teams a shared record from request through finality. Existing banking, liquidity and execution relationships remain in place.",
     boundary: "INRSettle coordinates work and evidence. Integrated providers execute settlements and supply liquidity.",
@@ -241,7 +241,7 @@ const PAGES: Record<string, PublicPage> = {
   },
   "docs/integration.html": {
     eyebrow: "Provider integration",
-    title: "Connect providers behind a stable control plane.",
+    title: "Connect providers behind a stable operating model.",
     description:
       "A connector declares capabilities, resolves a secret-manager reference, submits idempotently, normalizes status and verifies inbound events.",
     sections: [

@@ -3,21 +3,36 @@
 import type { FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 
-function Field({ name, type = "text", placeholder, required }: {
+function Field({
+  name,
+  label,
+  type = "text",
+  placeholder,
+  required,
+  autoComplete,
+}: {
   name: string;
+  label: string;
   type?: string;
   placeholder: string;
   required?: boolean;
+  autoComplete?: string;
 }) {
   return (
-    <input
-      name={name}
-      type={type}
-      placeholder={placeholder}
-      required={required}
-      aria-label={placeholder}
-      className="w-full rounded-lg border border-[var(--ops-line)] bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[var(--status-ok)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,199,157,0.15)]"
-    />
+    <label className="grid gap-1.5 text-xs font-medium text-slate-700">
+      <span>
+        {label}
+        {required ? <span className="ml-0.5 text-rose-600" aria-hidden="true">*</span> : null}
+      </span>
+      <input
+        name={name}
+        type={type}
+        placeholder={placeholder}
+        required={required}
+        autoComplete={autoComplete}
+        className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm font-normal text-slate-950 placeholder:text-slate-400 hover:border-slate-400 focus:border-[var(--status-ok)] focus:outline-none focus:ring-3 focus:ring-[rgba(0,127,105,0.12)]"
+      />
+    </label>
   );
 }
 
@@ -42,42 +57,48 @@ export function ContactMailForm({ mode }: { mode: "access" | "sales" }) {
 
   return (
     <form onSubmit={openDraft} className="grid gap-3">
-      <Field name="email" type="email" placeholder="Work email" required />
-      <Field name="company" placeholder="Company" required />
-      <Field name="role" placeholder="Role" />
+      <Field name="email" label="Work email" type="email" placeholder="name@company.com" required autoComplete="email" />
+      <Field name="company" label="Company" placeholder="Legal entity name" required autoComplete="organization" />
+      <Field name="role" label="Role" placeholder="Your role" autoComplete="organization-title" />
       {mode === "access" ? (
         <>
-          <select
-            name="monthly_volume"
-            defaultValue=""
-            aria-label="Monthly INR/USDT settlement volume"
-            className="w-full rounded-lg border border-[var(--ops-line)] bg-white px-3.5 py-2.5 text-sm text-slate-700 focus:border-[var(--status-ok)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,199,157,0.15)]"
-          >
-            <option value="">Monthly INR/USDT settlement volume</option>
-            <option>Below $10k</option>
-            <option>$10k–$50k</option>
-            <option>$50k–$250k</option>
-            <option>$250k+</option>
-          </select>
-          <textarea
-            name="use_case"
-            placeholder="Your settlement workflow, providers and control requirements"
-            aria-label="Use case"
-            className="min-h-28 w-full resize-y rounded-lg border border-[var(--ops-line)] bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[var(--status-ok)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,199,157,0.15)]"
-          />
+          <label className="grid gap-1.5 text-xs font-medium text-slate-700">
+            Monthly settlement volume
+            <select
+              name="monthly_volume"
+              defaultValue=""
+              className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm font-normal text-slate-700 hover:border-slate-400 focus:border-[var(--status-ok)] focus:outline-none focus:ring-3 focus:ring-[rgba(0,127,105,0.12)]"
+            >
+              <option value="">Select a range</option>
+              <option>Below $10k</option>
+              <option>$10k–$50k</option>
+              <option>$50k–$250k</option>
+              <option>$250k+</option>
+            </select>
+          </label>
+          <label className="grid gap-1.5 text-xs font-medium text-slate-700">
+            Operating workflow
+            <textarea
+              name="use_case"
+              placeholder="Providers, controls and reconciliation requirements"
+              className="min-h-28 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal text-slate-950 placeholder:text-slate-400 hover:border-slate-400 focus:border-[var(--status-ok)] focus:outline-none focus:ring-3 focus:ring-[rgba(0,127,105,0.12)]"
+            />
+          </label>
         </>
       ) : (
         <>
-          <Field name="corridor" placeholder="Corridor interest" />
-          <textarea
-            name="message"
-            placeholder="Volumes, integration scope, partnership requirements"
-            aria-label="Message"
-            className="min-h-28 w-full resize-y rounded-lg border border-[var(--ops-line)] bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[var(--status-ok)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,199,157,0.15)]"
-          />
+          <Field name="corridor" label="Corridor" placeholder="Settlement corridor" />
+          <label className="grid gap-1.5 text-xs font-medium text-slate-700">
+            Integration context
+            <textarea
+              name="message"
+              placeholder="Volumes, providers, controls and commercial requirements"
+              className="min-h-28 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal text-slate-950 placeholder:text-slate-400 hover:border-slate-400 focus:border-[var(--status-ok)] focus:outline-none focus:ring-3 focus:ring-[rgba(0,127,105,0.12)]"
+            />
+          </label>
         </>
       )}
-      <Button type="submit" variant="primary" className="lp-cta-primary mt-1 w-full">
+      <Button type="submit" variant="primary" size="lg" className="lp-cta-primary mt-1 w-full">
         Open email draft
       </Button>
       <p className="text-center text-xs leading-relaxed text-slate-400">

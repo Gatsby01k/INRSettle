@@ -199,7 +199,7 @@ export function FinalityReview({ data }: { data: FinalityReviewData }) {
                 Reported amount {data.proof.actualAmount} {data.proof.currency ?? ""}
               </p>
             ) : (
-              <p className="text-slate-400">No payout amount reported by the provider.</p>
+              <p className="text-slate-400">No executed amount reported by the provider.</p>
             )}
             <p className="text-slate-400">
               Received {data.proof.receivedAt}

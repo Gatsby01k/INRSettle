@@ -77,7 +77,7 @@ export function SettlementDetailSheet({
           <span className="text-xs text-slate-500">{settlement.corridor}</span>
         </div>
 
-        <div className="rounded-xl border border-[var(--ops-line-soft)] bg-slate-50/70 p-4">
+        <div className="rounded-lg border border-[var(--ops-line-soft)] bg-slate-50 p-4">
           <SettlementLifecycle status={settlement.status} />
         </div>
 
@@ -98,7 +98,7 @@ export function SettlementDetailSheet({
           </TabsList>
 
           <TabsContent value="overview">
-            <div className="rounded-xl border border-[var(--ops-line)] p-3">
+            <div className="rounded-lg border border-[var(--ops-line)] p-3">
               <StatRow label="Source amount" value={settlement.sourceAmount} />
               <StatRow label="Destination amount" value={settlement.targetAmount} />
               <StatRow label="Fee" value={settlement.feeAmount} />
@@ -131,8 +131,8 @@ export function SettlementDetailSheet({
                 ))}
               </ol>
             ) : (
-              <p className="rounded-xl border border-[var(--ops-line-soft)] bg-slate-50/70 px-3 py-6 text-center text-sm text-slate-500">
-                No lifecycle events recorded yet.
+              <p className="rounded-lg border border-[var(--ops-line-soft)] bg-slate-50 px-3 py-5 text-sm text-slate-600">
+                Lifecycle events will appear here as the settlement moves through approval and provider execution.
               </p>
             )}
           </TabsContent>
@@ -141,7 +141,7 @@ export function SettlementDetailSheet({
             {settlement.reconciliation.length ? (
               <div className="space-y-2">
                 {settlement.reconciliation.map((record) => (
-                  <div key={record.externalRef} className="rounded-xl border border-[var(--ops-line)] p-3">
+                  <div key={record.externalRef} className="rounded-lg border border-[var(--ops-line)] p-3">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-medium text-slate-950">{record.externalRef}</p>
                       <StatusBadge status={record.status} />
@@ -158,8 +158,8 @@ export function SettlementDetailSheet({
                 ))}
               </div>
             ) : (
-              <p className="rounded-xl border border-[var(--ops-line-soft)] bg-slate-50/70 px-3 py-6 text-center text-sm text-slate-500">
-                No reconciliation records linked to this settlement.
+              <p className="rounded-lg border border-[var(--ops-line-soft)] bg-slate-50 px-3 py-5 text-sm text-slate-600">
+                No independent record is linked yet. Add or match a bank or PSP record in Reconciliation.
               </p>
             )}
           </TabsContent>

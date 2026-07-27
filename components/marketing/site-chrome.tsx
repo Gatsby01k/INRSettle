@@ -19,7 +19,7 @@ export function SiteHeader() {
         className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-5 sm:px-8"
         aria-label="Primary"
       >
-        <Link href="/" className="flex items-center gap-2.5" aria-label="INRSettle home">
+        <Link href="/" className="flex min-h-11 items-center gap-2.5" aria-label="INRSettle home">
           <Image src="/assets/mark.png" alt="" width={31} height={31} className="rounded-lg" />
           <span className="text-[15px] font-semibold tracking-[-0.02em] text-slate-950">INRSettle</span>
         </Link>
@@ -125,7 +125,7 @@ export function SiteCta() {
       <div className="platform-container">
         <div>
           <p className="platform-kicker">Settlement operations</p>
-          <h2>Bring the workflow under control.</h2>
+          <h2>Review your settlement workflow.</h2>
           <p>
             Map approvals, funding, provider execution, evidence and finality
             into one operating record.

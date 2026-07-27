@@ -44,12 +44,12 @@ export function AlertBanner({
   const content = (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-xl border px-3.5 py-3 transition-shadow",
+        "flex items-start gap-3 rounded-md border px-3.5 py-3 transition-colors",
         style.wrap,
-        href && "hover:shadow-ops-sm",
+        href && "hover:border-slate-300",
       )}
     >
-      <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-lg", style.chip)}>
+      <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-md", style.chip)}>
         <Icon className="h-4 w-4" />
       </span>
       <div className="min-w-0 flex-1">

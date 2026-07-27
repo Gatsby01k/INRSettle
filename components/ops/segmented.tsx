@@ -28,7 +28,7 @@ export function Segmented({
       role="group"
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex flex-wrap items-center gap-1 rounded-xl border border-[var(--ops-line)] bg-slate-100/70 p-1",
+        "inline-flex flex-wrap items-center gap-0.5 rounded-md bg-slate-100 p-0.5",
         className,
       )}
     >
@@ -41,10 +41,10 @@ export function Segmented({
             aria-pressed={active}
             onClick={() => onChange(option.value)}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "inline-flex min-h-8 items-center gap-1.5 rounded-[5px] font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-emerald/30",
               size === "sm" ? "px-2.5 py-1 text-xs" : "px-3.5 py-1.5 text-sm",
               active
-                ? "bg-white text-slate-950 shadow-[0_1px_2px_rgba(7,17,31,0.08),0_4px_10px_rgba(7,17,31,0.06)]"
+                ? "bg-white text-slate-950 shadow-[0_1px_2px_rgba(15,23,42,0.08)]"
                 : "text-slate-500 hover:text-slate-800",
             )}
           >

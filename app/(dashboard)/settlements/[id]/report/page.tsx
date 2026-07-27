@@ -380,7 +380,7 @@ export default async function SettlementReportPage({
                 value={`${safety.capLabel} · ${safety.withinCap ? "within cap" : "EXCEEDED"}`}
               />
               <StatRow
-                label="Live payouts"
+                label="Provider execution"
                 value={safety.executionBoundaryConfirmed ? "Provider executed" : "Not confirmed"}
               />
             </>
@@ -404,7 +404,7 @@ export default async function SettlementReportPage({
           {isShadowMode ? (
             <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">
               Funds were moved by the external provider. INRSettle recorded and verified the settlement.
-              {isLiveTest ? " Live payouts disabled." : ""}
+              {isLiveTest ? " Live provider execution disabled." : ""}
             </p>
           ) : null}
         </div>

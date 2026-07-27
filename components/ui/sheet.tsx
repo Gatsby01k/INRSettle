@@ -27,16 +27,15 @@ export function SheetContent({
       <DialogPrimitive.Overlay className="ops-animate-overlay fixed inset-0 z-50 bg-[rgba(7,17,31,0.46)] backdrop-blur-[2px]" />
       <DialogPrimitive.Content
         className={cn(
-          "ops-animate-sheet fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-[var(--ops-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.92))] shadow-[var(--ops-shadow-lg)] outline-none sm:inset-y-2 sm:right-2 sm:rounded-2xl sm:border",
+          "ops-animate-sheet fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-[var(--ops-line)] bg-white shadow-[var(--ops-shadow-lg)] outline-none",
           className,
         )}
         {...props}
       >
-        <span className="pointer-events-none absolute inset-x-5 top-0 h-[2px] rounded-full bg-[linear-gradient(90deg,transparent,rgba(0,199,157,0.8),rgba(242,173,35,0.55),transparent)]" />
         <div className="flex items-start justify-between gap-3 border-b border-[var(--ops-line-soft)] px-5 py-4">
           <div className="min-w-0">
             {eyebrow ? (
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-brand-emerald-ink">
+              <p className="mb-1 text-xs font-medium text-slate-500">
                 {eyebrow}
               </p>
             ) : null}
