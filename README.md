@@ -56,6 +56,14 @@ npx prisma validate
 
 The application deploys as Next.js (the repository is not a static Netlify site). Use a secret manager for production values. `ProviderConnection.credentialsRef` stores only an opaque reference such as `vault://...`; it must never contain a credential value.
 
+Vercel uses `npm run build:vercel`, which applies committed Prisma migrations
+before compiling the application. The deployment fails closed if the database
+cannot be reached or a migration cannot be applied, preventing a new Prisma
+Client from being published against an older schema. Preview and production
+must use separately scoped `DATABASE_URL` values. PostgreSQL URLs should use
+`sslmode=verify-full`; the runtime also preserves pg 8's current strict
+verification when a legacy `prefer`, `require` or `verify-ca` alias is supplied.
+
 Pontis deployments that require a whitelisted static IP should use `gateway/pontis`. Provider credentials remain on that gateway; the app receives only the gateway URL and a separate shared secret.
 
 ## Known production blockers

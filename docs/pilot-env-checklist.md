@@ -13,7 +13,9 @@ proof, reconciliation, audit, and finality.
       (`ops@inrsettle.com`, `demo@inrsettle.com`, `approver@inrsettle.com` —
       seed/script defaults must not survive into the pilot)
 - [ ] Set `SESSION_SECRET` (≥ 32 chars, random; the app refuses shorter values)
-- [ ] Set `DATABASE_URL` (pilot database, not the demo database)
+- [ ] Set `DATABASE_URL` (pilot database, not the demo database) with
+      `sslmode=verify-full`; preview and production must use separately scoped
+      database URLs
 - [ ] Set `QUOTE_RATE_USDT_INR` (manual desk rate; quotes fail closed in
       production if unset)
 - [ ] Set `LIVE_TEST_MAX_INR` (per-settlement LIVE_TEST cap; default 1000)
@@ -29,7 +31,9 @@ proof, reconciliation, audit, and finality.
 
 ## Deploy & verify
 
-- [ ] `npx prisma migrate deploy`
+- [ ] `npm run prisma:migrate:status` against the target database and review any
+      missing, failed or divergent migration history
+- [ ] `npm run prisma:migrate:deploy` (Vercel also runs this before its Next build)
 - [ ] `npx prisma validate`
 - [ ] `npm test`
 - [ ] `npm run build`
