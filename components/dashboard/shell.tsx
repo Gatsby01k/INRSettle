@@ -37,7 +37,7 @@ export function DashboardShell({
             <UserMenu userName={userName} organizationName={organizationName} logoutAction={logout} />
           </div>
         </header>
-        <main className="mx-auto w-full max-w-[1440px] space-y-6 px-4 pb-28 pt-5 sm:px-6 sm:pb-24 sm:pt-7 lg:px-8 lg:py-8">
+        <main className="app-main mx-auto w-full max-w-[1440px] space-y-6 px-4 pb-8 pt-5 sm:px-6 sm:pt-7 lg:px-8 lg:py-8">
           {children}
         </main>
       </div>

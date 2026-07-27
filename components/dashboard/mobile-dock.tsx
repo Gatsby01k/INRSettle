@@ -17,7 +17,7 @@ export function MobileDock() {
   const pathname = usePathname();
 
   return (
-    <nav className="mobile-ops-dock lg:hidden" aria-label="Primary mobile navigation">
+    <nav className="mobile-ops-dock" aria-label="Primary mobile navigation">
       {ITEMS.map((item) => {
         const Icon = item.icon;
         const active =

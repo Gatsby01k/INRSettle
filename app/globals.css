@@ -8307,7 +8307,7 @@ section.lp-view.bg-slate-50\/60 {
   right: 12px;
   bottom: max(10px, env(safe-area-inset-bottom));
   left: 12px;
-  display: grid;
+  display: none;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   min-height: 66px;
   padding: 6px;
@@ -8908,6 +8908,24 @@ body {
 .mobile-ops-dock a.is-active > span {
   background: transparent;
   color: #08715f;
+}
+
+/* The bottom dock is a phone-only control. Tablet and desktop navigation use
+   the menu/sidebar, so a fixed dock must never cover operational content. */
+@media (max-width: 767px) {
+  .mobile-ops-dock {
+    display: grid;
+  }
+
+  .app-main {
+    padding-bottom: calc(86px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-ops-dock {
+    display: none !important;
+  }
 }
 
 /* Marketing answers one question per section; whitespace separates ideas. */
