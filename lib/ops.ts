@@ -18,30 +18,14 @@ export type NavGroup = { label: string; items: NavItem[] };
 
 export const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Settlement workflow",
+    label: "Operations",
     items: [
-      { href: "/dashboard", label: "Operations overview" },
+      { href: "/dashboard", label: "Operations Center" },
       { href: "/settlements", label: "Settlements" },
-      { href: "/funding", label: "Funding" },
       { href: "/reconciliation", label: "Reconciliation" },
-      { href: "/finality", label: "Finality" },
-      { href: "/exceptions", label: "Exceptions" },
-    ],
-  },
-  {
-    label: "Provider network",
-    items: [
-      { href: "/providers", label: "Providers" },
-      { href: "/providers/operations", label: "Provider operations" },
-      { href: "/audit-logs", label: "Audit explorer" },
-    ],
-  },
-  {
-    label: "Control & evidence",
-    items: [
-      { href: "/risk-review", label: "Risk & due diligence" },
-      { href: "/reports", label: "Reports" },
-      { href: "/settings", label: "Settings" },
+      { href: "/providers", label: "Provider Network" },
+      { href: "/risk-review", label: "Controls & Evidence" },
+      { href: "/settings", label: "Platform Settings" },
     ],
   },
 ];

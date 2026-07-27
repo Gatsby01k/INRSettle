@@ -42,7 +42,6 @@ import { FilterBar } from "@/components/ops/filter-bar";
 import { FormSelect } from "@/components/ops/form-select";
 import { SettlementLifecycle } from "@/components/ops/settlement-lifecycle";
 import {
-  SettlementDetailSheet,
   type SettlementDetail,
 } from "@/components/dashboard/settlement-detail-sheet";
 import {
@@ -640,7 +639,12 @@ export default async function SettlementsPage({
                 <div className="scase__header">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <p className="text-[15px] font-semibold tracking-tight text-slate-950">{settlement.publicId}</p>
+                      <Link
+                        href={`/settlements/${settlement.id}`}
+                        className="text-[15px] font-semibold tracking-tight text-slate-950 transition-colors hover:text-brand-emerald-ink"
+                      >
+                        {settlement.publicId}
+                      </Link>
                       <StatusBadge status={settlement.status} />
                       <span
                         className={cn(
@@ -877,11 +881,9 @@ export default async function SettlementsPage({
 
                   <span className="scase__actions-spacer" aria-hidden="true" />
 
-                  <SettlementDetailSheet
-                    key={`${settlement.id}-${settlement.status}-${settlement.providerTransactionId ?? ""}-${settlement.events.length}`}
-                    settlement={detail}
-                    triggerLabel="Case details"
-                  />
+                  <Button asChild variant="brand" size="sm">
+                    <Link href={`/settlements/${settlement.id}`}>Open workspace</Link>
+                  </Button>
                   {isCompleted(settlement.status) ? (
                     <Button asChild variant="outline" size="sm">
                       <Link href={`/settlements/${settlement.id}/controls`}>Finality review</Link>

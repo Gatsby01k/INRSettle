@@ -34,49 +34,84 @@ export const metadata: Metadata = {
       "One operating record for every provider-executed settlement, from request and approval through reconciliation and finality.",
     url: "https://inrsettle.com/",
     type: "website",
+    images: [
+      {
+        url: "/og.png",
+        width: 1731,
+        height: 909,
+        alt: "INRSettle settlement operations workspace",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "INRSettle — Settlement operations, from request to finality",
+    description:
+      "One operating record for every provider-executed settlement, from request and approval through reconciliation and finality.",
+    images: ["/og.png"],
   },
 };
 
 const LIFECYCLE_STAGES = [
   {
     number: "01",
-    name: "Request",
+    name: "Draft",
     detail: "Commercial terms, corridor, accounts and client reference enter one controlled record.",
   },
   {
     number: "02",
-    name: "Quote",
-    detail: "Rate, fee, amount and settlement window remain bound to the request.",
+    name: "Internal Review",
+    detail: "Settlement operations verify that the record is complete before controlled processing.",
   },
   {
     number: "03",
+    name: "Quote Locked",
+    detail: "Rate, fee, amount, validity and settlement window remain bound to the record.",
+  },
+  {
+    number: "04",
     name: "Approval",
     detail: "Role policy, limits, MFA step-up and dual control determine whether work may proceed.",
   },
   {
-    number: "04",
-    name: "Funding",
-    detail: "Required, requested and confirmed amounts stay visible before provider submission.",
-  },
-  {
     number: "05",
-    name: "Execution",
-    detail: "A selected provider receives an idempotent request and returns its own reference.",
+    name: "Funding Requested",
+    detail: "The provider funding requirement and requested amount remain visible to treasury.",
   },
   {
     number: "06",
-    name: "Evidence",
-    detail: "Signed webhooks and status polling preserve provider proof without asserting finality.",
+    name: "Funding Available",
+    detail: "Dual control confirms the funding position before provider submission is allowed.",
   },
   {
     number: "07",
-    name: "Reconciliation",
-    detail: "Independent bank or PSP records are matched against the settlement record.",
+    name: "Provider Accepted",
+    detail: "A selected provider accepts an idempotent request and returns its own reference.",
   },
   {
     number: "08",
-    name: "Finality",
+    name: "Executing",
+    detail: "External execution is tracked through callbacks, polling and controlled intervention.",
+  },
+  {
+    number: "09",
+    name: "Provider Proof Received",
+    detail: "Provider references and proof are retained with provenance, without asserting finality.",
+  },
+  {
+    number: "10",
+    name: "Independent Reconciliation",
+    detail: "Independent bank or PSP records are matched against the settlement record.",
+  },
+  {
+    number: "11",
+    name: "Finality Review",
     detail: "The final review evaluates approval, proof, reconciliation and operational guardrails.",
+  },
+  {
+    number: "12",
+    name: "Completed",
+    detail: "Authorized completion and the final evidence package close the operating record.",
   },
 ] as const;
 
@@ -159,7 +194,7 @@ export default function HomePage() {
           <div className="platform-container">
             <SectionIntro
               label="Settlement lifecycle"
-              title="One operating record. Eight controlled stages."
+              title="One operating record. Twelve controlled stages."
               body="Each stage shows its owner, state, evidence and next action—without reconstructing the settlement across provider portals and spreadsheets."
             />
             <ol className="platform-lifecycle-grid">

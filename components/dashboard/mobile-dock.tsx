@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircleAlert, LayoutDashboard, Network, Scale, Workflow } from "lucide-react";
+import { LayoutDashboard, Network, Scale, ShieldCheck, Workflow } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/settlements", label: "Workflow", icon: Workflow },
-  { href: "/reconciliation", label: "Match", icon: Scale },
-  { href: "/exceptions", label: "Exceptions", icon: CircleAlert },
+  { href: "/dashboard", label: "Center", icon: LayoutDashboard },
+  { href: "/settlements", label: "Settlements", icon: Workflow },
+  { href: "/reconciliation", label: "Reconcile", icon: Scale },
   { href: "/providers", label: "Providers", icon: Network },
+  { href: "/risk-review", label: "Controls", icon: ShieldCheck },
 ] as const;
 
 export function MobileDock() {
