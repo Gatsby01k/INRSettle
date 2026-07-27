@@ -3,15 +3,16 @@ import Link from "next/link";
 import { ArrowRight, Check, FileCheck2, ShieldCheck } from "lucide-react";
 import { resolveContactIntent, type ContactIntent } from "@/components/marketing/static-marketing-page";
 import { SiteFooter, SiteHeader } from "@/components/marketing/site-chrome";
-import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ContactMailForm } from "@/components/marketing/contact-mail-form";
 
 /**
  * Request access / Talk to us — rebuilt native, a continuation of the
  * homepage: same chamber lighting, same glass, same certificate surfaces.
  * The form is framed as what it is — the beginning of a pilot review, not
- * a contact form. Netlify form attributes and field names are unchanged so
- * submissions keep working.
+ * a contact form. No CRM/form backend exists in this repository, so the form
+ * opens a transparent email draft instead of pretending a Vercel POST was
+ * delivered through Netlify.
  */
 
 const META: Record<ContactIntent, { title: string; description: string }> = {
@@ -37,29 +38,6 @@ export async function generateMetadata({
   const { intent } = await searchParams;
   const meta = META[resolveContactIntent(intent)];
   return { ...meta, alternates: { canonical: "https://inrsettle.com/contact" } };
-}
-
-function Field({
-  name,
-  type = "text",
-  placeholder,
-  required,
-}: {
-  name: string;
-  type?: string;
-  placeholder: string;
-  required?: boolean;
-}) {
-  return (
-    <input
-      name={name}
-      type={type}
-      placeholder={placeholder}
-      required={required}
-      aria-label={placeholder}
-      className="w-full rounded-lg border border-[var(--ops-line)] bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[var(--status-ok)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,199,157,0.15)]"
-    />
-  );
 }
 
 function DirectContact() {
@@ -109,88 +87,6 @@ function IntentTabs({ active }: { active: "access" | "sales" }) {
         </Link>
       ))}
     </div>
-  );
-}
-
-function AccessForm() {
-  return (
-    <form name="access-request" method="POST" data-netlify="true" netlify-honeypot="bot-field" className="grid gap-3">
-      <input type="hidden" name="form-name" value="access-request" />
-      <input type="hidden" name="intent" value="Access request" />
-      <p hidden>
-        <label>
-          Do not fill:
-          <input name="bot-field" />
-        </label>
-      </p>
-      <Field name="email" type="email" placeholder="Work email" required />
-      <Field name="company" placeholder="Company" required />
-      <Field name="role" placeholder="Role" />
-      <select
-        name="monthly_volume"
-        defaultValue=""
-        aria-label="Monthly INR/USDT settlement volume"
-        className="w-full rounded-lg border border-[var(--ops-line)] bg-white px-3.5 py-2.5 text-sm text-slate-700 focus:border-[var(--status-ok)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,199,157,0.15)]"
-      >
-        <option value="">Monthly INR/USDT settlement volume</option>
-        <option>Below $10k</option>
-        <option>$10k–$50k</option>
-        <option>$50k–$250k</option>
-        <option>$250k+</option>
-      </select>
-      <textarea
-        name="use_case"
-        placeholder="Your payout flow and what you need to prove"
-        aria-label="Use case"
-        className="min-h-28 w-full resize-y rounded-lg border border-[var(--ops-line)] bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[var(--status-ok)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,199,157,0.15)]"
-      />
-      <button
-        type="submit"
-        className={cn(buttonVariants({ variant: "primary", size: "default" }), "lp-cta-primary mt-1 w-full")}
-      >
-        Request access
-      </button>
-      <p className="text-center text-xs text-slate-400">
-        Reviewed for fit, KYB requirements and operational needs before provisioning.
-      </p>
-    </form>
-  );
-}
-
-function SalesForm() {
-  return (
-    <form
-      name="sales-conversation"
-      method="POST"
-      data-netlify="true"
-      netlify-honeypot="bot-field"
-      className="grid gap-3"
-    >
-      <input type="hidden" name="form-name" value="sales-conversation" />
-      <input type="hidden" name="intent" value="Sales conversation" />
-      <p hidden>
-        <label>
-          Do not fill:
-          <input name="bot-field" />
-        </label>
-      </p>
-      <Field name="email" type="email" placeholder="Work email" required />
-      <Field name="company" placeholder="Company" required />
-      <Field name="role" placeholder="Role" />
-      <Field name="corridor" placeholder="Corridor interest" />
-      <textarea
-        name="message"
-        placeholder="Volumes, integration scope, partnership requirements"
-        aria-label="Message"
-        className="min-h-28 w-full resize-y rounded-lg border border-[var(--ops-line)] bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[var(--status-ok)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,199,157,0.15)]"
-      />
-      <button
-        type="submit"
-        className={cn(buttonVariants({ variant: "primary", size: "default" }), "lp-cta-primary mt-1 w-full")}
-      >
-        Start the conversation
-      </button>
-    </form>
   );
 }
 
@@ -286,7 +182,7 @@ export default async function ContactPage({
                 A few details about your {isAccess ? "payout flow" : "corridor"}. We reply from a named
                 address, not a queue.
               </p>
-              <div className="mt-5">{isAccess ? <AccessForm /> : <SalesForm />}</div>
+              <div className="mt-5"><ContactMailForm mode={mode} /></div>
             </div>
           </div>
         </div>

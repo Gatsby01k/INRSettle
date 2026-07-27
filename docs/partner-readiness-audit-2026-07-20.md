@@ -43,7 +43,7 @@ INRSettle — работающий Next.js/Prisma прототип B2B settlemen
 ### 3.1 Public surface
 
 - `/` — native Next landing (`app/page.tsx`), demonstration metrics явно маркированы.
-- `/contact` — native contact/access page (`app/contact/page.tsx`). Формы всё ещё содержат Netlify attributes, хотя deployment config — Vercel; без отдельного form handler доставка заявок не доказана.
+- `/contact` — native contact/access page (`app/contact/page.tsx`). Ложная Netlify submission удалена: `components/marketing/contact-mail-form.tsx` явно открывает email draft и сообщает, что поля не загружаются в INRSettle. CRM/form backend всё ещё отсутствует, но silent data loss больше не маскируется под успешную отправку.
 - `/settings/security` — реальный TOTP enrollment, recovery codes, session step-up и MFA disable/re-auth (`app/(dashboard)/settings/security/page.tsx`, `components/security/mfa-panel.tsx`). Public `/security` остаётся отдельной marketing/control-description page.
 - `/sample-report` — статический публичный demonstration report (`app/sample-report/page.tsx`).
 - `/use-cases`, `/inr-settlement-india`, `/infrastructure`, `/developers`, `/compliance`, `/security`, `/risk`, `/status`, `/docs/**`, `/legal/**` — Next wrappers над legacy HTML через `components/marketing/static-marketing-page.tsx` и `dangerouslySetInnerHTML` из tracked local files.
@@ -266,7 +266,7 @@ flowchart LR
 
 Плюсы: чёткая funds-movement boundary, клиент остаётся в INRSettle workflow, provider можно выбирать явно, funding visibility и evidence report хорошо поддерживают white-label/control-plane narrative.
 
-Что вызовет вопрос: нет productized client onboarding/KYB gate, pricing/volume SLA placeholders в `docs/commercial-partner-terms.md`, contact form delivery не доказана, нет реальных InvoiceMate facts, static named counterparties/balances были потенциально misleading и теперь помечены illustrative.
+Что вызовет вопрос: нет productized client onboarding/KYB gate, pricing/volume SLA placeholders в `docs/commercial-partner-terms.md`, нет CRM/lead workflow, нет реальных InvoiceMate facts, static named counterparties/balances были потенциально misleading и теперь помечены illustrative. Contact page теперь честно использует user-controlled email draft вместо недоказанной submission.
 
 ### CTO
 
@@ -287,7 +287,7 @@ flowchart LR
 3. Старый `/providers` делал неподтверждённые заявления о sandbox verification, commercial proposal, WhatsApp evidence, legal entity и prefunding. Экран заменён на реальные catalog/DB/ledger данные.
 4. Старый `/api-reference` заявлял `https://api.inrsettle.com/v1` и provisioned API keys без реализации. Экран заменён на фактические cookie-session routes и blockers.
 5. `README.md` утверждал static Netlify/no build. Исправлено на Next/Prisma/Vercel/Postgres.
-6. `app/contact/page.tsx` всё ещё использует Netlify form attributes при Vercel config; submission backend не найден.
+6. `app/contact/page.tsx` использовал Netlify form attributes при Vercel config и отправлял данные в недоказанный backend. Исправлено на явный client-side email draft без server upload; настоящий CRM handler остаётся P1.
 7. `/status` — static placeholder, не incident/status integration.
 8. Public security/compliance/legal content приходит из legacy HTML и не является доказательством выполненного control или legal approval.
 9. `defaultAccountsForCorridor` и provider connectors используют unstructured `sourceAccount`/`targetAccount`; live beneficiary schema/validation отсутствует, sandbox adapters содержат test defaults.
@@ -336,7 +336,8 @@ flowchart LR
 - [ ] Bulk/API/CSV reconciliation ingestion with validation and resumability.
 - [ ] Provider scorecards generated from real operations and DD evidence.
 - [ ] White-label configuration, client-specific policies, billing/volume metering.
-- [ ] Dependency update policy; replace unconstrained `latest` specifications.
+- [x] Replace unconstrained top-level `latest` specifications with the exact versions already resolved in `package-lock.json`.
+- [ ] Dependency update/remediation policy and advisory closure; current production audit still reports Prisma/Hono and Next/PostCSS advisories.
 
 ## 11. Недостающие screens/workflows
 
@@ -404,6 +405,7 @@ Release запрещён, пока каждый mandatory пункт не под
 - provider: generic contract/registry/service, explicit selection, durable operations/inbox, Remit status adapter, proof dedupe, separated Pontis gateway callback trust boundary, status-only/no-effect REVIEW_REQUIRED resolution;
 - funding: state machine, API, screen, execution guard, dual control;
 - trust/security: headers, audit redaction/trigger, real TOTP MFA and step-up, session revocation, account lockout, role-aware masking, real provider UI, truthful API/static screen labels, corrected README/env template.
+- supply chain: all root top-level dependencies/devDependencies pinned to the lockfile-resolved versions; no package upgrade was hidden in this change.
 
 Финальный verification result должен быть заполнен только фактическими повторными командами на итоговом tree:
 
@@ -411,7 +413,7 @@ Release запрещён, пока каждый mandatory пункт не под
 |---|---|
 | Prisma format/validate/generate | Pass |
 | TypeScript | Pass |
-| Unit/integration tests | Pass on current pre-final suite — 19 files, 216 tests; rerun below after final tree changes |
+| Unit/integration tests | Pass — 19 files, 216 tests |
 | ESLint | Pass — 0 warnings/errors |
 | Next production build | Pass — 48 generated page units; one known NFT tracing warning from legacy `fs` HTML renderer |
 | Pontis gateway typecheck/build | Pass after clean `npm ci` |
