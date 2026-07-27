@@ -100,7 +100,9 @@ const mock = vi.hoisted(() => {
       }),
       findFirst: vi.fn(async ({ where }) => {
         return store.settlements.find((settlement) => {
-          return settlement.id === where.id && settlement.organizationId === where.organizationId;
+          return settlement.id === where.id &&
+            settlement.organizationId === where.organizationId &&
+            (!where.status || settlement.status === where.status);
         }) ?? null;
       }),
       findMany: vi.fn(async ({ where }) => {
@@ -150,10 +152,12 @@ const mock = vi.hoisted(() => {
       }),
       findMany: vi.fn(async ({ where }) => {
         const statuses: string[] | undefined = where.status?.in;
+        const sources: string[] | undefined = where.source?.in;
         return store.reconciliationRecords.filter((record) => {
           return record.organizationId === where.organizationId &&
             (where.settlementId === undefined || record.settlementId === where.settlementId) &&
-            (!statuses || statuses.includes(record.status as string));
+            (!statuses || statuses.includes(record.status as string)) &&
+            (!sources || sources.includes(record.source as string));
         });
       }),
       create: vi.fn(async ({ data }) => {
@@ -169,11 +173,13 @@ const mock = vi.hoisted(() => {
       }),
       updateMany: vi.fn(async ({ where, data }) => {
         const statuses: string[] | undefined = where.status?.in;
+        const status: string | undefined = typeof where.status === "string" ? where.status : undefined;
         const record = store.reconciliationRecords.find((item) =>
           item.id === where.id &&
           item.organizationId === where.organizationId &&
           (where.settlementId === undefined || item.settlementId === where.settlementId) &&
-          (!statuses || statuses.includes(item.status as string)));
+          (!statuses || statuses.includes(item.status as string)) &&
+          (!status || item.status === status));
         if (!record) return { count: 0 };
         Object.assign(record, data);
         return { count: 1 };
@@ -443,6 +449,59 @@ describe("settlement and reconciliation workflow", () => {
     expect(mock.store.auditLogs.some((log) => log.action === "reconciliation.reject_match")).toBe(true);
   });
 
+  it("does not select an arbitrary suggestion when the best candidates tie", async () => {
+    const { bestSettlementMatch } = await import("@/lib/domain");
+    const valueDate = new Date("2026-06-02T00:00:00Z");
+    const record = seedOpenRecord({ valueDate });
+    const first = seedSettledSettlement({ settledAt: valueDate });
+    const second = seedSettledSettlement({ settledAt: valueDate });
+
+    expect(
+      bestSettlementMatch(
+        record as never,
+        [first, second] as never[],
+        { minConfidence: 80 },
+      ),
+    ).toBeNull();
+  });
+
+  it("rejects a tampered suggestion that does not match amount or currency", async () => {
+    const { rejectReconciliationSuggestion } = await import("@/lib/domain");
+    const settlement = seedSettledSettlement({
+      settledAt: new Date("2026-06-02T00:00:00Z"),
+      sourceAmount: 1000,
+    });
+    const record = seedOpenRecord({
+      valueDate: new Date("2026-06-02T00:00:00Z"),
+      amount: 2500000,
+    });
+
+    await expect(
+      rejectReconciliationSuggestion(record.id, settlement.id, "user_1", "org_1"),
+    ).rejects.toThrow("This settlement is not an eligible match suggestion for the record.");
+
+    expect(record.status).toBe(ReconciliationStatus.OPEN);
+    expect(record.rawPayload).toBeNull();
+    expect(mock.store.auditLogs).toHaveLength(0);
+  });
+
+  it("does not let suggestion rejection reopen an exception", async () => {
+    const { rejectReconciliationSuggestion } = await import("@/lib/domain");
+    const settlement = seedSettledSettlement({ settledAt: new Date("2026-06-02T00:00:00Z") });
+    const record = seedOpenRecord({
+      valueDate: new Date("2026-06-02T00:00:00Z"),
+      status: ReconciliationStatus.EXCEPTION,
+      exceptionReason: "Payment is under investigation.",
+    });
+
+    await expect(
+      rejectReconciliationSuggestion(record.id, settlement.id, "user_1", "org_1"),
+    ).rejects.toThrow("Only OPEN or UNMATCHED records can reject a suggestion.");
+
+    expect(record.status).toBe(ReconciliationStatus.EXCEPTION);
+    expect(record.rawPayload).toBeNull();
+  });
+
   it("saving an external record does not reconcile by default", async () => {
     const { createReconciliationRecord } = await import("@/lib/domain");
     // A SETTLED settlement that would match perfectly exists...
@@ -525,10 +584,18 @@ describe("settlement and reconciliation workflow", () => {
     }, "user_1", "org_1");
     expect(record.status).toBe(ReconciliationStatus.EXCEPTION);
 
-    const resolved = await resolveReconciliationException(record.id, "user_1", "org_1");
+    const resolved = await resolveReconciliationException(
+      record.id,
+      "user_1",
+      "org_1",
+      "Reviewed the bank credit and documented it as an unrelated transfer.",
+    );
 
     expect(resolved.status).toBe(ReconciliationStatus.RESOLVED);
     expect(resolved.settlementId).toBeFalsy();
+    expect((resolved.rawPayload as { _resolutionNote?: string })._resolutionNote).toBe(
+      "Reviewed the bank credit and documented it as an unrelated transfer.",
+    );
     expect(settlement.status).toBe(SettlementStatus.SETTLED);
     expect(mock.store.auditLogs.some((log) => log.action === "reconciliation.resolve_exception")).toBe(true);
     // Resolving never reconciles a settlement.
@@ -569,6 +636,51 @@ describe("settlement and reconciliation workflow", () => {
           (log.after as { toStatus?: string })?.toStatus === SettlementStatus.RECONCILED,
       ),
     ).toBe(true);
+  });
+
+  it("blocks a manual match when the selected settlement has a different amount", async () => {
+    const { createReconciliationRecord } = await import("@/lib/domain");
+    const settlement = seedSettledSettlement({
+      settledAt: new Date("2026-06-02T00:00:00Z"),
+      sourceAmount: 5000,
+    });
+
+    await expect(createReconciliationRecord({
+      externalRef: "bank_ref_manual_mismatch",
+      source: "bank_statement",
+      amount: 2500000,
+      currency: "INR",
+      settlementId: settlement.id,
+      valueDate: "2026-06-02",
+      status: "MATCHED",
+    }, "user_1", "org_1")).rejects.toThrow(
+      "The selected settlement does not match this record's amount and currency.",
+    );
+
+    expect(settlement.status).toBe(SettlementStatus.SETTLED);
+    expect(mock.store.reconciliationRecords).toHaveLength(0);
+  });
+
+  it("excludes provider claims from the automatic reconciliation scan", async () => {
+    const { autoMatchReconciliation } = await import("@/lib/domain");
+    const valueDate = new Date("2026-06-02T00:00:00Z");
+    const providerClaim = seedOpenRecord({
+      valueDate,
+      source: "provider_claim",
+      externalRef: "provider_claim_1",
+    });
+    seedOpenRecord({
+      valueDate,
+      source: "bank_statement",
+      externalRef: "bank_ref_independent",
+      amount: 9000,
+    });
+
+    const result = await autoMatchReconciliation("user_1", "org_1");
+
+    expect(result.scanned).toBe(1);
+    expect(result.matched).toBe(0);
+    expect(providerClaim.status).toBe(ReconciliationStatus.OPEN);
   });
 });
 

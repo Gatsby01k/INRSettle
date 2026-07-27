@@ -66,10 +66,59 @@ export type SettlementLegs = {
   refDate: Date;
 };
 
+export type ReconciliationComparison = {
+  settlementAmount: number | null;
+  currencyMatch: boolean;
+  amountMatch: boolean;
+  valueDateMatch: boolean;
+  confidence: number;
+};
+
 export function settlementLegAmount(settlement: SettlementLegs, currency: string): number | null {
   if (settlement.sourceCurrency === currency) return settlement.sourceAmount;
   if (settlement.targetCurrency === currency) return settlement.targetAmount;
   return null;
+}
+
+function utcDateKey(value: Date): string {
+  const date = new Date(value);
+  return [
+    String(date.getUTCFullYear()).padStart(4, "0"),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    String(date.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+export function compareReconciliationRecord(
+  amount: number,
+  currency: string,
+  valueDate: Date,
+  settlement: SettlementLegs | null,
+): ReconciliationComparison {
+  if (!settlement) {
+    return {
+      settlementAmount: null,
+      currencyMatch: false,
+      amountMatch: false,
+      valueDateMatch: false,
+      confidence: 0,
+    };
+  }
+
+  const settlementAmount = settlementLegAmount(settlement, currency);
+  const currencyMatch = settlementAmount !== null;
+  const amountMatch =
+    settlementAmount !== null && Math.abs(settlementAmount - amount) <= 0.01;
+  const valueDateMatch = utcDateKey(settlement.refDate) === utcDateKey(valueDate);
+  const confidence = amountMatch ? (valueDateMatch ? 100 : 90) : 0;
+
+  return {
+    settlementAmount,
+    currencyMatch,
+    amountMatch,
+    valueDateMatch,
+    confidence,
+  };
 }
 
 /**
@@ -84,12 +133,7 @@ export function computeConfidence(
   valueDate: Date,
   settlement: SettlementLegs | null,
 ): number {
-  if (!settlement) return 0;
-  const leg = settlementLegAmount(settlement, currency);
-  if (leg === null) return 0;
-  if (Math.abs(leg - amount) > 0.01) return 0;
-  const sameDay = new Date(settlement.refDate).toDateString() === new Date(valueDate).toDateString();
-  return sameDay ? 100 : 90;
+  return compareReconciliationRecord(amount, currency, valueDate, settlement).confidence;
 }
 
 /**

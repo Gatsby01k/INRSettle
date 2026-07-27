@@ -3,6 +3,7 @@ import {
   AUTO_MATCH_MIN_CONFIDENCE,
   PROVIDER_CLAIM_SOURCE,
   SUGGESTED_MIN_CONFIDENCE,
+  compareReconciliationRecord,
   computeConfidence,
   isIndependentReconciliationSource,
   matchReasonFor,
@@ -49,6 +50,39 @@ describe("computeConfidence", () => {
 
   it("returns 0 when there is no settlement candidate", () => {
     expect(computeConfidence(500000, "INR", new Date(), null)).toBe(0);
+  });
+
+  it("compares value dates in UTC instead of the server's local timezone", () => {
+    const utcLegs = {
+      ...legs,
+      refDate: new Date("2026-06-10T23:30:00-05:00"),
+    };
+    expect(computeConfidence(500000, "INR", new Date("2026-06-11T00:00:00Z"), utcLegs)).toBe(100);
+  });
+});
+
+describe("compareReconciliationRecord", () => {
+  it("returns field-level comparison signals for the workbench", () => {
+    expect(
+      compareReconciliationRecord(500000, "INR", new Date("2026-06-11T00:00:00Z"), legs),
+    ).toEqual({
+      settlementAmount: 500000,
+      currencyMatch: true,
+      amountMatch: true,
+      valueDateMatch: false,
+      confidence: 90,
+    });
+  });
+
+  it("keeps currency mismatch distinct from amount mismatch", () => {
+    expect(
+      compareReconciliationRecord(500000, "EUR", new Date("2026-06-10T00:00:00Z"), legs),
+    ).toMatchObject({
+      settlementAmount: null,
+      currencyMatch: false,
+      amountMatch: false,
+      confidence: 0,
+    });
   });
 });
 

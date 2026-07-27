@@ -5,6 +5,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { UserFacingError } from "@/lib/errors";
 import {
   AUTO_MATCH_MIN_CONFIDENCE,
+  INDEPENDENT_RECONCILIATION_SOURCES,
   PROVIDER_CLAIM_SOURCE,
   SUGGESTED_MIN_CONFIDENCE,
   computeConfidence,
@@ -301,6 +302,21 @@ export async function createReconciliationRecord(input: unknown, userId: string,
     throw new UserFacingError("Only SETTLED settlements can be matched for reconciliation.");
   }
 
+  if (data.status === "MATCHED" && matchedSettlement) {
+    const confidence = computeConfidence(data.amount, data.currency, new Date(data.valueDate), {
+      sourceCurrency: matchedSettlement.sourceCurrency,
+      targetCurrency: matchedSettlement.targetCurrency,
+      sourceAmount: Number(matchedSettlement.sourceAmount),
+      targetAmount: Number(matchedSettlement.targetAmount),
+      refDate: matchedSettlement.settledAt ?? matchedSettlement.createdAt,
+    });
+    if (confidence <= 0) {
+      throw new UserFacingError(
+        "The selected settlement does not match this record's amount and currency.",
+      );
+    }
+  }
+
   // A manual match (operator picks a settlement at create time) is an explicit,
   // operator-driven reconciliation — tag its origin so the UI never labels it "Auto".
   const isManualMatch = data.status === "MATCHED" && Boolean(matchedSettlement);
@@ -327,6 +343,20 @@ export async function createReconciliationRecord(input: unknown, userId: string,
     }
     if (data.status === "MATCHED" && freshSettlement?.status !== SettlementStatus.SETTLED) {
       throw new UserFacingError("Only SETTLED settlements can be matched for reconciliation.");
+    }
+    if (data.status === "MATCHED" && freshSettlement) {
+      const confidence = computeConfidence(data.amount, data.currency, new Date(data.valueDate), {
+        sourceCurrency: freshSettlement.sourceCurrency,
+        targetCurrency: freshSettlement.targetCurrency,
+        sourceAmount: Number(freshSettlement.sourceAmount),
+        targetAmount: Number(freshSettlement.targetAmount),
+        refDate: freshSettlement.settledAt ?? freshSettlement.createdAt,
+      });
+      if (confidence <= 0) {
+        throw new UserFacingError(
+          "The selected settlement does not match this record's amount and currency.",
+        );
+      }
     }
 
     const record = await tx.reconciliationRecord.create({
@@ -456,6 +486,7 @@ export function bestSettlementMatch<T extends SettlementCandidate>(
 ): { settlement: T; confidence: number } | null {
   const min = options.minConfidence ?? SUGGESTED_MIN_CONFIDENCE;
   let best: { settlement: T; confidence: number } | null = null;
+  let ambiguous = false;
 
   for (const settlement of candidates) {
     if (options.excludeSettlementIds?.has(settlement.id)) continue;
@@ -467,12 +498,16 @@ export function bestSettlementMatch<T extends SettlementCandidate>(
       targetAmount: Number(settlement.targetAmount),
       refDate: settlement.settledAt ?? settlement.createdAt,
     });
-    if (confidence >= min && (!best || confidence > best.confidence)) {
+    if (confidence < min) continue;
+    if (!best || confidence > best.confidence) {
       best = { settlement, confidence };
+      ambiguous = false;
+    } else if (confidence === best.confidence) {
+      ambiguous = true;
     }
   }
 
-  return best;
+  return ambiguous ? null : best;
 }
 
 type ReconciliationMatchOrigin = Extract<MatchOrigin, "AUTO" | "MANUAL">;
@@ -635,6 +670,7 @@ export async function autoMatchReconciliation(userId: string, organizationId: st
       organizationId,
       settlementId: null,
       status: { in: [ReconciliationStatus.OPEN, ReconciliationStatus.UNMATCHED] },
+      source: { in: Array.from(INDEPENDENT_RECONCILIATION_SOURCES) },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -719,44 +755,84 @@ export async function rejectReconciliationSuggestion(
   userId: string,
   organizationId: string,
 ) {
-  const record = await prisma.reconciliationRecord.findFirst({
-    where: { id: recordId, organizationId },
-  });
-  if (!record) {
-    throw new UserFacingError("Reconciliation record was not found.");
-  }
-  if (record.settlementId) {
-    throw new UserFacingError("This record is already linked and cannot reject a suggestion.");
-  }
+  return prisma.$transaction(async (tx) => {
+    const record = await tx.reconciliationRecord.findFirst({
+      where: { id: recordId, organizationId },
+    });
+    if (!record) {
+      throw new UserFacingError("Reconciliation record was not found.");
+    }
+    if (record.settlementId) {
+      throw new UserFacingError("This record is already linked and cannot reject a suggestion.");
+    }
+    if (
+      record.status !== ReconciliationStatus.OPEN &&
+      record.status !== ReconciliationStatus.UNMATCHED
+    ) {
+      throw new UserFacingError("Only OPEN or UNMATCHED records can reject a suggestion.");
+    }
+    if (!isIndependentReconciliationSource(record.source)) {
+      throw new UserFacingError("Only independent reconciliation evidence can reject a match suggestion.");
+    }
 
-  const rejected = new Set(rejectedSettlementIdsOf(record.rawPayload));
-  rejected.add(settlementId);
+    const settlement = await tx.settlement.findFirst({
+      where: { id: settlementId, organizationId, status: SettlementStatus.SETTLED },
+    });
+    if (!settlement) {
+      throw new UserFacingError("Suggested settlement was not found or is no longer eligible.");
+    }
 
-  await prisma.reconciliationRecord.update({
-    where: { id: record.id },
-    data: {
-      status: ReconciliationStatus.UNMATCHED,
-      rawPayload: {
-        ...baseRawPayload(record.rawPayload),
-        _rejectedSettlementIds: Array.from(rejected),
-      } as Prisma.InputJsonValue,
-    },
-  });
+    const confidence = computeConfidence(Number(record.amount), record.currency, record.valueDate, {
+      sourceCurrency: settlement.sourceCurrency,
+      targetCurrency: settlement.targetCurrency,
+      sourceAmount: Number(settlement.sourceAmount),
+      targetAmount: Number(settlement.targetAmount),
+      refDate: settlement.settledAt ?? settlement.createdAt,
+    });
+    if (confidence < SUGGESTED_MIN_CONFIDENCE) {
+      throw new UserFacingError("This settlement is not an eligible match suggestion for the record.");
+    }
 
-  await writeAuditLog({
-    action: "reconciliation.reject_match",
-    resourceType: "reconciliation_record",
-    resourceId: record.id,
-    organizationId,
-    userId,
-    after: {
-      externalRef: record.externalRef,
-      rejectedSettlementId: settlementId,
-      rejectedSettlementIds: Array.from(rejected),
-    },
-  });
+    const rejected = new Set(rejectedSettlementIdsOf(record.rawPayload));
+    if (rejected.has(settlementId)) {
+      throw new UserFacingError("This match suggestion was already rejected.");
+    }
+    rejected.add(settlementId);
 
-  return { recordId: record.id, rejectedSettlementId: settlementId };
+    const claimed = await tx.reconciliationRecord.updateMany({
+      where: {
+        id: record.id,
+        organizationId,
+        settlementId: null,
+        status: { in: [ReconciliationStatus.OPEN, ReconciliationStatus.UNMATCHED] },
+      },
+      data: {
+        status: ReconciliationStatus.UNMATCHED,
+        rawPayload: {
+          ...baseRawPayload(record.rawPayload),
+          _rejectedSettlementIds: Array.from(rejected),
+        } as Prisma.InputJsonValue,
+      },
+    });
+    if (claimed.count !== 1) {
+      throw new UserFacingError("Reconciliation record changed concurrently. Refresh and try again.");
+    }
+
+    await writeAuditLog({
+      action: "reconciliation.reject_match",
+      resourceType: "reconciliation_record",
+      resourceId: record.id,
+      organizationId,
+      userId,
+      after: {
+        externalRef: record.externalRef,
+        rejectedSettlementId: settlementId,
+        rejectedSettlementIds: Array.from(rejected),
+      },
+    }, tx);
+
+    return { recordId: record.id, rejectedSettlementId: settlementId };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 /**
@@ -771,40 +847,56 @@ export async function resolveReconciliationException(
   organizationId: string,
   note?: string,
 ) {
-  const record = await prisma.reconciliationRecord.findFirst({
-    where: { id: recordId, organizationId },
-  });
-  if (!record) {
-    throw new UserFacingError("Reconciliation record was not found.");
-  }
-  if (record.status !== ReconciliationStatus.EXCEPTION) {
-    throw new UserFacingError("Only EXCEPTION records can be resolved.");
-  }
-
   const resolutionNote = note?.trim() || "Marked reviewed by operator.";
+  return prisma.$transaction(async (tx) => {
+    const record = await tx.reconciliationRecord.findFirst({
+      where: { id: recordId, organizationId },
+    });
+    if (!record) {
+      throw new UserFacingError("Reconciliation record was not found.");
+    }
+    if (record.status !== ReconciliationStatus.EXCEPTION) {
+      throw new UserFacingError("Only EXCEPTION records can be resolved.");
+    }
 
-  const updated = await prisma.reconciliationRecord.update({
-    where: { id: record.id },
-    data: {
-      status: ReconciliationStatus.RESOLVED,
-      rawPayload: {
-        ...baseRawPayload(record.rawPayload),
-        _resolutionNote: resolutionNote,
-      } as Prisma.InputJsonValue,
-    },
-  });
+    const claimed = await tx.reconciliationRecord.updateMany({
+      where: {
+        id: record.id,
+        organizationId,
+        status: ReconciliationStatus.EXCEPTION,
+        settlementId: null,
+      },
+      data: {
+        status: ReconciliationStatus.RESOLVED,
+        rawPayload: {
+          ...baseRawPayload(record.rawPayload),
+          _resolutionNote: resolutionNote,
+        } as Prisma.InputJsonValue,
+      },
+    });
+    if (claimed.count !== 1) {
+      throw new UserFacingError("Exception state changed concurrently. Refresh and try again.");
+    }
 
-  await writeAuditLog({
-    action: "reconciliation.resolve_exception",
-    resourceType: "reconciliation_record",
-    resourceId: record.id,
-    organizationId,
-    userId,
-    before: { id: record.id, status: record.status, exceptionReason: record.exceptionReason },
-    after: { id: updated.id, status: updated.status, resolutionNote },
-  });
+    const updated = await tx.reconciliationRecord.findFirst({
+      where: { id: record.id, organizationId },
+    });
+    if (!updated) {
+      throw new UserFacingError("Resolved reconciliation record could not be reloaded.");
+    }
 
-  return updated;
+    await writeAuditLog({
+      action: "reconciliation.resolve_exception",
+      resourceType: "reconciliation_record",
+      resourceId: record.id,
+      organizationId,
+      userId,
+      before: { id: record.id, status: record.status, exceptionReason: record.exceptionReason },
+      after: { id: updated.id, status: updated.status, resolutionNote },
+    }, tx);
+
+    return updated;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 export async function updateSettings(input: unknown, userId: string, organizationId: string) {

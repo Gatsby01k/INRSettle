@@ -62,7 +62,11 @@ export function AddRecordForm({
   const [source, setSource] = useState("bank_statement");
   const [dateMode, setDateMode] = useState<"today" | "yesterday" | "custom">("today");
   const [customDate, setCustomDate] = useState(todayISO());
-  const isManualMatch = manualSettlementId !== NO_SETTLEMENT && manualSettlementId !== "";
+  const [recordMode, setRecordMode] = useState<"queue" | "manual" | "exception">("queue");
+  const isManualMatch =
+    recordMode === "manual" &&
+    manualSettlementId !== NO_SETTLEMENT &&
+    manualSettlementId !== "";
 
   const valueDate = dateMode === "today" ? todayISO() : dateMode === "yesterday" ? yesterdayISO() : customDate;
 
@@ -70,6 +74,7 @@ export function AddRecordForm({
     <form action={action} className={compact ? "grid gap-2.5" : "grid gap-4"}>
       <input type="hidden" name="source" value={source} />
       <input type="hidden" name="valueDate" value={valueDate} />
+      <input type="hidden" name="recordMode" value={recordMode} />
 
       <div className={cn("grid gap-2", compact ? "sm:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-2")}>
         <div className="grid gap-1.5">
@@ -147,49 +152,71 @@ export function AddRecordForm({
         </div>
       </div>
 
-      <details
-        className={cn(
-          "group rounded-xl border border-dashed border-[var(--ops-line)] bg-slate-50/60",
-          compact ? "p-2.5" : "p-3",
-        )}
-      >
-        <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-slate-500 marker:hidden">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="transition-transform group-open:rotate-90">›</span>
-            Manual match / exception handling
-          </span>
-        </summary>
-        <div className="mt-3 grid gap-2 reconciliation-details-content">
-          <p className="text-xs text-slate-500">
-            Leave as <span className="font-medium">Unmatched</span> to let the auto-match engine reconcile this record.
-            Pick a settlement only to reconcile it manually right now.
-          </p>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="grid gap-1.5">
-              <Label>Settlement</Label>
-              <FormSelect
-                name="settlementId"
-                defaultValue={NO_SETTLEMENT}
-                onValueChange={setManualSettlementId}
-                options={[{ value: NO_SETTLEMENT, label: "Unmatched (recommended)" }, ...settlements]}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="exceptionReason">Exception reason (optional)</Label>
-              <Input id="exceptionReason" name="exceptionReason" placeholder="Flags the record as an EXCEPTION" />
-            </div>
-          </div>
-          {isManualMatch ? (
-            <p className="reconciliation-manual-hint-pop text-xs font-medium text-[#0a7d86]">
-              This will link the record and reconcile the settlement.
-            </p>
-          ) : null}
+      <div className={cn("grid gap-2 rounded-lg border border-[var(--ops-line)] bg-slate-50/60", compact ? "p-2.5" : "p-3")}>
+        <div className="grid gap-1.5">
+          <Label>Record handling</Label>
+          <Segmented
+            ariaLabel="Record handling"
+            options={[
+              { value: "queue", label: "Add to queue" },
+              { value: "manual", label: "Manual match" },
+              { value: "exception", label: "Flag exception" },
+            ]}
+            value={recordMode}
+            onChange={(next) => setRecordMode(next as typeof recordMode)}
+          />
         </div>
-      </details>
+
+        {recordMode === "queue" ? (
+          <p className="text-xs text-slate-500">
+            The record stays unlinked until an exact auto-match or an explicit operator decision.
+          </p>
+        ) : null}
+
+        {recordMode === "manual" ? (
+          <div className="reconciliation-form-reveal grid gap-1.5">
+            <Label>Eligible SETTLED settlement</Label>
+            <FormSelect
+              name="settlementId"
+              defaultValue={NO_SETTLEMENT}
+              onValueChange={setManualSettlementId}
+              options={[{ value: NO_SETTLEMENT, label: "Select a settlement" }, ...settlements]}
+            />
+            <p className="text-xs text-slate-500">
+              The server verifies amount and currency before linking. Mismatched records are rejected.
+            </p>
+            {isManualMatch ? (
+              <p className="reconciliation-manual-hint-pop text-xs font-medium text-[#0a7d86]">
+                This creates an attributed manual match and moves the settlement to RECONCILED.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {recordMode === "exception" ? (
+          <div className="reconciliation-form-reveal grid gap-1.5">
+            <Label htmlFor="exceptionReason">Exception reason</Label>
+            <Input
+              id="exceptionReason"
+              name="exceptionReason"
+              required
+              minLength={6}
+              placeholder="Describe the discrepancy and required investigation"
+            />
+            <p className="text-xs text-slate-500">
+              Exceptions are never linked automatically and remain visible until an operator records a resolution.
+            </p>
+          </div>
+        ) : null}
+      </div>
 
       <div className="flex items-center">
         <SubmitButton type="submit" variant="primary" size={compact ? "sm" : "default"} pendingText="Saving...">
-          {isManualMatch ? "Confirm manual match" : "Add external record"}
+          {recordMode === "manual"
+            ? "Confirm manual match"
+            : recordMode === "exception"
+              ? "Flag exception"
+              : "Add to matching queue"}
         </SubmitButton>
       </div>
     </form>
