@@ -488,9 +488,9 @@ export function SettlementOperationConsoleRow({
             <div className="flex items-start gap-2">
               <CircleCheckBig className="settlement-complete-icon mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-emerald-900">Settlement complete</p>
+                <p className="text-xs font-semibold text-emerald-900">Independent reconciliation complete</p>
                 <p className="mt-0.5 text-[11px] text-emerald-700/85">
-                  Provider execution, settlement update, reconciliation and audit trail are complete.
+                  Provider execution and an independent record agree. Finality approval remains a separate controlled step.
                 </p>
               </div>
             </div>

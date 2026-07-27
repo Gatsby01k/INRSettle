@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Landmark } from "lucide-react";
+import { ArrowRight, Landmark } from "lucide-react";
 import { SettlementStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -8,7 +8,6 @@ import { isMfaStepUpFresh, requireSession } from "@/lib/auth";
 import { AreaTabs } from "@/components/ops/area-tabs";
 import { PageHeader } from "@/components/ops/page-header";
 import {
-  autoMatchReconciliation,
   createSettlement,
   transitionSettlement,
 } from "@/lib/domain";
@@ -16,7 +15,6 @@ import { friendlyErrorMessage } from "@/lib/errors";
 import { assessFinality } from "@/lib/finality";
 import { buildFinalityInput, hasAuditApproval, latestProofOf, relevantReconciliationOf } from "@/lib/finality-input";
 import {
-  INDEPENDENT_RECONCILIATION_SOURCES,
   RECONCILIATION_SOURCE_LABEL,
   isIndependentReconciliationSource,
 } from "@/lib/reconciliation";
@@ -40,15 +38,11 @@ import {
 import { StatusBadge } from "@/components/ops/status-badge";
 import { FilterBar } from "@/components/ops/filter-bar";
 import { FormSelect } from "@/components/ops/form-select";
-import { SettlementLifecycle } from "@/components/ops/settlement-lifecycle";
 import {
   type SettlementDetail,
 } from "@/components/dashboard/settlement-detail-sheet";
 import {
-  SettlementOperationConsoleRow,
   SettlementPageFlash,
-  SettlementRowStatusSubtext,
-  type SettlementOperationConsoleData,
 } from "@/components/dashboard/settlement-operation-console";
 import {
   SettlementActionForm,
@@ -60,6 +54,7 @@ import {
   checkSettlementProviderStatus,
   executeSettlementWithProvider,
 } from "@/lib/providers/service";
+import { deriveSettlementWorkflow } from "@/lib/settlement-workspace";
 
 function revalidateSettlementsPage() {
   revalidatePath("/settlements");
@@ -76,17 +71,9 @@ export const metadata = { title: "Settlements" };
 function pageFlashMessage(value?: string) {
   if (value === "created") return "Settlement created.";
   if (value === "reconciled" || value === "matched") {
-    return "Settlement complete — provider execution, reconciliation and audit trail recorded.";
+    return "Independent reconciliation recorded. Finality approval remains a separate controlled step.";
   }
   return null;
-}
-
-function hasWorkflowAction(status: SettlementStatus) {
-  return new Set<SettlementStatus>([
-    SettlementStatus.REQUESTED,
-    SettlementStatus.APPROVED,
-    SettlementStatus.EXECUTING,
-  ]).has(status);
 }
 
 function isInFlight(status: SettlementStatus) {
@@ -95,15 +82,6 @@ function isInFlight(status: SettlementStatus) {
 
 function isCompleted(status: SettlementStatus) {
   return new Set<SettlementStatus>([SettlementStatus.SETTLED, SettlementStatus.RECONCILED]).has(status);
-}
-
-function rowShowsConsole(status: SettlementStatus) {
-  return new Set<SettlementStatus>([
-    SettlementStatus.APPROVED,
-    SettlementStatus.EXECUTING,
-    SettlementStatus.SETTLED,
-    SettlementStatus.RECONCILED,
-  ]).has(status);
 }
 
 function successMatchesRow(success: string | undefined, status: SettlementStatus) {
@@ -268,19 +246,6 @@ function toSettlementDetail(settlement: SettlementRow, canViewSensitive: boolean
   };
 }
 
-function toOperationConsoleData(settlement: SettlementRow): SettlementOperationConsoleData {
-  return {
-    status: settlement.status,
-    corridor: settlement.corridor.replace("_", " → "),
-    amount: formatCurrencyFull(String(settlement.sourceAmount), settlement.sourceCurrency),
-    provider: settlement.provider ?? undefined,
-    providerStatus: settlement.providerStatus ?? undefined,
-    providerTransactionId: settlement.providerTransactionId ?? undefined,
-    hasReconciliation: settlement.reconciliation.length > 0,
-    hasAuditEvents: settlement.events.length > 0,
-  };
-}
-
 async function submitSettlement(formData: FormData) {
   "use server";
   const { user, organization, membership } = await requireSession();
@@ -373,33 +338,6 @@ async function transition(formData: FormData) {
   redirect(`/settlements?success=${finalStatus.toLowerCase()}`);
 }
 
-async function runAutoMatch(formData: FormData) {
-  "use server";
-  const { user, organization, membership } = await requireSession();
-  if (!canApproveSettlement(membership.role)) redirect("/settlements");
-  const settlementId = String(formData.get("settlementId") ?? "");
-  try {
-    await autoMatchReconciliation(user.id, organization.id);
-  } catch (error) {
-    redirect(`/settlements?error=${encodeURIComponent(friendlyErrorMessage(error))}`);
-  }
-  if (settlementId) {
-    const settlement = await prisma.settlement.findFirst({
-      where: { id: settlementId, organizationId: organization.id },
-    });
-    if (settlement?.status === SettlementStatus.RECONCILED) {
-      revalidateSettlementsPage();
-      redirect("/settlements?success=reconciled");
-    }
-    if (settlement?.status === SettlementStatus.SETTLED) {
-      revalidateSettlementsPage();
-      redirect(`/settlements?reconcileRequired=${settlementId}`);
-    }
-  }
-  revalidateSettlementsPage();
-  redirect("/settlements");
-}
-
 async function checkStatus(formData: FormData) {
   "use server";
   const { user, organization, membership } = await requireSession();
@@ -431,7 +369,6 @@ export default async function SettlementsPage({
     success?: string;
     q?: string;
     status?: string;
-    reconcileRequired?: string;
     page?: string;
     quoteId?: string;
   }>;
@@ -447,7 +384,7 @@ export default async function SettlementsPage({
   // roles browse cases but never see the creation form.
   const canCreate = canCreateSettlement(membership.role);
 
-  const [quotes, settlements, openIndependentRecords, readyProviderConnections] = await Promise.all([
+  const [quotes, settlements, readyProviderConnections, finalityApprovals] = await Promise.all([
     prisma.quote.findMany({
       where: { organizationId: organization.id, status: "ACTIVE", expiresAt: { gt: new Date() } },
       orderBy: { createdAt: "desc" },
@@ -460,17 +397,8 @@ export default async function SettlementsPage({
         events: { orderBy: { createdAt: "asc" } },
         reconciliation: true,
         providerProofs: { orderBy: { receivedAt: "desc" } },
+        providerOperations: { orderBy: { createdAt: "desc" } },
         executionInstruction: { select: { id: true, updatedAt: true } },
-      },
-    }),
-    // Display-only signal: is there anything for auto-match to work with?
-    // Mirrors the auto-match engine's input filter (unlinked + independent).
-    prisma.reconciliationRecord.count({
-      where: {
-        organizationId: organization.id,
-        settlementId: null,
-        status: { in: ["OPEN", "UNMATCHED"] },
-        source: { in: [...INDEPENDENT_RECONCILIATION_SOURCES] },
       },
     }),
     prisma.providerConnection.findMany({
@@ -480,18 +408,66 @@ export default async function SettlementsPage({
       },
       select: { providerCode: true },
     }),
+    prisma.auditLog.findMany({
+      where: {
+        organizationId: organization.id,
+        resourceType: "settlement",
+        action: "settlement.finality_approved",
+      },
+      select: { resourceId: true },
+    }),
   ]);
-  const hasOpenRecords = openIndependentRecords > 0;
+  const approvedFinalityIds = new Set(
+    finalityApprovals.map((log) => log.resourceId).filter((id): id is string => Boolean(id)),
+  );
 
   const query = params.q?.toLowerCase().trim() ?? "";
 
   // Case files: settlement + its full deterministic finality detail, computed
   // once and reused for stats, cards, evidence strips and the detail sheet.
   const canViewSensitive = canViewSensitiveFinancialData(membership.role);
-  const caseFiles = settlements.map((settlement) => ({
-    settlement,
-    detail: toSettlementDetail(settlement, canViewSensitive),
-  }));
+  const caseFiles = settlements.map((settlement) => {
+    const detail = toSettlementDetail(settlement, canViewSensitive);
+    const providerException = settlement.providerOperations.find((operation) =>
+      ["FAILED", "REVIEW_REQUIRED"].includes(operation.status),
+    );
+    const reconciliationException = settlement.reconciliation.find((record) =>
+      ["EXCEPTION", "UNMATCHED"].includes(record.status),
+    );
+    const reconciliationMatched = settlement.reconciliation.some(
+      (record) =>
+        record.status === "MATCHED" && isIndependentReconciliationSource(record.source),
+    );
+    const providerAccepted = Boolean(
+      settlement.providerTransactionId ||
+        settlement.providerOperations.some((operation) =>
+          ["SUCCEEDED", "RESOLVED_BY_STATUS"].includes(operation.status),
+        ),
+    );
+
+    return {
+      settlement,
+      detail,
+      workflow: deriveSettlementWorkflow(
+        {
+          status: settlement.status,
+          quoteLocked: Boolean(settlement.quoteId),
+          approved: Boolean(settlement.approvedAt),
+          fundingStatus: settlement.fundingStatus,
+          providerAccepted,
+          proofReceived: settlement.providerProofs.length > 0,
+          reconciliationMatched,
+          reconciliationException: reconciliationException?.exceptionReason ?? null,
+          finalityReady: detail.finality.decision === "ready_to_finalize",
+          finalityApproved: approvedFinalityIds.has(settlement.id),
+          failureReason: settlement.failureReason,
+          providerException: providerException?.errorMessage ?? null,
+          finalityBlockers: detail.finality.blockingIssues,
+        },
+        settlement.id,
+      ),
+    };
+  });
 
   const filteredCases = caseFiles.filter(({ settlement }) => {
     const matchesSearch =
@@ -549,9 +525,7 @@ export default async function SettlementsPage({
 
       <SettlementAutoRefresh enabled={autoRefreshSettlements} />
 
-      {params.error && !params.reconcileRequired ? (
-        <SettlementPageFlash message={params.error} tone="error" />
-      ) : null}
+      {params.error ? <SettlementPageFlash message={params.error} tone="error" /> : null}
       {flashMessage ? <SettlementPageFlash message={flashMessage} /> : null}
 
       <div className="ov-reveal ov-reveal-1">
@@ -562,62 +536,55 @@ export default async function SettlementsPage({
           />
         </Suspense>
         {justCompleted ? (
-          <p className="mt-2 text-xs font-semibold text-emerald-700">Settlement completion recorded.</p>
+          <p className="mt-2 text-xs font-semibold text-emerald-700">Independent reconciliation recorded.</p>
         ) : null}
       </div>
 
       {filteredCases.length ? (
         <div className="space-y-3">
-          {pagedCases.map(({ settlement, detail }) => {
-            const rowAutoRefresh =
-              settlement.status === SettlementStatus.EXECUTING ||
-              Boolean(
-                settlement.provider &&
-                  settlement.providerStatus &&
-                  !["completed", "failed", "settled", "reconciled"].includes(
-                    settlement.providerStatus.toLowerCase(),
-                  ),
-              );
-            const showConsole = rowShowsConsole(settlement.status);
+          {pagedCases.map(({ settlement, detail, workflow }) => {
             const rowJustUpdated = successMatchesRow(params.success, settlement.status);
             const finality = detail.finality;
-            const reconBad =
+            const reconBad = Boolean(
               finality.reconciliation &&
-              (["UNMATCHED", "EXCEPTION"].includes(finality.reconciliation.status) || !finality.reconciliation.independent);
-            const reconOk =
-              finality.reconciliation && finality.reconciliation.independent && finality.reconciliation.status === "MATCHED";
-            const chain = [
-              { name: "Provider proof", state: finality.proof ? "ok" : "pending" },
-              { name: "Reconciliation", state: reconOk ? "ok" : reconBad ? "bad" : "pending" },
-              { name: "Audit trail", state: finality.auditApprovalPresent ? "ok" : "pending" },
+                (["UNMATCHED", "EXCEPTION"].includes(finality.reconciliation.status) ||
+                  !finality.reconciliation.independent),
+            );
+            const reconOk = Boolean(
+              finality.reconciliation &&
+                finality.reconciliation.independent &&
+                finality.reconciliation.status === "MATCHED",
+            );
+            const evidenceSignals = [
               {
-                name: "Finality",
-                // "Mismatch" is reserved for real evidence contradictions; an
-                // in-flight settlement with no proof yet is simply not ready.
-                state: finality.decision === "ready_to_finalize" ? "ok" : reconBad ? "bad" : "pending",
+                label: "Provider proof",
+                value: finality.proof ? "Received" : "Pending",
+                tone: finality.proof ? "ok" : "pending",
+              },
+              {
+                label: "Independent record",
+                value: reconOk ? "Matched" : reconBad ? "Exception" : "Pending",
+                tone: reconOk ? "ok" : reconBad ? "blocked" : "pending",
+              },
+              {
+                label: "Finality",
+                value: workflow.complete
+                  ? "Approved"
+                  : finality.decision === "ready_to_finalize"
+                    ? "Ready for review"
+                    : finality.decision === "needs_review"
+                      ? "Blocked"
+                      : "Not ready",
+                tone: workflow.complete
+                  ? "ok"
+                  : finality.decision === "ready_to_finalize"
+                    ? "ready"
+                    : finality.decision === "needs_review"
+                      ? "blocked"
+                      : "pending",
               },
             ] as const;
-            // The blocker is the FIRST non-verified step; later steps are consequences.
-            const blockerIndex = chain.findIndex((step) => step.state !== "ok");
             const operationalSummary = caseOperationalSummary(settlement.status, finality);
-            const inFlightCase = (["REQUESTED", "APPROVED", "EXECUTING"] as string[]).includes(settlement.status);
-            const awaitingRecon =
-              (settlement.status === SettlementStatus.SETTLED || settlement.status === SettlementStatus.RECONCILED) &&
-              finality.decision !== "ready_to_finalize";
-            // Display-only recommendation, matched to the settlement's actual state.
-            const recommendedAction =
-              settlement.status === SettlementStatus.REQUESTED
-                ? "Approve the settlement to continue."
-                : settlement.status === SettlementStatus.EXECUTING
-                  ? "Check provider status and record proof when available."
-                  : awaitingRecon && settlement.status === SettlementStatus.SETTLED && !reconBad
-                    ? "Match this settlement with a bank or PSP record."
-                    : finality.decision === "ready_to_finalize"
-                      ? "Generate the settlement report and finalize — all three evidence sources agree."
-                      : finality.recommendedActions[0] ?? null;
-            const settlementProviders = providers.filter((provider) =>
-              provider.supportedCorridors.includes(settlement.corridor),
-            );
 
             return (
               <article
@@ -631,11 +598,9 @@ export default async function SettlementsPage({
                       : finality.decision === "needs_review"
                         ? "scase--fin-review"
                         : undefined,
-                  showConsole && "settlement-row-active",
                   rowJustUpdated && "settlement-row-highlight",
                 )}
               >
-                {/* Case header */}
                 <div className="scase__header">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -646,21 +611,17 @@ export default async function SettlementsPage({
                         {settlement.publicId}
                       </Link>
                       <StatusBadge status={settlement.status} />
-                      <span
-                        className={cn(
-                          "state-chip",
-                          finality.decision === "ready_to_finalize" && "state-chip--ready",
-                          finality.decision === "needs_review" && "state-chip--review",
-                          finality.decision === "not_ready" && "state-chip--pending",
-                        )}
-                        title={finality.summary}
-                      >
-                        {finality.decision === "ready_to_finalize"
-                          ? "✓ Finality ready"
-                          : finality.decision === "needs_review"
-                            ? "Needs review"
-                            : "Finality pending"}
-                      </span>
+                      {workflow.complete ? (
+                        <span className="state-chip state-chip--ready">✓ Completed</span>
+                      ) : finality.decision === "ready_to_finalize" ? (
+                        <span className="state-chip state-chip--ready" title={finality.summary}>
+                          Finality ready
+                        </span>
+                      ) : finality.decision === "needs_review" ? (
+                        <span className="state-chip state-chip--review" title={finality.summary}>
+                          Needs review
+                        </span>
+                      ) : null}
                       {finality.riskLevel === "high" ? <span className="state-chip state-chip--risk">High risk</span> : null}
                     </div>
                     <p className="mt-1 text-xs text-slate-500">
@@ -671,7 +632,6 @@ export default async function SettlementsPage({
                       ) : null}
                     </p>
                     <p className="scase__summary">{operationalSummary}</p>
-                    <SettlementRowStatusSubtext status={settlement.status} settlementId={settlement.id} />
                   </div>
                   <div className="scase__fin">
                     <p className="scase__amount" title={formatCurrencyFull(String(settlement.sourceAmount), settlement.sourceCurrency)}>
@@ -690,138 +650,101 @@ export default async function SettlementsPage({
                   </div>
                 </div>
 
-                {/* Evidence strip + lifecycle rail */}
-                <div className="scase__body grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-                  <div className="evidence-chain evidence-chain--mini" aria-label="Evidence chain">
-                    {chain.map((step, index) => {
-                      const isBlocker = index === blockerIndex && step.state !== "ok";
-                      const isDownstream = blockerIndex >= 0 && index > blockerIndex && step.state !== "ok";
-                      return (
-                        <div
-                          key={step.name}
-                          className={cn(
-                            "evidence-chain__pillar",
-                            `evidence-chain__pillar--${step.state}`,
-                            isBlocker && "evidence-chain__pillar--focus",
-                            isDownstream && "evidence-chain__pillar--downstream",
-                          )}
-                        >
-                          <span className="evidence-chain__label">{step.name}</span>
-                          <span className="evidence-chain__state">
-                            {step.state === "ok"
-                              ? step.name === "Finality"
-                                ? "Ready"
-                                : "Verified"
-                              : step.state === "bad"
-                                ? "Mismatch"
-                                : step.name === "Reconciliation" && !finality.proof
-                                  ? "Waiting for proof"
-                                  : step.name === "Finality"
-                                    ? inFlightCase
-                                      ? "Not ready"
-                                      : "Pending"
-                                    : "Pending"}
+                <div className="scase__body">
+                  <div className="scase__workflow">
+                    <div className="scase__stage">
+                      <span className="scase__eyebrow">
+                        Current stage
+                        <b>{workflow.currentIndex + 1} / {workflow.stages.length}</b>
+                      </span>
+                      <strong>{workflow.currentStage.label}</strong>
+                      <small>{workflow.currentOwner}</small>
+                    </div>
+
+                    <div className="scase__required">
+                      <span className="scase__eyebrow">Next required action</span>
+                      <strong>{workflow.nextAction}</strong>
+                      {workflow.blockers.length ? (
+                        <small className="scase__blocker">
+                          Blocked: {workflow.blockers[0]}
+                        </small>
+                      ) : (
+                        <small>{workflow.currentStage.requirement}</small>
+                      )}
+                    </div>
+
+                    <div className="scase__evidence" aria-label="Evidence status">
+                      <span className="scase__eyebrow">Evidence status</span>
+                      <div>
+                        {evidenceSignals.map((signal) => (
+                          <span
+                            key={signal.label}
+                            className={cn("scase__signal", `is-${signal.tone}`)}
+                            title={`${signal.label}: ${signal.value}`}
+                          >
+                            <i aria-hidden="true" />
+                            <span>{signal.label}</span>
+                            <strong>{signal.value}</strong>
                           </span>
-                        </div>
-                      );
-                    })}
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div className="scase__rail">
-                    <SettlementLifecycle status={settlement.status} />
+
+                  <div
+                    className="scase__progress"
+                    aria-label={`Lifecycle progress: stage ${workflow.currentIndex + 1} of ${workflow.stages.length}, ${workflow.currentStage.label}`}
+                  >
+                    {workflow.stages.map((stage) => (
+                      <span
+                        key={stage.key}
+                        className={`is-${stage.state}`}
+                        title={`${stage.label}: ${stage.evidence}`}
+                      />
+                    ))}
                   </div>
                 </div>
 
-                {recommendedAction ? (
-                  <div className={cn("scase__next", finality.decision === "ready_to_finalize" && "scase__next--ready")}>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.07em]">
-                      {finality.decision === "ready_to_finalize" ? "Ready" : "Next"}
-                    </span>
-                    <span>
-                      <strong className="font-semibold">Recommended action:</strong> {recommendedAction}
-                    </span>
-                  </div>
-                ) : null}
-
-                {/* Case actions */}
                 <div className="scase__actions">
-                  {canApprove && hasWorkflowAction(settlement.status) ? (
+                  <Button asChild variant="brand" size="sm">
+                    <Link href={`/settlements/${settlement.id}`}>
+                      Open workspace
+                      <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Link>
+                  </Button>
+
+                  {canApprove && settlement.status === SettlementStatus.REQUESTED ? (
                     <SettlementActionForm
                       settlementId={settlement.id}
-                      action={
-                        settlement.status === SettlementStatus.REQUESTED
-                          ? "approve"
-                          : settlement.status === SettlementStatus.APPROVED
-                            ? "execute"
-                            : "settle"
-                      }
+                      action="approve"
                       serverAction={transition}
                       className="flex flex-wrap gap-1.5"
                     >
                       <input type="hidden" name="settlementId" value={settlement.id} />
-                      {settlement.status === SettlementStatus.REQUESTED ? (
-                        <>
-                          <Button asChild variant="outline" size="sm">
-                            <Link href={`/settlements/${settlement.id}/execution`}>
-                              {settlement.executionInstruction ? "Review execution instruction" : "Add execution instruction"}
-                            </Link>
-                          </Button>
-                          <SubmitButton
-                            name="status"
-                            value="APPROVED"
-                            variant="primary"
-                            size="sm"
-                            pendingText="Approving..."
-                            settlementId={settlement.id}
-                            action="approve"
-                          >
-                            Approve settlement
-                          </SubmitButton>
-                        </>
-                      ) : null}
-                      {settlement.status === SettlementStatus.APPROVED ? (
-                        <>
-                          <input type="hidden" name="status" value="EXECUTING" />
-                          {settlementProviders.length > 0 ? (
-                          settlementProviders.map((provider) => (
-                            <SubmitButton
-                              key={provider.code}
-                              name="providerCode"
-                              value={provider.code}
-                              variant="primary"
-                              size="sm"
-                              pendingText={`Sending to ${provider.displayName}...`}
-                              settlementId={settlement.id}
-                              action="execute"
-                            >
-                              Execute via {provider.displayName}
-                            </SubmitButton>
-                          ))
-                          ) : (
-                          <Button asChild variant="outline" size="sm">
-                            <Link href={`/settlements/${settlement.id}/execution`}>
-                              Prepare provider execution
-                            </Link>
-                          </Button>
-                          )}
-                        </>
-                      ) : null}
-                      {settlement.status === SettlementStatus.EXECUTING && !settlement.provider ? (
-                        <SubmitButton
-                          name="status"
-                          value="SETTLED"
-                          variant="primary"
-                          size="sm"
-                          pendingText="Settling..."
-                          settlementId={settlement.id}
-                          action="settle"
-                        >
-                          Settle
-                        </SubmitButton>
-                      ) : null}
+                      <SubmitButton
+                        name="status"
+                        value="APPROVED"
+                        variant="primary"
+                        size="sm"
+                        pendingText="Approving..."
+                        settlementId={settlement.id}
+                        action="approve"
+                      >
+                        Approve settlement
+                      </SubmitButton>
                     </SettlementActionForm>
                   ) : !canApprove ? (
                     <span className="case-chip">Read-only role</span>
                   ) : null}
+
+                  {settlement.status === SettlementStatus.REQUESTED ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/settlements/${settlement.id}/execution`}>
+                        {settlement.executionInstruction ? "Review instruction" : "Add instruction"}
+                      </Link>
+                    </Button>
+                  ) : null}
+
                   {settlement.status === SettlementStatus.APPROVED || settlement.fundingStatus !== "NOT_REQUIRED" ? (
                     <Button asChild variant="outline" size="sm">
                       <Link href={`/settlements/${settlement.id}/funding`}>
@@ -829,33 +752,36 @@ export default async function SettlementsPage({
                       </Link>
                     </Button>
                   ) : null}
-                  {/* Reconciliation actions live in ONE place: the embedded console
-                      panel below renders them whenever this settlement is SETTLED
-                      with no linked record. This top-row fallback only appears when
-                      that panel is absent (a record is already linked but finality
-                      is not ready), so the actions are never duplicated. */}
-                  {awaitingRecon &&
-                  settlement.status === SettlementStatus.SETTLED &&
-                  settlement.reconciliation.length > 0 ? (
-                    <>
-                      <Button asChild variant="primary" size="sm">
-                        <Link href="/reconciliation">Open reconciliation</Link>
-                      </Button>
-                      {canApprove && hasOpenRecords ? (
-                        <form action={runAutoMatch}>
-                          <input type="hidden" name="settlementId" value={settlement.id} />
-                          <SubmitButton variant="outline" size="sm" pendingText="Matching...">
-                            Run auto-match
-                          </SubmitButton>
-                        </form>
-                      ) : null}
-                    </>
-                  ) : null}
-                  {settlement.status === SettlementStatus.RECONCILED && finality.decision === "ready_to_finalize" ? (
-                    <Button asChild variant="primary" size="sm">
-                      <Link href={`/settlements/${settlement.id}/report`}>Generate report</Link>
+
+                  {settlement.status === SettlementStatus.APPROVED ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/settlements/${settlement.id}/execution`}>Prepare provider execution</Link>
                     </Button>
                   ) : null}
+
+                  {canApprove && settlement.status === SettlementStatus.EXECUTING && !settlement.provider ? (
+                    <SettlementActionForm settlementId={settlement.id} action="settle" serverAction={transition}>
+                      <input type="hidden" name="settlementId" value={settlement.id} />
+                      <SubmitButton
+                        name="status"
+                        value="SETTLED"
+                        variant="outline"
+                        size="sm"
+                        pendingText="Settling..."
+                        settlementId={settlement.id}
+                        action="settle"
+                      >
+                        Record settlement
+                      </SubmitButton>
+                    </SettlementActionForm>
+                  ) : null}
+
+                  {settlement.status === SettlementStatus.SETTLED ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href="/reconciliation">Open reconciliation</Link>
+                    </Button>
+                  ) : null}
+
                   {canApprove &&
                   settlement.status === SettlementStatus.EXECUTING &&
                   settlement.provider &&
@@ -868,7 +794,7 @@ export default async function SettlementsPage({
                       <input type="hidden" name="settlementId" value={settlement.id} />
                       <SubmitButton
                         type="submit"
-                        variant="primary"
+                        variant="outline"
                         size="sm"
                         pendingText="Checking..."
                         settlementId={settlement.id}
@@ -881,38 +807,18 @@ export default async function SettlementsPage({
 
                   <span className="scase__actions-spacer" aria-hidden="true" />
 
-                  <Button asChild variant="brand" size="sm">
-                    <Link href={`/settlements/${settlement.id}`}>Open workspace</Link>
-                  </Button>
                   {isCompleted(settlement.status) ? (
                     <Button asChild variant="outline" size="sm">
                       <Link href={`/settlements/${settlement.id}/controls`}>Finality review</Link>
                     </Button>
                   ) : null}
-                  {settlement.status === SettlementStatus.RECONCILED &&
-                  finality.decision !== "ready_to_finalize" ? (
+
+                  {settlement.status === SettlementStatus.RECONCILED ? (
                     <Button asChild variant="outline" size="sm">
                       <Link href={`/settlements/${settlement.id}/report`}>Settlement report</Link>
                     </Button>
                   ) : null}
                 </div>
-
-                {/* Embedded case console (provider tracking / reconcile) */}
-                {showConsole ? (
-                  <div className="scase__console">
-                    <SettlementOperationConsoleRow
-                      asCard
-                      settlementId={settlement.id}
-                      settlement={toOperationConsoleData(settlement)}
-                      autoRefresh={rowAutoRefresh}
-                      canReconcile={canApprove}
-                      autoMatchAction={runAutoMatch}
-                      hasOpenRecords={hasOpenRecords}
-                      reconcileRequired={params.reconcileRequired === settlement.id}
-                      inlineError={params.reconcileRequired === settlement.id ? params.error : undefined}
-                    />
-                  </div>
-                ) : null}
               </article>
             );
           })}

@@ -10997,3 +10997,210 @@ body {
     scroll-snap-align: none;
   }
 }
+
+/* Settlement queue: one operational truth per row.
+   The full 12-stage lifecycle lives in the workspace; the queue exposes only
+   current stage, owner, next action and evidence posture. */
+.scase__workflow {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(280px, 1.35fr) minmax(250px, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--ops-line);
+  border-radius: 8px;
+  background: #fafbfc;
+}
+
+.scase__stage,
+.scase__required,
+.scase__evidence {
+  min-width: 0;
+  padding: 12px 14px;
+}
+
+.scase__required,
+.scase__evidence {
+  border-left: 1px solid var(--ops-line);
+}
+
+.scase__eyebrow {
+  display: flex;
+  min-height: 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #8a94a2;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.scase__eyebrow b {
+  color: #667085;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.scase__stage > strong,
+.scase__required > strong {
+  display: block;
+  margin-top: 6px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.scase__stage > small,
+.scase__required > small {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+}
+
+.scase__required > .scase__blocker {
+  color: var(--status-blocked);
+  white-space: normal;
+}
+
+.scase__evidence > div {
+  display: grid;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.scase__signal {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: #667085;
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.scase__signal i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a4acb7;
+}
+
+.scase__signal > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scase__signal strong {
+  color: #596374;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.scase__signal.is-ok i,
+.scase__signal.is-ready i {
+  background: var(--status-ok);
+}
+
+.scase__signal.is-ok strong,
+.scase__signal.is-ready strong {
+  color: var(--status-ok);
+}
+
+.scase__signal.is-blocked i {
+  background: var(--status-blocked);
+}
+
+.scase__signal.is-blocked strong {
+  color: var(--status-blocked);
+}
+
+.scase__progress {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 9px;
+}
+
+.scase__progress > span {
+  height: 4px;
+  border-radius: 999px;
+  background: #e3e8ed;
+}
+
+.scase__progress > span.is-complete {
+  background: #69b5a4;
+}
+
+.scase__progress > span.is-current {
+  background: #0c7663;
+}
+
+.scase__progress > span.is-blocked {
+  background: var(--status-blocked);
+}
+
+.scase__actions {
+  min-height: 56px;
+}
+
+@media (max-width: 1120px) {
+  .scase__workflow {
+    grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.2fr);
+  }
+
+  .scase__evidence {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--ops-line);
+    border-left: 0;
+  }
+
+  .scase__evidence > div {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 767px) {
+  .scase__workflow {
+    grid-template-columns: 1fr;
+  }
+
+  .scase__stage,
+  .scase__required,
+  .scase__evidence {
+    padding: 12px;
+  }
+
+  .scase__required,
+  .scase__evidence {
+    border-top: 1px solid var(--ops-line);
+    border-left: 0;
+  }
+
+  .scase__evidence {
+    grid-column: auto;
+  }
+
+  .scase__evidence > div {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .scase__progress {
+    gap: 3px;
+  }
+
+  .scase__progress > span {
+    height: 5px;
+  }
+}
