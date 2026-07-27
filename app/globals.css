@@ -5933,6 +5933,30 @@ section.lp-view.bg-slate-50\/60 {
   border-radius: 9999px;
   background: linear-gradient(180deg, rgba(0, 199, 157, 0.7), rgba(11, 180, 196, 0.5));
 }
+.ee-finality-fragment {
+  /* The animated seal owns the lower-right corner. Reserve a real footer
+     zone so neither its resting state nor its entrance animation can cover
+     evidence values. */
+  padding-bottom: 6.75rem;
+}
+.ee-finality-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr);
+  align-items: start;
+  gap: 1rem;
+}
+.ee-finality-row dd {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 480px) {
+  .ee-finality-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.15rem;
+  }
+  .ee-finality-row dd {
+    text-align: left;
+  }
+}
 /* the spine node marking each act */
 .ee-node {
   position: absolute; left: 50%; top: 3.4rem; transform: translateX(-50%);
@@ -6422,8 +6446,8 @@ section.lp-view.bg-slate-50\/60 {
       animation-timeline: view(); animation-range: entry 35% entry 75%;
     }
     @keyframes eeSealPress {
-      from { opacity: 0; transform: translateY(-34px) scale(1.5) rotate(-14deg);
-             box-shadow: 0 26px 40px -8px rgba(201, 136, 15, 0.6); }
+      from { opacity: 0; transform: translateY(18px) scale(0.86) rotate(-10deg);
+             box-shadow: 0 18px 32px -10px rgba(201, 136, 15, 0.45); }
       to { opacity: 1; transform: translateY(0) scale(1) rotate(0deg);
            box-shadow: 0 6px 16px -4px rgba(201, 136, 15, 0.5), inset 0 1px 1px rgba(255,255,255,0.6); }
     }

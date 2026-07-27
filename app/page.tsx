@@ -48,7 +48,7 @@ export default function HomePage() {
         <SettlementProofScene />
 
         {/* ════ THE ASSEMBLY · five scenes, five compositions ═════════ */}
-        <section id="how-it-works" className="relative scroll-mt-20" aria-label="How the evidence assembles">
+        <section id="how-it-works" className="relative overflow-x-clip scroll-mt-20" aria-label="How the evidence assembles">
           <div className="ee-spine" aria-hidden="true" />
 
           <div className="mx-auto max-w-6xl px-4 pt-20 text-center sm:px-6">
@@ -192,21 +192,21 @@ export default function HomePage() {
                   API; they can never disagree.
                 </p>
               </div>
-              <div className="ee-fragment relative z-10 p-6" style={{ transform: "rotate(0.8deg)" }}>
+              <div className="ee-fragment ee-finality-fragment relative z-10 p-6" style={{ transform: "rotate(0.8deg)" }}>
                 <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3 pl-2">
                   <p className="text-sm font-semibold tracking-tight text-slate-950">Finality review</p>
                   <span className="rounded-full bg-[var(--status-ok-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--status-ok)]">Ready to finalize</span>
                 </div>
-                <dl className="mt-3 space-y-2.5 pl-2">
+                <dl className="ee-finality-list mt-3 space-y-2.5 pl-2">
                   {[
                     ["Provider proof", "Verified"],
                     ["Independent reconciliation", "Verified"],
                     ["Recorded approval", "Verified"],
                     ["Guardrails", "Within cap · live payouts disabled"],
                   ].map(([k, v]) => (
-                    <div key={k} className="flex items-baseline justify-between gap-4">
-                      <dt className="text-[13px] text-slate-500">{k}</dt>
-                      <dd className="text-right text-[13px] font-medium text-[var(--status-ok)]">{v}</dd>
+                    <div key={k} className="ee-finality-row">
+                      <dt className="min-w-0 text-[13px] text-slate-500">{k}</dt>
+                      <dd className="min-w-0 text-right text-[13px] font-medium text-[var(--status-ok)]">{v}</dd>
                     </div>
                   ))}
                 </dl>
