@@ -67,6 +67,9 @@ Client from being published against an older schema. Preview and production
 must use separately scoped `DATABASE_URL` values. PostgreSQL URLs should use
 `sslmode=verify-full`; the runtime also preserves pg 8's current strict
 verification when a legacy `prefer`, `require` or `verify-ca` alias is supplied.
+When `DATABASE_URL_UNPOOLED` is available, Prisma CLI operations use that direct
+connection for migration advisory locks. Runtime traffic continues to use the
+pooled `DATABASE_URL`.
 
 Pontis deployments that require a whitelisted static IP should use `gateway/pontis`. Provider credentials remain on that gateway; the app receives only the gateway URL and a separate shared secret.
 
